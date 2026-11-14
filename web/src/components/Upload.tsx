@@ -9,18 +9,29 @@ interface Props {
   onSample: () => void;
 }
 
+const MAX_FILES = 8;
+
 export default function Upload({ lang, busy, onLanguage, onSubmit, onSample }: Props) {
-  const [doc, setDoc] = useState<File | null>(null);
+  const [docs, setDocs] = useState<File[]>([]);
+  const [tooMany, setTooMany] = useState(false);
   const [device, setDevice] = useState<File | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const pdfRef = useRef<HTMLInputElement>(null);
   const deviceRef = useRef<HTMLInputElement>(null);
 
+  // Several pages or documents are sent as repeated "document" fields (CONTRACTS.md §2).
+  function addDocs(list: FileList | null) {
+    if (!list) return;
+    const next = [...docs, ...Array.from(list)];
+    setTooMany(next.length > MAX_FILES);
+    setDocs(next.slice(0, MAX_FILES));
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!doc) return;
+    if (docs.length === 0) return;
     const f = new FormData();
-    f.append("document", doc);
+    docs.forEach((d) => f.append("document", d));
     if (device) f.append("device_photo", device);
     f.append("language", lang);
     onSubmit(f);
@@ -46,8 +57,8 @@ export default function Upload({ lang, busy, onLanguage, onSubmit, onSample }: P
         </h2>
         <p className="note">{t(lang, "addDocHint")}</p>
 
-        <input ref={photoRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => setDoc(e.target.files?.[0] ?? null)} />
-        <input ref={pdfRef} hidden type="file" accept="application/pdf,image/*" onChange={(e) => setDoc(e.target.files?.[0] ?? null)} />
+        <input ref={photoRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { addDocs(e.target.files); e.target.value = ""; }} />
+        <input ref={pdfRef} hidden multiple type="file" accept="application/pdf,image/*" onChange={(e) => { addDocs(e.target.files); e.target.value = ""; }} />
         <input ref={deviceRef} hidden type="file" accept="image/*" onChange={(e) => setDevice(e.target.files?.[0] ?? null)} />
 
         <button type="button" className="btn primary choice" onClick={() => photoRef.current?.click()}>
@@ -61,7 +72,15 @@ export default function Upload({ lang, busy, onLanguage, onSubmit, onSample }: P
           <span>📄</span>
           <strong>{t(lang, "pdf")}</strong>
         </button>
-        {doc && <p className="picked">✓ {doc.name}</p>}
+        {docs.map((d, i) => (
+          <p className="picked" key={i}>
+            ✓ {d.name}{" "}
+            <button type="button" className="linkbtn" aria-label={`Remove ${d.name}`} onClick={() => setDocs(docs.filter((_, j) => j !== i))}>
+              ✕
+            </button>
+          </p>
+        ))}
+        {tooMany && <p className="note" role="alert">{t(lang, "tooMany")}</p>}
 
         <button type="button" className="devicerow" onClick={() => deviceRef.current?.click()}>
           <span>🖼</span>
@@ -83,7 +102,7 @@ export default function Upload({ lang, busy, onLanguage, onSubmit, onSample }: P
         </label>
 
         <div className="row">
-          <button className="btn primary" type="submit" disabled={!doc || busy}>
+          <button className="btn primary" type="submit" disabled={docs.length === 0 || busy}>
             {busy ? t(lang, "working") : t(lang, "start")}
           </button>
           <button className="btn" type="button" onClick={onSample} disabled={busy}>

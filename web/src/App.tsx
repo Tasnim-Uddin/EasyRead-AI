@@ -228,7 +228,7 @@ export default function App() {
           <div className="right">
             {guide.status !== "ready" && <p className="banner">{t(lang, "working")}</p>}
             {guide.source.is_sample && <p className="note">{t(lang, "sampleNote")}</p>}
-            {guide.facts && <FactsCard facts={guide.facts} lang={lang} />}
+            {guide.facts && (guide.doc_type ?? "how_to") === "how_to" && <FactsCard facts={guide.facts} lang={lang} />}
             {guide.steps.length > 0 && (
               <StepViewer guide={guide} index={index} lang={lang} clips={clips} playClip={playClip} onIndex={(i) =>
                   void runTool(i === index + 1 ? "next_step" : i === index - 1 ? "previous_step" : "show_step", { index: i })
