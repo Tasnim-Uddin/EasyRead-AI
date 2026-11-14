@@ -168,7 +168,7 @@ Full table with routes: [design/EVIDENCE.md](design/EVIDENCE.md). Writing rules:
 - Every row is filtered by our Easy Read rubric (`finetune/rubric.py`, `finetune/adaption_run.py filter`). 1,161 rows passed.
 - Mixed papers: medicines, letters, bills and forms. All fictional. Held-out seeds are never used for training.
 
-**Run.** On Tasnim's Adaption account. AutoScientist run `6ab34ef1`. Base model `Qwen/Qwen3.5-4B`. Best win rate against the base model: ADAPTION_RESULT. Details: [finetune/RESULTS.md](finetune/RESULTS.md).
+**Run.** On Tasnim's Adaption account. AutoScientist run `6ab34ef1`. Base model `Qwen/Qwen3.5-4B`. Best win rate against the base model: **0.7712** (77% of held-out rewrites preferred over the base model; target 0.7). Details: [finetune/RESULTS.md](finetune/RESULTS.md).
 
 Adaption does not yet offer inference on tuned models, so the live app writes steps with Claude and the fine-tune is shown by its win rate.
 
