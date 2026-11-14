@@ -27,3 +27,12 @@ def test_missing_get_help_and_long_sentence_fail():
 
 def test_seeds_wellformed():
     assert len(SEEDS) >= 10 and all(s["medicine"] and s["dose"] for s in SEEDS)
+
+
+def test_score_generic():
+    from finetune.rubric import score_generic
+    assert score_generic(FIX["steps"])["passed"]
+    assert not score_generic([])["passed"]
+    bad = [dict(s) for s in FIX["steps"]]
+    bad[0]["text_en"] = "This is your blue inhaler and it helps you to breathe much more easily when you feel unwell."
+    assert not score_generic(bad)["checks"]["max_15_words"]
