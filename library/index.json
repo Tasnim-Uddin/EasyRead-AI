@@ -20,7 +20,10 @@
       "poster_url": "/api/library/clips/inhaler_mdi_shake.poster.png",
       "checked_by": null,
       "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
-      "checked_at": null
+      "checked_at": null,
+      "match": [
+        "shake"
+      ]
     },
     {
       "id": "inhaler_mdi_3",
@@ -42,7 +45,12 @@
       "poster_url": null,
       "checked_by": null,
       "checked_against": null,
-      "checked_at": null
+      "checked_at": null,
+      "match": [
+        "press your inhaler",
+        "press the inhaler",
+        "press down"
+      ]
     },
     {
       "id": "inhaler_mdi_hold",
@@ -53,7 +61,10 @@
       "poster_url": "/api/library/clips/inhaler_mdi_hold.poster.png",
       "checked_by": null,
       "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
-      "checked_at": null
+      "checked_at": null,
+      "match": [
+        "hold your breath"
+      ]
     },
     {
       "id": "inhaler_mdi_spacer_1",
