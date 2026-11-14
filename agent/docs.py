@@ -5,7 +5,6 @@ MAX_FILES = 8
 MAX_PAGES = 20
 MAX_FILE_BYTES = 15 * 1024 * 1024
 ROLES = ["label", "leaflet", "device_photo", "letter", "form", "other"]
-IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
 class UploadError(Exception):
@@ -14,7 +13,7 @@ class UploadError(Exception):
         self.status, self.error, self.detail = status, error, detail
 
 
-def sniff(data: bytes, declared: str | None) -> str | None:
+def sniff(data: bytes, declared: str | None = None) -> str | None:
     """Trust the bytes over the browser's content type. None if not a supported type."""
     if data[:5] == b"%PDF-":
         return "application/pdf"
@@ -26,7 +25,7 @@ def sniff(data: bytes, declared: str | None) -> str | None:
         return "image/gif"
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
         return "image/webp"
-    return declared if declared in IMAGE_TYPES else None
+    return None
 
 
 def count_pages(data: bytes, media_type: str) -> int:
