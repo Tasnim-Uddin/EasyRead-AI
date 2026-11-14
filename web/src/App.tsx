@@ -186,7 +186,7 @@ export default function App() {
         const clip = clips.find((c) => c.id === step?.technique_clip_id);
         setScreen("clip");
         return clip
-          ? `Playing the checked video. ${clip.caption_en}`
+          ? `${clip.unchecked ? "Playing a demo video that a pharmacist has not checked yet." : "Playing the checked video."} ${clip.caption_en}`
           : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
       },
       answer_from_document: async ({ question: q }) => {

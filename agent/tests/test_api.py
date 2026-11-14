@@ -107,3 +107,13 @@ def test_tts_validation_and_cache(client, monkeypatch):
         r = client.post("/api/tts", json={"text": "Take 2 puffs", "language": "en"})
         assert r.status_code == 200 and r.headers["content-type"] == "audio/mpeg" and r.content == b"ID3fake"
     assert len(calls) == 1 and "text-to-speech" in calls[0][0] and calls[0][1]["model_id"]
+
+
+def test_unchecked_clips_hidden_unless_demo_flag(monkeypatch):
+    from agent import pipeline
+    monkeypatch.delenv("SHOW_UNCHECKED_CLIPS", raising=False)
+    assert all(c.get("checked_by") for c in pipeline.load_library())
+    monkeypatch.setenv("SHOW_UNCHECKED_CLIPS", "1")
+    shown = [c for c in pipeline.load_library() if c.get("unchecked")]
+    assert {c["id"] for c in shown} >= {"inhaler_mdi_shake", "inhaler_mdi_hold"}
+    assert all(not c.get("checked_by") and c["video_url"] for c in shown)

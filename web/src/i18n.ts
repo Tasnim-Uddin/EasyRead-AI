@@ -179,6 +179,7 @@ Object.assign(en, {
   clipTitle: "Show me how",
   playAgain: "Play again",
   slower: "Slower",
+  clipUnchecked: "DEMO ONLY: Not yet checked by a pharmacist",
   clipMissing: "The checked video is not ready yet. This is the picture for this step.",
   clipChecked: "Checked by a person",
   clipNhs: "Checked against NHS advice",

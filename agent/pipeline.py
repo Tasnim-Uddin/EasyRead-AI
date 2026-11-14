@@ -56,10 +56,17 @@ def load_fixture() -> dict:
 
 
 def load_library() -> list[dict]:
+    """Checked clips only. DEMO ONLY: SHOW_UNCHECKED_CLIPS=1 also returns clips that have a video but no human sign-off,
+    each marked "unchecked": true so the UI shows a visible 'not yet checked' badge. Default off."""
+    demo = os.environ.get("SHOW_UNCHECKED_CLIPS") == "1"
     try:
-        return [c for c in json.loads(LIBRARY.read_text()).get("clips", []) if c.get("checked_by")]
+        clips = json.loads(LIBRARY.read_text()).get("clips", [])
     except Exception:
         return []
+    out = [c for c in clips if c.get("checked_by")]
+    if demo:
+        out += [{**c, "unchecked": True} for c in clips if not c.get("checked_by") and c.get("video_url")]
+    return out
 
 
 def attach_clips(guide: dict):

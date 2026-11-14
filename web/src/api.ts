@@ -127,7 +127,7 @@ export async function getAnamToken(guideId: string, language: string, stepIndex 
 export async function getLibrary(): Promise<Clip[]> {
   try {
     const r = await json<{ clips: Clip[] }>(await fetch("/api/library"));
-    return r.clips.filter((c) => !!c.checked_by);
+    return r.clips.filter((c) => !!c.checked_by || c.unchecked === true); // unchecked only arrives in server demo mode
   } catch {
     return [];
   }

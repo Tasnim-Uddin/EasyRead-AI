@@ -12,14 +12,14 @@
       "checked_at": null
     },
     {
-      "id": "inhaler_mdi_2",
+      "id": "inhaler_mdi_shake",
       "device_type": "inhaler_mdi",
       "order": 2,
       "caption_en": "Shake the inhaler 4 times.",
-      "video_url": null,
-      "poster_url": null,
+      "video_url": "/api/library/clips/inhaler_mdi_shake.mp4",
+      "poster_url": "/api/library/clips/inhaler_mdi_shake.poster.png",
       "checked_by": null,
-      "checked_against": null,
+      "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
       "checked_at": null
     },
     {
@@ -45,14 +45,14 @@
       "checked_at": null
     },
     {
-      "id": "inhaler_mdi_5",
+      "id": "inhaler_mdi_hold",
       "device_type": "inhaler_mdi",
       "order": 5,
       "caption_en": "Hold your breath for 10 seconds.",
-      "video_url": null,
-      "poster_url": null,
+      "video_url": "/api/library/clips/inhaler_mdi_hold.mp4",
+      "poster_url": "/api/library/clips/inhaler_mdi_hold.poster.png",
       "checked_by": null,
-      "checked_against": null,
+      "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
       "checked_at": null
     },
     {
