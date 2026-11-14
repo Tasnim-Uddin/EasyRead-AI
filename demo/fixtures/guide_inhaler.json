@@ -60,7 +60,7 @@
       "kind": "how",
       "picture_prompt": "side view of the person breathing out first, mouth open and turned away from the blue inhaler held in one hand, calm eyes, then lips sealing round the grey mouthpiece with a finger on the canister",
       "image_url": "/fixtures/img/step_3.png",
-      "technique_clip_id": null,
+      "technique_clip_id": "inhaler_mdi_press",
       "status": "ready"
     },
     {
