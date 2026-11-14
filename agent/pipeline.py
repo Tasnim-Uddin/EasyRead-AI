@@ -85,7 +85,9 @@ def _device_applies(clip_dev: str, guide_dev: str | None) -> bool:
 
 def attach_clips(guide: dict):
     dev = guide["facts"].get("device_type")
-    clips = sorted((c for c in load_library() if _device_applies(c["device_type"], dev)),
+    # A clip marked "exact_device" (e.g. press without a spacer) only applies to that exact device type.
+    clips = sorted((c for c in load_library() if (c["device_type"] == dev if c.get("exact_device")
+                                                  else _device_applies(c["device_type"], dev))),
                    key=lambda c: c.get("order", 0))
     how = [s for s in guide["steps"] if s["kind"] == "how" and not s.get("technique_clip_id")]
     for c in clips:

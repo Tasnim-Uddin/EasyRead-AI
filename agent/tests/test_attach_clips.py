@@ -54,3 +54,24 @@ def test_falls_back_to_text_without_text_en(lib):
     g = {"facts": {"device_type": "inhaler_mdi"}, "steps": [{"kind": "how", "text": "SHAKE well", "technique_clip_id": None}]}
     pipeline.attach_clips(g)
     assert g["steps"][0]["technique_clip_id"] == "inhaler_mdi_shake"
+
+
+def test_exact_device_clip_skips_spacer_guides(monkeypatch, tmp_path):
+    monkeypatch.setenv("SHOW_UNCHECKED_CLIPS", "1")
+    clips = [{"id": "inhaler_mdi_press", "device_type": "inhaler_mdi", "order": 4, "video_url": "/p.mp4",
+              "exact_device": True, "match": ["press once"]}]
+    f = tmp_path / "index.json"
+    f.write_text(json.dumps({"clips": clips}))
+    monkeypatch.setattr(pipeline, "LIBRARY", f)
+    plain = guide("inhaler_mdi", "Press once and breathe in slowly.")
+    spacer = guide("inhaler_mdi_spacer", "Press once and breathe in slowly.")
+    pipeline.attach_clips(plain)
+    pipeline.attach_clips(spacer)
+    assert ids(plain) == ["inhaler_mdi_press"]
+    assert ids(spacer) == [None]
+
+
+def test_real_library_press_clip_is_listed_and_unchecked(monkeypatch):
+    monkeypatch.setenv("SHOW_UNCHECKED_CLIPS", "1")
+    press = [c for c in pipeline.load_library() if c["id"] == "inhaler_mdi_press"]
+    assert press and press[0]["checked_by"] is None and press[0]["unchecked"] is True
