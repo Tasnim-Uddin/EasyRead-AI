@@ -853,7 +853,7 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
           {t(lang, "rowPictures")}…
         </p>
       )}
-      {guide.source.is_sample && <p className="safe">{t(lang, "sampleNote")}</p>}
+      {guide.source.is_sample && k === "medicine" && <p className="safe">{t(lang, "sampleNote")}</p>}
       <p className="safe" dir="auto">
         {safetyLines(guide).map((l, i) => (
           <span key={i}>
