@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Clip, Guide, GuideStatus, Step, ToolLogEntry } from "./types";
 import { LANGUAGES, RTL, t } from "./i18n";
 import Icon, { GuideFace } from "./icons";
@@ -7,6 +7,106 @@ import type { AnamState } from "./useAnam";
 
 export const AVATAR_VIDEO_ID = "anam-video";
 export const MAX_FILES = 8;
+
+/* ---------- the one live avatar video, kept mounted for the whole session ---------- */
+export interface LiveInfo {
+  live: boolean;
+  lang: string;
+  onEnd: () => void;
+  micMuted: boolean;
+  soundOff: boolean;
+  onToggleMic: () => void;
+  onToggleSound: () => void;
+}
+export const LiveContext = createContext<LiveInfo | null>(null);
+const useLive = () => {
+  const c = useContext(LiveContext);
+  return c && c.live ? c : null;
+};
+
+/**
+ * Rendered once at App level (never unmounted), so the avatar stream survives screen changes.
+ * It sits over whichever [data-avatar-slot] the current screen shows (large stage on Talk, small
+ * face in the guide row on Step/Ask). With no slot (clip, settings...) it floats as a small tile.
+ */
+export function AvatarHost({ live, screen }: { live: boolean; screen: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    let slot: Element | null = null;
+    let ro: ResizeObserver | null = null;
+    const place = () => {
+      if (!slot || !slot.isConnected) return;
+      const r = slot.getBoundingClientRect();
+      Object.assign(host.style, {
+        top: `${r.top + window.scrollY}px`,
+        left: `${r.left + window.scrollX}px`,
+        width: `${r.width}px`,
+        height: `${r.height}px`,
+      });
+    };
+    const find = () => {
+      const next = document.querySelector("[data-avatar-slot]");
+      if (next === slot) return place();
+      ro?.disconnect();
+      slot = next;
+      host.dataset.mode = slot ? (slot.getAttribute("data-avatar-slot") ?? "face") : "float";
+      if (!slot) {
+        for (const k of ["top", "left", "width", "height"]) host.style.removeProperty(k);
+        return;
+      }
+      ro = new ResizeObserver(place);
+      ro.observe(slot);
+      ro.observe(document.body);
+      place();
+    };
+    find();
+    // slots can appear a frame after the screen (lists, images): re-check as the page settles
+    const mo = new MutationObserver(find);
+    mo.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener("resize", place);
+    return () => {
+      mo.disconnect();
+      ro?.disconnect();
+      window.removeEventListener("resize", place);
+    };
+  }, [screen, live]);
+  const info = useContext(LiveContext);
+  return (
+    <div ref={ref} className="avhost" data-mode="float" data-live={live ? "1" : "0"}>
+      <video id={AVATAR_VIDEO_ID} autoPlay playsInline />
+      {live && info && (
+        <button className="avend" onClick={info.onEnd} aria-label={t(info.lang, "endTalk")}>
+          <Icon name="x" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Stand-in face, or the empty slot the live avatar is shown over. */
+function GuideOrAvatar({ live }: { live: LiveInfo | null }) {
+  return live ? <div className="avslot face" data-avatar-slot="face" /> : <GuideFace />;
+}
+
+/** Small End / mic / sound buttons next to the live tile. */
+function LiveControls({ live }: { live: LiveInfo }) {
+  const { lang } = live;
+  return (
+    <div className="livectl">
+      <button className="end" onClick={live.onEnd}>
+        {t(lang, "endTalk")}
+      </button>
+      <button onClick={live.onToggleMic} aria-pressed={live.micMuted} aria-label={t(lang, live.micMuted ? "unmuteMic" : "muteMic")}>
+        <Icon name="mic" />
+      </button>
+      <button onClick={live.onToggleSound} aria-pressed={live.soundOff} aria-label={t(lang, live.soundOff ? "soundOn" : "soundOff")}>
+        <Icon name="play" />
+      </button>
+    </div>
+  );
+}
 export const ROLES = ["auto", "label", "leaflet", "device_photo", "letter", "form", "other"] as const;
 export type Role = (typeof ROLES)[number];
 export interface TrayItem {
@@ -506,6 +606,7 @@ export function stepHasHow(guide: Guide, step: Step, clips: Clip[]) {
   return !!clip || (kindOf(guide) !== "letter" && kindOf(guide) !== "form" && step.kind === "how");
 }
 export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow }: StepProps) {
+  const live = useLive();
   const step = guide.steps[index];
   if (!step) return null;
   const total = guide.steps.length;
@@ -543,11 +644,12 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
         )}
       </div>
       <div className="guide">
-        <GuideFace />
+        <GuideOrAvatar live={live} />
         <div className="bubble" dir="auto">
           <b>{t(lang, "guideSays")}</b>
           {step.say || step.text}
         </div>
+        {live && <LiveControls live={live} />}
       </div>
       <div className="nav">
         <button className="btn soft back" onClick={() => onIndex(index - 1)} disabled={index === 0}>
@@ -653,6 +755,7 @@ interface AskProps {
   onBack: () => void;
 }
 export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onAsk, onTalk, onTellBack, onPrint, onBack }: AskProps) {
+  const live = useLive();
   const k = kindOf(guide);
   const noun = k === "medicine" ? "medicine" : "paper";
   const [listening, setListening] = useState(false);
@@ -691,6 +794,12 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           {t(lang, "allDoneSub")}
         </div>
       </div>
+      {live && (
+        <div className="guide">
+          <GuideOrAvatar live={live} />
+          <LiveControls live={live} />
+        </div>
+      )}
       <div className="ask">
         <h2>
           {t(lang, "askAbout")} {noun}
@@ -790,7 +899,7 @@ export function TalkScreen({ lang, state, error, caption, onLanguage, onBack, on
       <TitleBar title={t(lang, "yourGuideTitle")} lang={lang} onBack={onBack} right={<LangPill lang={lang} onLanguage={onLanguage} />} />
       <div className="stage">
         {!live && <GuideFace large />}
-        <video id={AVATAR_VIDEO_ID} autoPlay playsInline style={{ display: live ? "block" : "none" }} />
+        {live && <div className="avslot" data-avatar-slot="stage" />}
       </div>
       {caption ? (
         <div className="live" aria-live="polite">

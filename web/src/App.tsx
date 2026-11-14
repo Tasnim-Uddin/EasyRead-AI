@@ -7,6 +7,9 @@ import { speak, stopSpeaking, voiceSettings } from "./speech";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
+  AvatarHost,
+  LiveContext,
+  type LiveInfo,
   CheckPhoto,
   ClipScreen,
   DevPanel,
@@ -358,11 +361,24 @@ export default function App() {
     void runTool(i === index + 1 ? "next_step" : i === index - 1 ? "previous_step" : "show_step", { index: i });
   }
 
+  // `?fakelive` (dev builds only) shows the live layout without a real Anam session, for screenshots.
+  const fakeLive = import.meta.env.DEV && location.search.includes("fakelive");
+  const liveState = fakeLive ? "live" : anam.state;
+  const liveInfo: LiveInfo = {
+    live: liveState === "live",
+    lang,
+    onEnd: () => void anam.stop(),
+    micMuted: anam.micMuted,
+    soundOff: anam.soundOff,
+    onToggleMic: anam.toggleMic,
+    onToggleSound: anam.toggleSound,
+  };
+
   const status = uploading ? "uploading" : guide?.status ?? "uploading";
   const lastSay = log.find((l) => l.say)?.say ?? "";
 
   return (
-    <>
+    <LiveContext.Provider value={liveInfo}>
       <div className="phone">
         <input ref={cameraRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { onCamera(e.target.files); e.target.value = ""; }} />
         <input ref={uploadRef} hidden multiple type="file" accept="application/pdf,image/*" onChange={(e) => { onUpload(e.target.files); e.target.value = ""; }} />
@@ -454,7 +470,7 @@ export default function App() {
         {screen === "talk" && guide && (
           <TalkScreen
             lang={lang}
-            state={anam.state}
+            state={liveState}
             error={anam.error}
             caption={lastSay}
             onLanguage={changeLanguage}
@@ -500,6 +516,7 @@ export default function App() {
         <DevPanel log={log} lang={lang} />
       </div>
       {guide && <PrintSheet guide={guide} lang={lang} />}
-    </>
+      <AvatarHost live={liveInfo.live} screen={screen} />
+    </LiveContext.Provider>
   );
 }
