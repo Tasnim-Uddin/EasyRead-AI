@@ -274,7 +274,7 @@ def test_medicine_safety_unchanged():
 def test_flatpack_fixture():
     fx = json.loads((pathlib.Path(__file__).resolve().parents[2] / "demo" / "fixtures" / "guide_flatpack.json").read_text())
     assert fx["doc_type"] == "how_to" and fx["domain"] == "other"
-    assert all(s["image_url"] is None and s["status"] == "skipped" and s["picture_prompt"] for s in fx["steps"])
+    assert all(s["image_url"] and s["status"] == "ready" and s["picture_prompt"] for s in fx["steps"])
     assert {s["kind"] for s in fx["steps"]} <= {"what", "how", "warning", "get_help"}
     assert fx["steps"][-1]["text_en"] == doctypes.SAFETY_HOWTO
     assert "medicine" not in json.dumps(fx["steps"]).lower()

@@ -8,29 +8,124 @@
     "kind": "other",
     "image_urls": [],
     "is_sample": true,
-    "documents": [{"index": 1, "role": "other", "role_source": "client", "image_url": null}],
+    "documents": [
+      {
+        "index": 1,
+        "role": "other",
+        "role_source": "client",
+        "image_url": null
+      }
+    ],
     "note": "SAMPLE ONLY. Fictional instructions for a fictional bookshelf. Not a real product."
   },
   "facts": {
     "title": "How to build your bookshelf",
-    "source_steps": ["Lay out all the parts.", "Join the 2 sides to the top with 4 screws.", "Slide the back panel into the groove.", "Stand the shelf up against a wall."],
-    "medicine": null, "dose": null, "frequency": null, "route": null,
-    "device_type": "unknown", "device_confidence": 0,
-    "warnings": ["Ask a second person to help you lift it."],
-    "get_help": ["If a part is missing, call the shop."],
-    "unreadable": [], "conflicts": []
+    "source_steps": [
+      "Lay out all the parts.",
+      "Join the 2 sides to the top with 4 screws.",
+      "Slide the back panel into the groove.",
+      "Stand the shelf up against a wall."
+    ],
+    "medicine": null,
+    "dose": null,
+    "frequency": null,
+    "route": null,
+    "device_type": "unknown",
+    "device_confidence": 0,
+    "warnings": [
+      "Ask a second person to help you lift it."
+    ],
+    "get_help": [
+      "If a part is missing, call the shop."
+    ],
+    "unreadable": [],
+    "conflicts": []
   },
   "content": null,
-  "safety_lines": ["If something breaks or feels unsafe, stop and ask for help."],
+  "safety_lines": [
+    "If something breaks or feels unsafe, stop and ask for help."
+  ],
   "steps": [
-    {"index": 0, "text": "You are building a small bookshelf.", "text_en": "You are building a small bookshelf.", "kind": "what", "picture_prompt": "a small wooden bookshelf standing against a wall", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 1, "text": "Lay out all the parts on the floor.", "text_en": "Lay out all the parts on the floor.", "kind": "how", "picture_prompt": "wooden shelf parts and screws laid out on a floor", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 2, "text": "Join the 2 sides to the top with 4 screws.", "text_en": "Join the 2 sides to the top with 4 screws.", "kind": "how", "picture_prompt": "a hand turning a screwdriver to join a wooden side to a top board", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 3, "text": "Slide the back panel into the groove.", "text_en": "Slide the back panel into the groove.", "kind": "how", "picture_prompt": "a thin back panel sliding into a groove in a wooden frame", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 4, "text": "Ask a second person to help you lift it.", "text_en": "Ask a second person to help you lift it.", "kind": "warning", "picture_prompt": "two people lifting a wooden shelf together", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 5, "text": "Stand the shelf up against a wall.", "text_en": "Stand the shelf up against a wall.", "kind": "how", "picture_prompt": "a finished bookshelf standing against a wall", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 6, "text": "A part is missing? Call the shop.", "text_en": "A part is missing? Call the shop.", "kind": "get_help", "picture_prompt": "a person on the phone holding a screw", "image_url": null, "technique_clip_id": null, "status": "skipped"},
-    {"index": 7, "text": "If something breaks or feels unsafe, stop and ask for help.", "text_en": "If something breaks or feels unsafe, stop and ask for help.", "kind": "get_help", "picture_prompt": "a person on the phone talking to a helper", "image_url": null, "technique_clip_id": null, "status": "skipped"}
+    {
+      "index": 0,
+      "text": "You are building a small bookshelf.",
+      "text_en": "You are building a small bookshelf.",
+      "kind": "what",
+      "picture_prompt": "a small wooden bookshelf standing against a wall",
+      "image_url": "/fixtures/img/flatpack_step_0.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 1,
+      "text": "Lay out all the parts on the floor.",
+      "text_en": "Lay out all the parts on the floor.",
+      "kind": "how",
+      "picture_prompt": "wooden shelf parts and screws laid out on a floor",
+      "image_url": "/fixtures/img/flatpack_step_1.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 2,
+      "text": "Join the 2 sides to the top with 4 screws.",
+      "text_en": "Join the 2 sides to the top with 4 screws.",
+      "kind": "how",
+      "picture_prompt": "a hand turning a screwdriver to join a wooden side to a top board",
+      "image_url": "/fixtures/img/flatpack_step_2.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 3,
+      "text": "Slide the back panel into the groove.",
+      "text_en": "Slide the back panel into the groove.",
+      "kind": "how",
+      "picture_prompt": "a thin back panel sliding into a groove in a wooden frame",
+      "image_url": "/fixtures/img/flatpack_step_3.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 4,
+      "text": "Ask a second person to help you lift it.",
+      "text_en": "Ask a second person to help you lift it.",
+      "kind": "warning",
+      "picture_prompt": "two people lifting a wooden shelf together",
+      "image_url": "/fixtures/img/flatpack_step_4.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 5,
+      "text": "Stand the shelf up against a wall.",
+      "text_en": "Stand the shelf up against a wall.",
+      "kind": "how",
+      "picture_prompt": "a finished bookshelf standing against a wall",
+      "image_url": "/fixtures/img/flatpack_step_5.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 6,
+      "text": "A part is missing? Call the shop.",
+      "text_en": "A part is missing? Call the shop.",
+      "kind": "get_help",
+      "picture_prompt": "a person on the phone holding a screw",
+      "image_url": "/fixtures/img/flatpack_step_6.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 7,
+      "text": "If something breaks or feels unsafe, stop and ask for help.",
+      "text_en": "If something breaks or feels unsafe, stop and ask for help.",
+      "kind": "get_help",
+      "picture_prompt": "a person on the phone talking to a helper",
+      "image_url": "/fixtures/img/flatpack_step_7.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    }
   ],
   "created_at": "2026-11-14T00:00:00+00:00"
 }
