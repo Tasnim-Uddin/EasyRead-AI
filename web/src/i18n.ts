@@ -1068,6 +1068,7 @@ const bn: Dict = {
   loadingSample: "নমুনা খোলা হচ্ছে",
   uploadingFailed: "আমরা আপনার গাইড বানাতে পারিনি।",
   talkError: "গাইড শুরু করা যায়নি। আপনি তবুও ধাপগুলো ব্যবহার করতে পারেন।",
+  askGo: "জিজ্ঞাসা করুন",
   yes: "হ্যাঁ",
 };
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
