@@ -1,6 +1,7 @@
 import fixture from "../../demo/fixtures/guide_inhaler.json";
 import council from "../../demo/fixtures/guide_council_letter.json";
 import flatpack from "../../demo/fixtures/guide_flatpack.json";
+import cachedInhaler from "../../demo/fixtures/cached/guide_cached_inhaler.json";
 import type { AskResult, Clip, Guide, ServerEvent } from "./types";
 
 export const sampleGuide = fixture as unknown as Guide;
@@ -8,6 +9,7 @@ export const SAMPLES: Record<string, Guide> = {
   inhaler: sampleGuide,
   council: council as unknown as Guide,
   flatpack: flatpack as unknown as Guide,
+  "cached-inhaler": cachedInhaler as unknown as Guide, // saved real run (demo/cache_run.py)
 };
 
 async function json<T>(res: Response): Promise<T> {

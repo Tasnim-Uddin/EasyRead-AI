@@ -1,0 +1,168 @@
+{
+  "id": "g_sample_cached_inhaler",
+  "status": "ready",
+  "language": "en",
+  "source": {
+    "kind": "prescription",
+    "image_urls": [],
+    "is_sample": true,
+    "documents": [
+      {
+        "index": 1,
+        "role": "label",
+        "role_source": "client"
+      },
+      {
+        "index": 2,
+        "role": "leaflet",
+        "role_source": "client"
+      },
+      {
+        "index": 3,
+        "role": "device_photo",
+        "role_source": "client"
+      }
+    ]
+  },
+  "doc_type": "how_to",
+  "domain": "medicine",
+  "content": null,
+  "safety_lines": [
+    "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP."
+  ],
+  "facts": {
+    "medicine": "Salbutamol 100 micrograms Evohaler (pressurised inhaler)",
+    "dose": "TWO puffs when needed for wheeze or breathlessness",
+    "frequency": "Maximum 4 times in 24 hours",
+    "route": "Inhaled through the mouth",
+    "device_type": "inhaler_mdi_spacer",
+    "device_confidence": 0.8,
+    "title": null,
+    "source_steps": [],
+    "warnings": [
+      "Your label and leaflet say different things. Ask your pharmacist.",
+      "Maximum 4 times in 24 hours.",
+      "Do not take more than 8 puffs in 24 hours.",
+      "Tell your doctor if your usual dose stops working.",
+      "Do not use more often than advised."
+    ],
+    "get_help": [
+      "Call 999 if you have severe difficulty breathing or swelling of the face or lips."
+    ],
+    "unreadable": [],
+    "conflicts": [
+      {
+        "field": "dose",
+        "label": "TWO puffs when needed for wheeze or breathlessness",
+        "leaflet": "Usual dose: ONE puff when needed. Adults may take up to 2 puffs if needed."
+      },
+      {
+        "field": "frequency",
+        "label": "Maximum 4 times in 24 hours",
+        "leaflet": "When needed. Do not take more than 8 puffs in 24 hours."
+      }
+    ]
+  },
+  "steps": [
+    {
+      "index": 0,
+      "text": "Use 2 puffs when you wheeze or feel short of breath. This is what your label says.",
+      "text_en": "Use 2 puffs when you wheeze or feel short of breath. This is what your label says.",
+      "kind": "what",
+      "picture_prompt": "A person sitting calmly holding a blue inhaler with a spacer, one hand on their chest",
+      "image_url": "/fixtures/img/step_0.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Use 2 puffs when you wheeze or feel short of breath. This is what your label says."
+    },
+    {
+      "index": 1,
+      "text": "Your label and leaflet say different things. Ask your pharmacist.",
+      "text_en": "Your label and leaflet say different things. Ask your pharmacist.",
+      "kind": "warning",
+      "picture_prompt": "a person holding a medicine box and a leaflet, looking unsure",
+      "image_url": "/fixtures/img/step_6.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Your label and leaflet say different things. Ask your pharmacist. Take care with this one."
+    },
+    {
+      "index": 2,
+      "text": "Shake your inhaler. Fit it into your spacer.",
+      "text_en": "Shake your inhaler. Fit it into your spacer.",
+      "kind": "how",
+      "picture_prompt": "Hands shaking an inhaler, then pushing the inhaler into the end of a clear plastic spacer tube",
+      "image_url": "/fixtures/img/step_2.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Shake your inhaler. Fit it into your spacer. Take your time."
+    },
+    {
+      "index": 3,
+      "text": "Put the spacer mouthpiece in your mouth. Close your lips around it.",
+      "text_en": "Put the spacer mouthpiece in your mouth. Close your lips around it.",
+      "kind": "how",
+      "picture_prompt": "Side view of a person with lips closed around the mouthpiece of a clear spacer",
+      "image_url": "/fixtures/img/step_3.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Put the spacer mouthpiece in your mouth. Close your lips around it. Take your time."
+    },
+    {
+      "index": 4,
+      "text": "Press the inhaler once. Breathe in slowly through your mouth. Repeat for your second puff.",
+      "text_en": "Press the inhaler once. Breathe in slowly through your mouth. Repeat for your second puff.",
+      "kind": "how",
+      "picture_prompt": "A person pressing the top of an inhaler with a finger while breathing in, with a soft arrow showing air going into the mouth",
+      "image_url": "/fixtures/img/step_4.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Press the inhaler once. Breathe in slowly through your mouth. Repeat for your second puff. Take your time."
+    },
+    {
+      "index": 5,
+      "text": "Use your inhaler 4 times at most in 24 hours. Do not take more than 8 puffs in 24 hours.",
+      "text_en": "Use your inhaler 4 times at most in 24 hours. Do not take more than 8 puffs in 24 hours.",
+      "kind": "warning",
+      "picture_prompt": "A clock face showing a full day, with four small inhaler icons around it and a red stop hand",
+      "image_url": "/fixtures/img/step_6.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Use your inhaler 4 times at most in 24 hours. Do not take more than 8 puffs in 24 hours. Take care with this one."
+    },
+    {
+      "index": 6,
+      "text": "Your label and your leaflet say different things. Ask your pharmacist which is right.",
+      "text_en": "Your label and your leaflet say different things. Ask your pharmacist which is right.",
+      "kind": "warning",
+      "picture_prompt": "A person at a pharmacy counter holding an inhaler box and a folded leaflet, talking to a pharmacist",
+      "image_url": "/fixtures/img/step_6.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Your label and your leaflet say different things. Ask your pharmacist which is right. Take care with this one."
+    },
+    {
+      "index": 7,
+      "text": "Tell your doctor if your usual dose stops working. Do not use your inhaler more often than advised.",
+      "text_en": "Tell your doctor if your usual dose stops working. Do not use your inhaler more often than advised.",
+      "kind": "warning",
+      "picture_prompt": "A person talking to a doctor in a small clinic room, holding an inhaler",
+      "image_url": "/fixtures/img/step_6.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Tell your doctor if your usual dose stops working. Do not use your inhaler more often than advised. Take care with this one."
+    },
+    {
+      "index": 8,
+      "text": "Call 999 if you have severe difficulty breathing or swelling of your face or lips.",
+      "text_en": "Call 999 if you have severe difficulty breathing or swelling of your face or lips.",
+      "kind": "get_help",
+      "picture_prompt": "A person holding a phone to their ear, looking worried, with one hand on their chest and a slightly swollen face",
+      "image_url": "/fixtures/img/step_7.png",
+      "technique_clip_id": null,
+      "status": "ready",
+      "say": "Call 999 if you have severe difficulty breathing or swelling of your face or lips."
+    }
+  ],
+  "created_at": "2026-11-14T18:22:43.972442+00:00"
+}
