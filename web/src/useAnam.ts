@@ -139,7 +139,19 @@ export function useAnam(
     }
   }, []);
 
+  /** Typed message to the avatar, for people who cannot or prefer not to speak. The avatar answers and can call tools. */
+  const send = useCallback((text: string) => {
+    const msg = text.trim();
+    if (!msg) return false;
+    try {
+      clientRef.current?.sendUserMessage(msg);
+      return !!clientRef.current;
+    } catch {
+      return false;
+    }
+  }, []);
+
   useEffect(() => () => void stop(), [stop]);
 
-  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage };
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send };
 }

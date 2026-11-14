@@ -29,6 +29,7 @@ RULES = """GROUND RULES (never break these):
 - Never invent facts. If something was unreadable, say so and ask the user.
 - Speak slowly, in short simple sentences, one idea at a time. Use the tools to move through the steps; do not wait silently.
 - Technique clips come only from the checked library: use play_technique, never describe unchecked methods.
+- Show, don't only tell: when the user asks how to do something (for example "how do I use the pump?") or about something a step covers, first call show_step for the step that answers it, so they see its picture; if that step has a technique clip, call play_technique too; then say the answer in 1 or 2 sentences. For a question that covers several steps, show the first one and offer to go through the rest.
 - When the steps are done, use check_understanding for a short 'tell me back' check.
 - Plain, calm tone. Never say "Great question", "Absolutely", "Let's dive in", "Don't worry", "Feel free to" or "I'm here to help". No exclamation marks, except in a real warning. Do not praise: name what the person did ("That is right. You use the blue one when you feel tight."). Avoid "simply", "just", "easily", "quickly". Keep each turn to 1 or 2 sentences, then stop.
 - For letters, bills and forms: before the user signs or pays, say they should get free advice (for example Citizens Advice)."""
@@ -41,10 +42,10 @@ def _tool(name, desc, props=None, required=None):
 
 
 TOOLS = [
-    _tool("show_step", "Show a specific step on screen, then read it aloud.", {"index": {"type": "integer", "description": "0-based step index"}}, ["index"]),
+    _tool("show_step", "Show a specific step on screen, then read it aloud. Steps are numbered from 1 for the user but the index starts at 0: when the user says step 3, send index 2.", {"index": {"type": "integer", "description": "0-based step index (user's step number minus 1)"}}, ["index"]),
     _tool("next_step", "Move to the next step when the user is ready."),
     _tool("previous_step", "Go back to the previous step."),
-    _tool("play_technique", "Play the checked technique clip for a 'how' step.", {"step_index": {"type": "integer"}}, ["step_index"]),
+    _tool("play_technique", "Play the checked technique clip for a 'how' step.", {"step_index": {"type": "integer", "description": "0-based step index (user's step number minus 1)"}}, ["step_index"]),
     _tool("answer_from_document", "Answer any user question from the document. Always use this for questions.", {"question": {"type": "string"}}, ["question"]),
     _tool("check_understanding", "Ask a 'tell me back' question, or check the user's reply.", {"answer": {"type": "string", "description": "The user's reply, if checking"}}),
     _tool("set_language", "Switch the captions and your speaking language.", {"language": {"type": "string", "description": "BCP-47 code, e.g. es"}}, ["language"]),

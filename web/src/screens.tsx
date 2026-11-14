@@ -6,6 +6,7 @@ import { canSpeak, findWorld, isRtl, languageLabel, languageValue, searchLanguag
 import Icon, { GuideFace } from "./icons";
 import { speak } from "./speech";
 import type { AnamState } from "./useAnam";
+import { THEMES, THEME_KEY, type Theme } from "./look";
 
 export const AVATAR_VIDEO_ID = "anam-video";
 export const MAX_FILES = 8;
@@ -19,12 +20,78 @@ export interface LiveInfo {
   soundOff: boolean;
   onToggleMic: () => void;
   onToggleSound: () => void;
+  onSend?: (text: string) => boolean;
+  /** Docked guide panel (?dock=1, on by default with the new themes). */
+  dock?: boolean;
+  /** The guide's latest spoken line, for the dock caption. */
+  caption?: string;
+  /** Open the talk screen. */
+  onTalk?: () => void;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
 const useLive = () => {
   const c = useContext(LiveContext);
   return c && c.live ? c : null;
 };
+const useDock = () => {
+  const c = useContext(LiveContext);
+  return c && c.dock ? c : null;
+};
+
+/**
+ * One panel above the bottom bar: the live avatar in a rounded video slot with its latest caption,
+ * small End / mic / sound controls and the type bar. Collapses to a slim bar. When the avatar is not
+ * live it is a slim "Talk to your guide" row.
+ */
+function GuideDock({ text, lang }: { text: string; lang: string }) {
+  const info = useDock();
+  const [small, setSmall] = useState(false);
+  if (!info) return null;
+  if (!info.live) {
+    // Not live: one slim row that opens the talk screen, no empty video space.
+    return info.onTalk ? (
+      <button className="dock dock-slim" onClick={info.onTalk}>
+        <GuideFace />
+        <span>{t(lang, "talkGuide")}</span>
+        <Icon name="mic" />
+      </button>
+    ) : null;
+  }
+  const caption = info.caption || text;
+  const chevron = (
+    <button className="dock-chev" onClick={() => setSmall(!small)} aria-expanded={!small} aria-label={t(lang, small ? "dockShow" : "dockHide")}>
+      <Icon name={small ? "up" : "down"} />
+    </button>
+  );
+  return (
+    <section className={"dock" + (small ? " small" : "")} aria-label={t(lang, "guideSays")}>
+      <div className="dock-row">
+        <div className="avslot dockvid" data-avatar-slot="dock" />
+        <div className="dock-cap" aria-live="polite" dir="auto">
+          {caption}
+        </div>
+        {small && chevron}
+      </div>
+      {!small && (
+        <>
+          <div className="dock-ctl">
+            <button className="end" onClick={info.onEnd}>
+              {t(lang, "endTalk")}
+            </button>
+            <button onClick={info.onToggleMic} aria-pressed={info.micMuted} aria-label={t(lang, info.micMuted ? "unmuteMic" : "muteMic")}>
+              <Icon name="mic" />
+            </button>
+            <button onClick={info.onToggleSound} aria-pressed={info.soundOff} aria-label={t(lang, info.soundOff ? "soundOn" : "soundOff")}>
+              <Icon name="speaker" />
+            </button>
+            {chevron}
+          </div>
+          {info.onSend && <TypeBar lang={lang} onSend={info.onSend} />}
+        </>
+      )}
+    </section>
+  );
+}
 
 /**
  * Rendered once at App level (never unmounted), so the avatar stream survives screen changes.
@@ -68,10 +135,13 @@ export function AvatarHost({ live, screen }: { live: boolean; screen: string }) 
     const mo = new MutationObserver(find);
     mo.observe(document.body, { childList: true, subtree: true });
     window.addEventListener("resize", place);
+    // the dock slot sits in a sticky bottom bar, so it moves on the page as the user scrolls
+    window.addEventListener("scroll", place, { passive: true });
     return () => {
       mo.disconnect();
       ro?.disconnect();
       window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place);
     };
   }, [screen, live]);
   const info = useContext(LiveContext);
@@ -93,9 +163,28 @@ function GuideOrAvatar({ live }: { live: LiveInfo | null }) {
 }
 
 /** Small End / mic / sound buttons next to the live tile. */
+/** Typed message to the live avatar (for people who cannot or prefer not to speak). */
+function TypeBar({ lang, onSend }: { lang: string; onSend: (text: string) => boolean }) {
+  const [typed, setTyped] = useState("");
+  return (
+    <form
+      className="typebar"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (onSend(typed)) setTyped("");
+      }}
+    >
+      <input dir="auto" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={t(lang, "typeToGuide")} aria-label={t(lang, "typeToGuide")} />
+      <button className="btn" type="submit" disabled={!typed.trim()}>
+        {t(lang, "send")}
+      </button>
+    </form>
+  );
+}
 function LiveControls({ live }: { live: LiveInfo }) {
   const { lang } = live;
   return (
+    <>
     <div className="livectl">
       <button className="end" onClick={live.onEnd}>
         {t(lang, "endTalk")}
@@ -107,6 +196,8 @@ function LiveControls({ live }: { live: LiveInfo }) {
         <Icon name="play" />
       </button>
     </div>
+    {live.onSend && <TypeBar lang={lang} onSend={live.onSend} />}
+    </>
   );
 }
 export const ROLES = ["auto", "label", "leaflet", "device_photo", "letter", "form", "other"] as const;
@@ -227,7 +318,7 @@ export function LangPill({ lang, onLanguage }: { lang: string; onLanguage: (c: s
   );
 }
 
-export function TopBar({ lang, onLanguage, onSettings, onBrand }: { lang: string; onLanguage: (c: string) => void; onSettings: () => void; onBrand?: () => void }) {
+export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { lang: string; onLanguage: (c: string) => void; onSettings: () => void; onBrand?: () => void; onPapers?: () => void }) {
   return (
     <div className="top">
       <button className="brand" onClick={onBrand} disabled={!onBrand}>
@@ -236,6 +327,11 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand }: { lang: string
       </button>
       <div className="top-right">
         <LangPill lang={lang} onLanguage={onLanguage} />
+        {onPapers && (
+          <button className="round" onClick={onPapers} aria-label={t(lang, "myPapers")}>
+            <Icon name="list" />
+          </button>
+        )}
         <button className="round" onClick={onSettings} aria-label={t(lang, "settings")}>
           <Icon name="sliders" />
         </button>
@@ -273,12 +369,15 @@ interface HomeProps {
   onSettings: () => void;
   onCamera: () => void;
   onUpload: () => void;
-  onSample: (name: string) => void;
+  /** Demo mode only: customers never see the sample chips. */
+  onSample?: (name: string) => void;
+  onPapers: () => void;
+  hasPapers: boolean;
 }
-export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample }: HomeProps) {
+export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers, hasPapers }: HomeProps) {
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} />
+      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
       <div className="hero">
         <h1>
           {t(lang, "homeTitleA")}
@@ -299,12 +398,20 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           {t(lang, "upload")}
         </button>
         <p className="help">{t(lang, "private")}</p>
-        <div className="samples">
-          <span style={{ flexBasis: "100%", textAlign: "center" }}>{t(lang, "trySample")}</span>
-          <button onClick={() => onSample("inhaler")}>{t(lang, "sampleInhaler")}</button>
-          <button onClick={() => onSample("council")}>{t(lang, "sampleLetter")}</button>
-          <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
-        </div>
+        {hasPapers && (
+          <button className="btn soft papers-link" onClick={onPapers}>
+            <Icon name="list" />
+            {t(lang, "myPapers")}
+          </button>
+        )}
+        {onSample && (
+          <div className="samples">
+            <span style={{ flexBasis: "100%", textAlign: "center" }}>{t(lang, "trySample")}</span>
+            <button onClick={() => onSample("inhaler")}>{t(lang, "sampleInhaler")}</button>
+            <button onClick={() => onSample("council")}>{t(lang, "sampleLetter")}</button>
+            <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
+          </div>
+        )}
         <p className="help">
           <a href="tel:999">
             <T lang={lang} k="emergencyLink" />
@@ -350,17 +457,18 @@ interface TrayProps {
   tooMany: boolean;
   onLanguage: (c: string) => void;
   onSettings: () => void;
+  onPapers?: () => void;
   onAdd: () => void;
   onRole: (id: number, r: Role) => void;
   onRemove: (id: number) => void;
   onMove: (id: number, d: -1 | 1) => void;
   onMake: () => void;
 }
-export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onAdd, onRole, onRemove, onMove, onMake }: TrayProps) {
+export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onPapers, onAdd, onRole, onRemove, onMove, onMake }: TrayProps) {
   const n = items.length;
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} />
+      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
       <h1 className="ttl">{t(lang, "yourPapers")}</h1>
       <p className="sub">
         {n} {t(lang, n === 1 ? "item" : "items")} {t(lang, "itemsReady")}.
@@ -518,11 +626,12 @@ interface SummaryProps {
   lang: string;
   onLanguage: (c: string) => void;
   onSettings: () => void;
+  onPapers?: () => void;
   onBack: () => void;
   onStart: () => void;
   onListen: () => void;
 }
-export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, onListen }: SummaryProps) {
+export function Summary({ guide, lang, onLanguage, onSettings, onPapers, onBack, onStart, onListen }: SummaryProps) {
   const k = kindOf(guide);
   const f = guide.facts;
   const c = guide.content;
@@ -535,7 +644,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
   const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} />
+      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} onPapers={onPapers} />
       <div className="card sage" style={{ marginTop: 14 }}>
         <div className="k">{t(lang, "thisIs")}</div>
         <div className="big">{title}</div>
@@ -732,6 +841,7 @@ export function stepHasHow(guide: Guide, step: Step, clips: Clip[]) {
 }
 export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow }: StepProps) {
   const live = useLive();
+  const dock = !!useDock();
   const step = guide.steps[index];
   if (!step) return null;
   const total = guide.steps.length;
@@ -770,22 +880,27 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
           </button>
         )}
       </div>
-      <div className="guide">
-        <GuideOrAvatar live={live} />
-        <div className="bubble" dir="auto">
-          <b>{t(lang, "guideSays")}</b>
-          {step.say || step.text}
+      {!dock && (
+        <div className="guide">
+          <GuideOrAvatar live={live} />
+          <div className="bubble" dir="auto">
+            <b>{t(lang, "guideSays")}</b>
+            {step.say || step.text}
+          </div>
+          {live && <LiveControls live={live} />}
         </div>
-        {live && <LiveControls live={live} />}
-      </div>
-      <div className="nav">
-        <button className="btn soft back" onClick={() => onIndex(index - 1)} disabled={index === 0}>
-          {t(lang, "back")}
-        </button>
-        <button className="btn next" onClick={last ? onFinish : () => onIndex(index + 1)}>
-          {t(lang, last ? "finish" : "next")}
-          <Icon name="arrow" />
-        </button>
+      )}
+      <div className={dock ? "bottombar" : undefined} style={dock ? undefined : { display: "contents" }}>
+        <GuideDock text={step.say || step.text} lang={lang} />
+        <div className="nav">
+          <button className="btn soft back" onClick={() => onIndex(index - 1)} disabled={index === 0}>
+            {t(lang, "back")}
+          </button>
+          <button className="btn next" onClick={last ? onFinish : () => onIndex(index + 1)}>
+            {t(lang, last ? "finish" : "next")}
+            <Icon name="arrow" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -798,6 +913,7 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
   const vid = useRef<HTMLVideoElement>(null);
   const [playing, setPlaying] = useState(false);
   const [slow, setSlow] = useState(false);
+  const dock = !!useDock();
   useEffect(() => {
     if (vid.current) vid.current.playbackRate = slow ? 0.5 : 1;
   }, [slow, playing]);
@@ -860,10 +976,13 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
           {t(lang, "slower")}
         </button>
       </div>
-      <div className="nav">
-        <button className="btn" onClick={onBack}>
-          {t(lang, "close")}
-        </button>
+      <div className={dock ? "bottombar" : undefined} style={dock ? undefined : { display: "contents" }}>
+        <GuideDock text={step.say || step.text} lang={lang} />
+        <div className="nav">
+          <button className="btn" onClick={onBack}>
+            {t(lang, "close")}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -892,6 +1011,7 @@ interface AskProps {
 }
 export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onAsk, onTalk, onTellBack, onPrint, onBack }: AskProps) {
   const live = useLive();
+  const dock = !!useDock();
   const k = kindOf(guide);
   const heading = t(lang, k === "medicine" ? "askAboutMedicine" : "askAboutPaper");
   const [listening, setListening] = useState(false);
@@ -930,7 +1050,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           {t(lang, "allDoneSub")}
         </div>
       </div>
-      {live && (
+      {live && !dock && (
         <div className="guide">
           <GuideOrAvatar live={live} />
           <LiveControls live={live} />
@@ -983,7 +1103,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           ))}
         </div>
       </div>
-      {answer && (
+      {answer && !(dock && live) && (
         <div className="answer" aria-live="polite">
           <b>{t(lang, "guideSays")}</b>
           {answer}
@@ -992,23 +1112,45 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       <p className="safe">
         <b>{t(lang, "notSure")}</b> {safetyLines(guide).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
       </p>
-      <div className="save">
-        <div className="row2" style={{ padding: 0 }}>
-          <button className="btn soft" onClick={onTellBack}>
-            {t(lang, "tellBack")}
+      {dock ? (
+        <>
+          <div className="row2 more">
+            <button className="btn quiet" onClick={onTellBack}>
+              <Icon name="check" />
+              {t(lang, "tellBack")}
+            </button>
+          </div>
+          <div className="bottombar">
+            <GuideDock text={answer ?? t(lang, "allDoneSub")} lang={lang} />
+            <div className="nav">
+              <button className="btn soft back" onClick={onBack}>
+                {t(lang, "back")}
+              </button>
+              <button className="btn next" onClick={onPrint}>
+                {t(lang, "savePrint")}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="save">
+          <div className="row2" style={{ padding: 0 }}>
+            <button className="btn soft" onClick={onTellBack}>
+              {t(lang, "tellBack")}
+            </button>
+            <button className="btn soft" onClick={onTalk}>
+              {t(lang, "talkGuide")}
+            </button>
+          </div>
+          <button className="btn" onClick={onPrint}>
+            <Icon name="print" />
+            {t(lang, "savePrint")}
           </button>
-          <button className="btn soft" onClick={onTalk}>
-            {t(lang, "talkGuide")}
+          <button className="btn soft" onClick={onBack}>
+            {t(lang, "back2")}
           </button>
         </div>
-        <button className="btn" onClick={onPrint}>
-          <Icon name="print" />
-          {t(lang, "savePrint")}
-        </button>
-        <button className="btn soft" onClick={onBack}>
-          {t(lang, "back2")}
-        </button>
-      </div>
+      )}
     </div>
   );
 }
@@ -1016,6 +1158,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
 /* ---------- 8. talk to your guide ---------- */
 interface TalkProps {
   lang: string;
+  onSend?: (text: string) => boolean;
   state: AnamState;
   error: string | null;
   caption: string;
@@ -1030,7 +1173,7 @@ interface TalkProps {
   onToggleMic?: () => void;
   onToggleSound?: () => void;
 }
-export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
+export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, onSend, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
   const live = state === "live";
   return (
     <div className="screen">
@@ -1078,9 +1221,13 @@ export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage
         </button>
         <span>{state === "connecting" ? "…" : live ? t(lang, "listening") + "…" : t(lang, "startTalk")}</span>
       </div>
-      <button className="txt" onClick={onType}>
-        {t(lang, "typeInstead")}
-      </button>
+      {live && onSend ? (
+        <TypeBar lang={lang} onSend={onSend} />
+      ) : (
+        <button className="txt" onClick={onType}>
+          {t(lang, "typeInstead")}
+        </button>
+      )}
     </div>
   );
 }
@@ -1264,10 +1411,14 @@ interface SettingsProps {
   onScale: (v: number) => void;
   onRate: (v: number) => void;
   onVoice: (v: boolean) => void;
+  theme?: Theme;
+  onTheme?: (t: Theme) => void;
   onLanguage: (c: string) => void;
   onBack: () => void;
+  demo?: boolean;
+  onDemo?: (on: boolean) => void;
 }
-export function Settings({ lang, scale, rate, voice, onScale, onRate, onVoice, onLanguage, onBack }: SettingsProps) {
+export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onVoice, onTheme, onLanguage, onBack, demo, onDemo }: SettingsProps) {
   const [other, setOther] = useState(false);
   return (
     <div className="screen">
@@ -1320,14 +1471,148 @@ export function Settings({ lang, scale, rate, voice, onScale, onRate, onVoice, o
             </div>
           )}
         </div>
+        {onTheme && (
+          <div className="sec">
+            <h3>{t(lang, "looks")}</h3>
+            <div className="langs">
+              {THEMES.map((th) => (
+                <button key={th} className={"chip" + (th === theme ? " on" : "")} aria-pressed={th === theme} onClick={() => onTheme(th)}>
+                  {t(lang, THEME_KEY[th])}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <button className="sec toggle" role="switch" aria-checked={voice} onClick={() => onVoice(!voice)}>
           <h3>{t(lang, "readAuto")}</h3>
           <span className={"tg" + (voice ? " on" : "")} />
         </button>
+        {onDemo && (
+          <button className="sec toggle demo-switch" role="switch" aria-checked={!!demo} onClick={() => onDemo(!demo)}>
+            <span>
+              <b>{t(lang, "demoMode")}</b>
+              <small>{t(lang, "demoModeNote")}</small>
+            </span>
+            <span className={"tg" + (demo ? " on" : "")} />
+          </button>
+        )}
       </div>
     </div>
   );
 }
+
+/* ---------- 12. my papers (this device's guides only) ---------- */
+function paperStatus(st: GuideStatus): { key: string; cls: string } {
+  if (st === "ready") return { key: "paperReady", cls: "ok" };
+  if (st === "failed") return { key: "paperFailed", cls: "bad" };
+  return { key: "paperDrawing", cls: "wait" };
+}
+
+function paperDate(lang: string, iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(d);
+  } catch {
+    return d.toLocaleString();
+  }
+}
+
+export interface PaperRow {
+  id: string;
+  title: string;
+  language: string;
+  created_at: string | null;
+  status: GuideStatus;
+  thumbnail: string | null;
+}
+
+interface PapersProps {
+  lang: string;
+  rows: PaperRow[] | null; // null while loading
+  failed: boolean;
+  onBack: () => void;
+  onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
+  onRetry: () => void;
+  onNew: () => void;
+}
+export function MyPapers({ lang, rows, failed, onBack, onOpen, onDelete, onRetry, onNew }: PapersProps) {
+  const [confirm, setConfirm] = useState<string | null>(null);
+  return (
+    <div className="screen">
+      <TitleBar title={t(lang, "myPapers")} lang={lang} onBack={onBack} />
+      <p className="sub">{t(lang, "papersPrivate")}</p>
+      {failed && (
+        <div className="banner" role="alert">
+          <p>{t(lang, "papersLoadFailed")}</p>
+          <button className="btn soft" onClick={onRetry}>
+            {t(lang, "papersRetry")}
+          </button>
+        </div>
+      )}
+      {rows === null && !failed && (
+        <p className="sub" role="status">
+          {t(lang, "papersLoading")}
+        </p>
+      )}
+      {rows && rows.length === 0 && (
+        <div className="papers-empty">
+          <p>{t(lang, "papersEmpty")}</p>
+          <button className="btn" onClick={onNew}>
+            <Icon name="camera" />
+            {t(lang, "scanLabel")}
+          </button>
+        </div>
+      )}
+      {rows && rows.length > 0 && (
+        <ul className="tray papers">
+          {rows.map((r) => {
+            const st = paperStatus(r.status);
+            const title = r.title || t(lang, "yourPaper");
+            return (
+              <li className="item" key={r.id}>
+                {confirm === r.id ? (
+                  <div className="confirm" role="group" aria-label={t(lang, "deleteAsk")}>
+                    <b>{t(lang, "deleteAsk")}</b>
+                    <small dir="auto">{title}</small>
+                    <div className="row2">
+                      <button className="btn soft" onClick={() => setConfirm(null)}>
+                        {t(lang, "deleteKeep")}
+                      </button>
+                      <button className="btn danger" onClick={() => { setConfirm(null); onDelete(r.id); }}>
+                        <Icon name="trash" />
+                        {t(lang, "deleteYes")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button className="open" onClick={() => onOpen(r.id)}>
+                      <div className="th">{r.thumbnail ? <img src={r.thumbnail} alt="" /> : <Icon name="doc" />}</div>
+                      <div className="meta">
+                        <b dir="auto">{title}</b>
+                        <small>
+                          <bdi>{paperDate(lang, r.created_at)}</bdi> · <bdi>{languageLabel(r.language)}</bdi>
+                        </small>
+                        <span className={"pstat " + st.cls}>{t(lang, st.key)}</span>
+                      </div>
+                    </button>
+                    <button className="round" onClick={() => setConfirm(r.id)} aria-label={`${t(lang, "deletePaper")}: ${title}`}>
+                      <Icon name="trash" />
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 
 /* ---------- dev panel + print ---------- */
 export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {

@@ -1,6 +1,6 @@
 # Demo morning checklist
 
-For the 3-minute script in `demo/SCRIPT.md`. Judging Sun 13:00 to 16:30, Huxley 308.
+For the live script in `demo/SCRIPT.md` (the video is 2 minutes, see `demo/VIDEO.md`). Judging Sun 13:00 to 16:30, Huxley 308.
 
 ## 1. Before leaving home / on arrival
 - [ ] Laptop charged and charger in the bag. Phone hotspot as a second network.
@@ -33,10 +33,11 @@ cd web && npm run dev
 Do not run a paid upload while in free mode: uploading needs a model.
 
 ## 4. Browser setup
+- **Open the app with `?demo=1` first** (`http://localhost:5173/?demo=1`). Without it the app is in customer mode: no sample chips on home and no Tool calls panel. The browser remembers demo mode; Settings > Demo mode turns it off. `#/sample/...` tabs work either way.
 - Chrome, one window, a fresh profile or incognito (no extensions, no password popups).
 - Zoom 100% to 125%. Narrow the window to a phone frame (about 390 px wide, DevTools device toolbar, iPhone 14) or keep desktop and say so. Make sure the 999 link and the dev panel button are visible.
 - Allow microphone for localhost (needed for talking to the avatar) and sound on.
-- Tabs, in order: 1 app home `/`; 2 `#/sample/cached-inhaler` (plan B); 3 `#/sample/council`; 4 `#/sample/flatpack`; 5 Figma https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w; 6 slide or terminal with the Adaption win rate; 7 README on GitHub.
+- Tabs, in order: 1 app home `/?demo=1`; 2 `#/sample/cached-inhaler` (plan B); 3 `#/sample/council`; 4 `#/sample/flatpack`; 5 Figma https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w; 6 slide or terminal with the Adaption win rate; 7 README on GitHub.
 - Dev panel: tap "Tool calls (n)" at the bottom once the avatar starts.
 
 ## 5. Dry run (5 minutes before)
@@ -47,7 +48,7 @@ Do not run a paid upload while in free mode: uploading needs a model.
 - [ ] Take a screenshot of the Tool calls log as backup evidence.
 
 ## 6. Reset between judges
-- Refresh the tab (guides live in memory; samples and the cached run reload themselves). Language back to English, text size back to default in Settings.
+- Refresh the tab (samples and the cached run reload themselves). Guides now survive a restart (`data/guides`); delete a judge's upload from **My papers** (top bar list button) if you want a clean list. Language back to English, text size back to default in Settings.
 - If anything is odd: stop and restart uvicorn, hard refresh the browser.
 - Delete old uploads if you want (`$TMPDIR/easyread_uploads`, or `UPLOAD_DIR`).
 

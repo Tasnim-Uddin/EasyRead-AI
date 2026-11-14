@@ -5,6 +5,8 @@ import { LANGUAGES, t } from "./i18n";
 import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
 import { useAnam, type ToolHandler } from "./useAnam";
 import { speak, stopSpeaking, voiceSettings } from "./speech";
+import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
+import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
@@ -17,6 +19,8 @@ import {
   ErrorScreen,
   Home,
   MAX_FILES,
+  MyPapers,
+  type PaperRow,
   PrintSheet,
   Reading,
   Settings,
@@ -31,7 +35,7 @@ import {
 } from "./screens";
 
 const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
-type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings";
+type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 
 function load<T>(key: string, fallback: T): T {
@@ -85,6 +89,16 @@ export default function App() {
   const [scale, setScale] = useState(() => load("er.scale", 1));
   const [rate, setRate] = useState(() => load("er.rate", 1));
   const [voice, setVoice] = useState(() => load("er.voice", true));
+  // Customer mode by default; demo mode (?demo=1, the Settings switch, or a #/sample link) shows samples and dev tools.
+  const [demo, setDemo] = useState(initialDemo);
+  const [mine, setMine] = useState<string[]>(myGuideIds);
+  const [papers, setPapers] = useState<PaperRow[] | null>(null);
+  const [papersFailed, setPapersFailed] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => {
+    const th = initialTheme();
+    applyTheme(th); // before the first paint, so the page never flashes the old look
+    return th;
+  });
 
   const voiceRef = useRef(voice);
   const indexRef = useRef(0);
@@ -114,6 +128,7 @@ export default function App() {
     document.documentElement.style.setProperty("--scale", String(scale));
     save("er.scale", scale);
   }, [scale]);
+  useEffect(() => applyTheme(theme), [theme]);
   useEffect(() => save("er.rate", rate), [rate]);
   useEffect(() => save("er.voice", voice), [voice]);
   useEffect(() => {
@@ -225,8 +240,16 @@ export default function App() {
           : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
       },
       answer_from_document: async ({ question: q }) => {
-        if (!g() || isSample(g())) return SAFE_FALLBACK;
-        const r = await api.ask(g()!.id, String(q), langRef.current);
+        if (!g()) return SAFE_FALLBACK;
+        // Sample guides are loaded on the server too (g_sample_*), so they answer from their document as well.
+        // With no server (offline demo) a sample falls back to the safe line instead of an error.
+        let r: Awaited<ReturnType<typeof api.ask>>;
+        try {
+          r = await api.ask(g()!.id, String(q), langRef.current);
+        } catch (e) {
+          if (isSample(g())) return SAFE_FALLBACK;
+          throw e;
+        }
         const tail = r.escalate === "999" ? " If this is an emergency, call 999." : r.escalate === "111" ? " Call 111 for urgent advice." : "";
         return r.answer + tail;
       },
@@ -241,7 +264,10 @@ export default function App() {
         if (!cleanLanguage(code)) return "I can't switch to that language yet.";
         setLang(code);
         anamLangRef.current(code);
-        if (g() && !isSample(g())) {
+        if (g() && isSample(g())) {
+          const v = api.sampleVariant(g()!, code);
+          if (v && v.id !== g()!.id) setGuide(v); // same screen and step index
+        } else if (g()) {
           setLangBusy(true);
           try {
             setGuide(await api.setLanguage(g()!.id, code));
@@ -320,6 +346,8 @@ export default function App() {
     try {
       const f = api.buildGuideForm(items, lang);
       const { guide_id } = await api.createGuide(f);
+      rememberGuide(guide_id); // "My papers" on this device only
+      setMine(myGuideIds());
       const g = await api.getGuide(guide_id);
       setGuide(g);
       setIndex(0);
@@ -333,8 +361,67 @@ export default function App() {
     }
   }
 
+  /* ---- My papers: the guides made on this device (ids kept in localStorage, CONTRACTS.md section 2) ---- */
+  const loadPapers = useCallback(() => {
+    const ids = myGuideIds();
+    setMine(ids);
+    setPapersFailed(false);
+    setPapers(null);
+    if (ids.length === 0) {
+      setPapers([]);
+      return;
+    }
+    api
+      .listGuides(ids)
+      .then((rows) => setPapers(rows))
+      .catch(() => setPapersFailed(true));
+  }, []);
+
+  function openPapers() {
+    loadPapers();
+    go("papers");
+  }
+
+  async function openPaper(id: string) {
+    try {
+      const g = await api.getGuide(id);
+      setGuide(g);
+      setIndex(0);
+      setAnswer(null);
+      setLog([]);
+      // No steps yet (still being read, or it failed): the progress screen opens the summary or the error when it can.
+      go(g.steps.length ? "summary" : "reading");
+    } catch (e) {
+      if (e instanceof api.ApiError && e.code !== "server") {
+        forgetGuide(id);
+        setMine(myGuideIds());
+        setPapers((rows) => rows?.filter((r) => r.id !== id) ?? rows);
+        setError({ title: t(langRef.current, "paperGone"), detail: null });
+        go("error");
+      } else setPapersFailed(true);
+    }
+  }
+
+  async function deletePaper(id: string) {
+    try {
+      await api.deleteGuide(id);
+    } catch {
+      setPapersFailed(true);
+      return;
+    }
+    forgetGuide(id);
+    setMine(myGuideIds());
+    setPapers((rows) => rows?.filter((r) => r.id !== id) ?? rows);
+    if (guideRef.current?.id === id) setGuide(null);
+  }
+
+  function changeDemo(on: boolean) {
+    saveDemo(on);
+    setDemo(on);
+  }
+
   function openSample(name: string, to: Screen = "summary", at = 0) {
-    const g = api.SAMPLES[name];
+    const g = api.sampleFor(name, langRef.current);
     if (!g) return;
     setGuide(g);
     setIndex(at);
@@ -403,8 +490,10 @@ export default function App() {
     void runTool(i === index + 1 ? "next_step" : i === index - 1 ? "previous_step" : "show_step", { index: i });
   }
 
-  // `?fakelive` (dev builds only) shows the live layout without a real Anam session, for screenshots.
-  const fakeLive = import.meta.env.DEV && location.search.includes("fakelive");
+  // `?fakelive` (dev builds, demo mode only) shows the live layout without a real Anam session, for screenshots.
+  const fakeLive = import.meta.env.DEV && demo && location.search.includes("fakelive");
+  const status = uploading ? "uploading" : guide?.status ?? "uploading";
+  const lastSay = log.find((l) => l.say)?.say ?? "";
   const liveState = fakeLive ? "live" : anam.state;
   const liveInfo: LiveInfo = {
     live: liveState === "live",
@@ -414,10 +503,12 @@ export default function App() {
     soundOff: anam.soundOff,
     onToggleMic: anam.toggleMic,
     onToggleSound: anam.toggleSound,
+    onSend: anam.send,
+    dock: dockOn(theme),
+    caption: lastSay,
+    onTalk: () => go("talk"),
   };
 
-  const status = uploading ? "uploading" : guide?.status ?? "uploading";
-  const lastSay = log.find((l) => l.say)?.say ?? "";
 
   return (
     <LiveContext.Provider value={liveInfo}>
@@ -432,7 +523,9 @@ export default function App() {
             onSettings={openSettings}
             onCamera={() => cameraRef.current?.click()}
             onUpload={() => uploadRef.current?.click()}
-            onSample={(n) => openSample(n)}
+            onSample={demo ? (n) => openSample(n) : undefined}
+            onPapers={openPapers}
+            hasPapers={mine.length > 0}
           />
         )}
         {screen === "check" && checking && (
@@ -446,6 +539,7 @@ export default function App() {
             tooMany={tooMany}
             onLanguage={changeLanguage}
             onSettings={openSettings}
+            onPapers={openPapers}
             onAdd={() => uploadRef.current?.click()}
             onRole={(id, r) => setItems((c) => c.map((i) => (i.id === id ? { ...i, role: r } : i)))}
             onRemove={(id) => {
@@ -476,6 +570,7 @@ export default function App() {
             lang={lang}
             onLanguage={changeLanguage}
             onSettings={openSettings}
+            onPapers={openPapers}
             onBack={startOver}
             onStart={() => { setIndex(0); go("step"); }}
             onListen={() => void speak(summaryText(guide), lang)}
@@ -525,6 +620,7 @@ export default function App() {
             onToggleMic={anam.toggleMic}
             onToggleSound={anam.toggleSound}
             onType={() => { void anam.stop(); go("ask"); }}
+            onSend={anam.send}
           />
         )}
         {screen === "tellback" && guide && (
@@ -548,11 +644,27 @@ export default function App() {
             scale={scale}
             rate={rate}
             voice={voice}
+            theme={theme}
+            onTheme={setTheme}
             onScale={setScale}
             onRate={setRate}
             onVoice={setVoice}
             onLanguage={changeLanguage}
             onBack={() => go(prevScreen === "settings" ? "home" : prevScreen)}
+            demo={demo}
+            onDemo={changeDemo}
+          />
+        )}
+        {screen === "papers" && (
+          <MyPapers
+            lang={lang}
+            rows={papers}
+            failed={papersFailed}
+            onBack={() => go(items.length ? "tray" : "home")}
+            onOpen={(id) => void openPaper(id)}
+            onDelete={(id) => void deletePaper(id)}
+            onRetry={loadPapers}
+            onNew={() => cameraRef.current?.click()}
           />
         )}
 
@@ -561,7 +673,7 @@ export default function App() {
             {t(lang, "changingLanguage")}
           </p>
         )}
-        <DevPanel log={log} lang={lang} />
+        {demo && <DevPanel log={log} lang={lang} />}
       </div>
       {guide && <PrintSheet guide={guide} lang={lang} />}
       <AvatarHost live={liveInfo.live} screen={screen} />

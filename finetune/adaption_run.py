@@ -20,18 +20,21 @@ def show(x):
 
 
 def filter_file(path):
-    """Keep exported rows whose completion is a JSON step list that passes score_generic."""
+    """Keep exported rows whose completion is a JSON step list that passes score_generic.
+    Adaption exports carry enhanced_* (generated rows) and original_* (our seeds): prefer enhanced."""
     out, kept, total = f"{DATA}/train_filtered.jsonl", 0, 0
     with open(path) as f, open(out, "w") as o:
         for line in f:
             total += 1
             try:
-                row = json.loads(line)
-                steps = json.loads(row["completion"]) if isinstance(row["completion"], str) else row["completion"]
+                r = json.loads(line)
+                prompt = r.get("enhanced_prompt") or r.get("original_prompt") or r["prompt"]
+                comp = r.get("enhanced_completion") or r.get("original_completion") or r["completion"]
+                steps = json.loads(comp) if isinstance(comp, str) else comp
             except (ValueError, KeyError):
                 continue
             if score_generic(steps)["passed"]:
-                o.write(json.dumps(row) + "\n")
+                o.write(json.dumps({"prompt": prompt, "completion": comp if isinstance(comp, str) else json.dumps(comp)}) + "\n")
                 kept += 1
     print(f"kept {kept}/{total} -> {out}")
 

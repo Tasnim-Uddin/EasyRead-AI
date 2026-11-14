@@ -7,3 +7,6 @@ __pycache__/
 
 finetune/data/
 .cache/
+
+# saved guides (GUIDES_DIR default)
+data/

@@ -10,7 +10,7 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 | fal | `fal-client` (Python) | `media/` |
 | Technique-clip library | JSON index + media files (or fal URLs) | `library/` |
 | Easy Read rewriter | Adaption fine-tuned model; base LLM fallback behind the same function | `finetune/` |
-| Storage | MongoDB Atlas (`pymongo`); in-memory dict fallback if `MONGODB_URI` is unset | `agent/` |
+| Storage | MongoDB Atlas (`pymongo`) when `MONGODB_URI` is set; otherwise one JSON file per guide in `GUIDES_DIR` (default `<repo>/data/guides`, gitignored), loaded at startup. Only the guide JSON is saved (text, facts, URLs), never the uploaded files | `agent/` |
 
 - The frontend dev server proxies `/api/*` to `http://localhost:8000`.
 - Python deps go in `requirements.txt` at the repo root.
@@ -90,6 +90,9 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
   - All files go to the vision model in **one** extraction call.
   - Limits: at most **8 files** (device photo included), **20 pages** in total (a PDF counts its pages), 15 MB per file. Errors are JSON `{ error, detail }`: `413 too_many_files`, `413 too_many_pages`, `413 file_too_large`, `400 unsupported_file_type`, `400 bad_role`, `400 bad_roles` (more roles than files, or not a list), `400 document_required` (when the server has a model key and no file was sent).
 - `GET /api/guides/{id}` → Guide.
+- `GET /api/guides?ids=g_a,g_b` → `{ guides: [ { id, title, language, doc_type, created_at, status, thumbnail } ] }`, newest first ("My papers"). `title` = `facts.medicine`, else `content.what_this_is`, else `facts.title`, else the first step's text; `thumbnail` = the first step `image_url` (or null). **Privacy: the list is per device, never global.** The web keeps the ids of the guides it created in `localStorage` (`er.myGuides`) and sends them here; the server returns only those ids (unknown ids and samples are skipped, at most 200). No `ids` → `{ guides: [] }`.
+- `DELETE /api/guides/{id}` → `{ deleted: id }`; removes the guide, its saved JSON and its uploaded files. `404` for unknown ids and samples.
+- Guides that were still being made when the server stopped come back as `ready` (if their steps were written; unfinished pictures are `failed`) or `failed`.
 - `GET /api/guides/{id}/events` → **Server-Sent Events**:
   ```jsonc
   { "type": "guide_status", "guide_id": "g_…", "status": "illustrating" }
