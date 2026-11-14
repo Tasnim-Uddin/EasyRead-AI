@@ -83,6 +83,16 @@ export function TitleBar({ title, lang, onBack, right }: { title: string; lang: 
   );
 }
 
+/* Persistent 999 link: shown on every guide screen (same rule as the home screen: all document kinds). */
+export function EmergencyLink({ lang, warn }: { lang: string; warn?: boolean }) {
+  return (
+    <a className={"sos" + (warn ? " warn" : "")} href="tel:999">
+      <Icon name="alert" style={{ width: 20, height: 20 }} />
+      {t(lang, "emergencyLink")}
+    </a>
+  );
+}
+
 /* ---------- 1. home ---------- */
 interface HomeProps {
   lang: string;
@@ -515,6 +525,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
           {index + 1} {t(lang, "of")} {total}
         </div>
       </div>
+      <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
       <StepPicture step={step} lang={lang} />
       <div className="step" aria-live="polite">
         {step.text}
@@ -670,6 +681,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
 
   return (
     <div className="screen">
+      <EmergencyLink lang={lang} />
       <div className="done-card">
         <div className="tick">
           <Icon name="check" />
@@ -864,6 +876,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
           {qi + 1} {t(lang, "of")} {qs.length}
         </div>
       </div>
+      <EmergencyLink lang={lang} />
       <h1 className="qtitle">{q.q}</h1>
       <div className="choices" role="radiogroup" aria-label={q.q}>
         {q.options.map((o, i) => (
