@@ -8,6 +8,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
 from . import docs, langs, llm, persona, pipeline, qa, tts
+from . import sheet as sheet_mod
+from . import sheet as sheet_mod
 from .store import Store
 
 if not os.environ.get("EASYREAD_NO_DOTENV"):  # tests set this so a real .env never leaks in
@@ -198,6 +200,7 @@ async def set_language(gid: str, req: LangReq):
     except Exception:
         pass  # keep existing text if translation fails
     await pipeline.translate_safety(g, req.language)
+    await pipeline.translate_summary(g, req.language)
     g["language"] = req.language
     store.put(g)
     for s in g["steps"]:
@@ -218,6 +221,14 @@ async def ask(gid: str, req: AskReq):
 async def check_understanding(gid: str, req: CheckReq):
     g = _guide(gid)
     f = g.get("facts") or {}
+    if f.get("conflicts"):
+        # The label and the leaflet disagree: never quiz a dose as if one of them were right.
+        if not req.answer:
+            return {"say": "Your label and leaflet say different things. What do you do?", "correct": None}
+        ok = "pharmacist" in req.answer.lower()
+        say = ("Well done, that is right. Ask your pharmacist before you use it." if ok else
+               "Nearly. Ask your pharmacist before you use it, because your label and leaflet say different things.")
+        return {"say": say, "correct": ok}
     if not req.answer:
         say = "Can you tell me in your own words how many puffs, and when you use it?" if f.get("device_type", "").startswith("inhaler") \
             else "Can you tell me in your own words how much to take, and when?"
@@ -294,11 +305,7 @@ def library():
 
 @app.get("/api/guides/{gid}/sheet", response_class=HTMLResponse)
 def sheet(gid: str):
-    g = _guide(gid)
-    items = "".join(f"<li><div class=p>{'<img src=\"%s\">' % s['image_url'] if s.get('image_url') else ''}</div>"
-                    f"<p>{s['text']}</p></li>" for s in g["steps"])
-    return (f"<!doctype html><meta charset=utf-8><title>Easy Read</title><style>body{{font:24px sans-serif;max-width:800px;margin:auto}}"
-            f"li{{margin:1em 0;page-break-inside:avoid}}img{{max-width:240px}}</style><h1>{(g['facts'] or {}).get('medicine') or 'Your guide'}</h1><ol>{items}</ol>")
+    return sheet_mod.render(_guide(gid))
 
 
 # Serve the built web app from this one origin (so a single tunnel port is enough). Registered last so every /api route

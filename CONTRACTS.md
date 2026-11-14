@@ -14,7 +14,7 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 
 - The frontend dev server proxies `/api/*` to `http://localhost:8000`.
 - Python deps go in `requirements.txt` at the repo root.
-- Env var names are in `.env.example`.
+- Env var names are in `.env.example`. `PICTURE_CONCURRENCY` (default 6, at least 1) sets how many step pictures are made at once.
 - Languages use BCP-47 codes (`en`, `es`, `bn`, `ar`, …). `ar`, `ur` and `he` are right-to-left.
 
 ## 1. Guide JSON (the central object)
@@ -23,11 +23,15 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 {
   "id": "g_…",
   "status": "extracting|writing|illustrating|ready|failed",
+  "error_code": "not_a_document",              // only when failed: not_a_document | unreadable (no words could be read); "error" holds the English message
   "language": "en",
   "doc_type": "how_to",                        // how_to | letter | bill | form | other. Missing = how_to (older guides, fixtures)
   "domain": "medicine",                        // medicine | money | legal | school | council | other
   "source": { "kind": "prescription|leaflet|letter|other", "image_urls": ["…"], "is_sample": true,
               "documents": [ { "index": 1, "role": "label", "role_source": "client|detected", "image_url": "…" } ] },  // one per uploaded file, same order as image_urls
+  // Optional, only when a device photo was uploaded, FAL_KEY is set and the device type is known (fal edit, best effort, never blocks the guide):
+  //   "device_photo_url": "/api/uploads/…", "device_photo_labelled_url": "https://…" (the photo with numbered circles on its parts, no words),
+  //   "device_photo_labels": ["cap", "mouthpiece", "canister"]  // English part keys, circle 1..n in order; the web shows the legend in the user's language
   "facts": {                                   // extracted from the document; null when not present
     "medicine": "Salbutamol 100 micrograms inhaler",
     "dose": "2 puffs", "frequency": "when needed, up to 4 times a day",

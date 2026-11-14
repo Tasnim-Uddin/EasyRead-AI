@@ -65,6 +65,10 @@ def test_cap_keeps_first_and_help():
     steps = [{"text_en": "This is a letter.", "kind": "what", "picture_prompt": "x"}] + many + \
             [{"text_en": "Ask for help now please.", "kind": "get_help", "picture_prompt": "x"}]
     out = postprocess.cap(steps, "letter", "council")
+    # Every step here carries its own number (a fact), so cap() allows a few extra steps before it trims facts.
+    assert len(out) == 8 + postprocess.EXTRA_FOR_FACTS and out[0]["kind"] == "what" and out[-1]["kind"] == "get_help"
+    plain = [{**s, "text_en": f"Do thing {c} with part {c}."} for c, s in zip("abcdefghijklmnopqrs", many)]
+    out = postprocess.cap(steps[:1] + plain + steps[-1:], "letter", "council")
     assert len(out) == 8 and out[0]["kind"] == "what" and out[-1]["kind"] == "get_help"
 
 

@@ -20,7 +20,10 @@
       "poster_url": "/api/library/clips/inhaler_mdi_shake.poster.png",
       "checked_by": null,
       "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
-      "checked_at": null
+      "checked_at": null,
+      "match": [
+        "shake"
+      ]
     },
     {
       "id": "inhaler_mdi_3",
@@ -34,15 +37,22 @@
       "checked_at": null
     },
     {
-      "id": "inhaler_mdi_4",
+      "id": "inhaler_mdi_press",
       "device_type": "inhaler_mdi",
       "order": 4,
-      "caption_en": "Press once and breathe in slowly.",
-      "video_url": null,
-      "poster_url": null,
+      "caption_en": "Lips round the mouthpiece. Press once as you breathe in slowly.",
+      "video_url": "/api/library/clips/inhaler_mdi_press.mp4",
+      "poster_url": "/api/library/clips/inhaler_mdi_press.poster.png",
       "checked_by": null,
-      "checked_against": null,
-      "checked_at": null
+      "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
+      "checked_at": null,
+      "match": [
+        "press your inhaler",
+        "press the inhaler",
+        "press down",
+        "press once"
+      ],
+      "exact_device": true
     },
     {
       "id": "inhaler_mdi_hold",
@@ -53,7 +63,10 @@
       "poster_url": "/api/library/clips/inhaler_mdi_hold.poster.png",
       "checked_by": null,
       "checked_against": "https://services.nhslothian.scot/respiratory/wp-content/uploads/sites/30/2024/01/NHS-Lothian-Inhaler-Training-Guide-Dec-2023.pdf",
-      "checked_at": null
+      "checked_at": null,
+      "match": [
+        "hold your breath"
+      ]
     },
     {
       "id": "inhaler_mdi_spacer_1",

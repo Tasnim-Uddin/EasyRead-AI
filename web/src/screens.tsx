@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Clip, Guide, GuideStatus, Step, ToolLogEntry } from "./types";
-import { LANGUAGES, t } from "./i18n";
+import { LANGUAGES, isFallback, t, tf } from "./i18n";
+import { Counted, Counter, CountThen, T } from "./bidi";
 import { canSpeak, findWorld, isRtl, languageLabel, languageValue, searchLanguages } from "./languages";
 import Icon, { GuideFace } from "./icons";
 import { speak } from "./speech";
@@ -18,6 +19,7 @@ export interface LiveInfo {
   soundOff: boolean;
   onToggleMic: () => void;
   onToggleSound: () => void;
+  onSend?: (text: string) => boolean;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
 const useLive = () => {
@@ -92,9 +94,28 @@ function GuideOrAvatar({ live }: { live: LiveInfo | null }) {
 }
 
 /** Small End / mic / sound buttons next to the live tile. */
+/** Typed message to the live avatar (for people who cannot or prefer not to speak). */
+function TypeBar({ lang, onSend }: { lang: string; onSend: (text: string) => boolean }) {
+  const [typed, setTyped] = useState("");
+  return (
+    <form
+      className="typebar"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (onSend(typed)) setTyped("");
+      }}
+    >
+      <input dir="auto" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={t(lang, "typeToGuide")} aria-label={t(lang, "typeToGuide")} />
+      <button className="btn" type="submit" disabled={!typed.trim()}>
+        {t(lang, "send")}
+      </button>
+    </form>
+  );
+}
 function LiveControls({ live }: { live: LiveInfo }) {
   const { lang } = live;
   return (
+    <>
     <div className="livectl">
       <button className="end" onClick={live.onEnd}>
         {t(lang, "endTalk")}
@@ -106,6 +127,8 @@ function LiveControls({ live }: { live: LiveInfo }) {
         <Icon name="play" />
       </button>
     </div>
+    {live.onSend && <TypeBar lang={lang} onSend={live.onSend} />}
+    </>
   );
 }
 export const ROLES = ["auto", "label", "leaflet", "device_photo", "letter", "form", "other"] as const;
@@ -260,7 +283,7 @@ export function EmergencyLink({ lang, warn }: { lang: string; warn?: boolean }) 
   return (
     <a className={"sos" + (warn ? " warn" : "")} href="tel:999">
       <Icon name="alert" style={{ width: 20, height: 20 }} />
-      {t(lang, "emergencyLink")}
+      <T lang={lang} k="emergencyLink" />
     </a>
   );
 }
@@ -305,7 +328,9 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
         </div>
         <p className="help">
-          <a href="tel:999">{t(lang, "emergencyLink")}</a>
+          <a href="tel:999">
+            <T lang={lang} k="emergencyLink" />
+          </a>
         </p>
       </div>
     </div>
@@ -481,6 +506,35 @@ export function summaryText(g: Guide): string {
   return [f?.medicine ?? f?.title, f?.dose, f?.frequency].filter(Boolean).join(". ") + `. ${g.steps.length} ${t(g.language, "steps")}.`;
 }
 
+function DeviceCard({ guide, lang }: { guide: Guide; lang: string }) {
+  const [original, setOriginal] = useState(false);
+  const src = guide.source;
+  if (!src.device_photo_labelled_url) return null;
+  const orig = src.device_photo_url;
+  const labels = src.device_photo_labels ?? [];
+  const title = t(lang, guide.facts?.device_type?.startsWith("inhaler") ? "yourInhaler" : "yourItem");
+  const showOrig = original && !!orig;
+  return (
+    <div className="card device">
+      <div className="k">{title}</div>
+      <img src={showOrig ? orig! : src.device_photo_labelled_url} alt={`${title}. ${t(lang, "itemCaption")}`} />
+      <p dir="auto">{t(lang, "itemCaption")}</p>
+      {!showOrig && labels.length > 0 && (
+        <ol className="legend" dir="auto">
+          {labels.map((x) => (
+            <li key={x}>{t(lang, "part_" + x)}</li>
+          ))}
+        </ol>
+      )}
+      {orig && (
+        <button className="btn soft small" onClick={() => setOriginal(!original)}>
+          {t(lang, showOrig ? "showLabelled" : "showOriginal")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface SummaryProps {
   guide: Guide;
   lang: string;
@@ -500,7 +554,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
   const warnings = (f?.warnings ?? []).filter((w) => !w.startsWith("Your label and leaflet say different"));
   const title =
     k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper");
-  const subline = k === "medicine" ? [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
+  const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   return (
     <div className="screen">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} />
@@ -509,6 +563,8 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
         <div className="big">{title}</div>
         {subline && <p>{subline}</p>}
       </div>
+
+      <DeviceCard guide={guide} lang={lang} />
 
       {conflicts.length > 0 && (
         <div className="card butter" role="alert">
@@ -574,7 +630,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
           <div className="fact">
             <div className="k">{t(lang, "youWillLearn")}</div>
             <div className="v">
-              {guide.steps.length} {t(lang, "steps")}
+              <CountThen lang={lang} k="steps" count={guide.steps.length} />
             </div>
           </div>
           {k === "medicine" && f?.dose && (
@@ -612,8 +668,13 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
         </div>
       )}
 
+      {guide.status === "illustrating" && guide.steps.some(pictureComing) && (
+        <p className="safe" role="status">
+          {t(lang, "rowPictures")}…
+        </p>
+      )}
       {guide.source.is_sample && <p className="safe">{t(lang, "sampleNote")}</p>}
-      <p className="safe">
+      <p className="safe" dir="auto">
         {safetyLines(guide).map((l, i) => (
           <span key={i}>
             {l}{" "}
@@ -639,6 +700,8 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
 /* ---------- 5. step ---------- */
 const KIND_ICON: Record<string, string> = { what: "doc", when: "sun", how: "hand", warning: "alert", get_help: "alert" };
 
+export const pictureComing = (s: Step) => !s.image_url && (s.status === "pending" || s.status === "generating");
+
 function StepPicture({ step, lang }: { step: Step; lang: string }) {
   const butter = step.kind === "warning" || step.kind === "get_help";
   const badge = butter ? (
@@ -656,11 +719,21 @@ function StepPicture({ step, lang }: { step: Step; lang: string }) {
       </div>
     );
   }
-  const working = step.status === "pending" || step.status === "generating";
+  const icon = <Icon name={KIND_ICON[step.kind] ?? "doc"} style={butter ? { width: 72, height: 72, strokeWidth: 2.6 } : undefined} />;
+  if (pictureComing(step)) {
+    // Same box as the finished picture, so nothing jumps when it arrives.
+    return (
+      <div className={"pic loading" + (butter ? " warn" : " ph")} role="img" aria-label={t(lang, "rowPictures")}>
+        {badge}
+        {icon}
+      </div>
+    );
+  }
+  // No picture (failed or offline): the step text is enough. A calm icon, no error text.
   return (
-    <div className={"pic small" + (butter ? " warn" : " ph")}>
+    <div className={"pic" + (step.status === "failed" ? "" : " small") + (butter ? " warn" : " ph")}>
       {badge}
-      {working ? <div className="spin" /> : <Icon name={KIND_ICON[step.kind] ?? "doc"} style={butter ? { width: 72, height: 72, strokeWidth: 2.6 } : undefined} />}
+      {icon}
     </div>
   );
 }
@@ -697,7 +770,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
           ))}
         </div>
         <div className="of">
-          {index + 1} {t(lang, "of")} {total}
+          <Counter lang={lang} n={index + 1} total={total} />
         </div>
       </div>
       <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
@@ -771,6 +844,10 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
           <video ref={vid} src={clip.video_url} poster={clip.poster_url} loop muted playsInline controls={playing} aria-label={clip.caption_en} />
         ) : step.image_url ? (
           <img src={step.image_url} alt="" />
+        ) : pictureComing(step) ? (
+          <div className="loading fill" role="img" aria-label={t(lang, "rowPictures")}>
+            <Icon name="hand" size={72} />
+          </div>
         ) : (
           <Icon name="hand" size={72} />
         )}
@@ -815,11 +892,11 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
 }
 
 /* ---------- 7. ask / finish ---------- */
-const CHIPS: Record<Kind, string[]> = {
-  medicine: ["How much do I take?", "What if I miss one?", "Can I eat first?"],
-  letter: ["What do I need to do?", "When is the deadline?", "Who do I call?"],
-  form: ["What do I write first?", "Which boxes can stay empty?"],
-  howto: ["What do I do first?", "What if a part is missing?"],
+const CHIP_KEYS: Record<Kind, string[]> = {
+  medicine: ["cMed1", "cMed2", "cMed3"],
+  letter: ["cLet1", "cLet2", "cLet3"],
+  form: ["cForm1", "cForm2"],
+  howto: ["cHow1", "cHow2"],
 };
 
 interface AskProps {
@@ -838,7 +915,7 @@ interface AskProps {
 export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onAsk, onTalk, onTellBack, onPrint, onBack }: AskProps) {
   const live = useLive();
   const k = kindOf(guide);
-  const noun = k === "medicine" ? "medicine" : "paper";
+  const heading = t(lang, k === "medicine" ? "askAboutMedicine" : "askAboutPaper");
   const [listening, setListening] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const SR = (window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -871,7 +948,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           <Icon name="check" />
         </div>
         <div>
-          <strong>{t(lang, "allDone").replace("{n}", String(guide.steps.length))}</strong>
+          <strong dir={isFallback(lang, "allDone") ? "ltr" : undefined}>{tf(lang, "allDone", { n: guide.steps.length })}</strong>
           {t(lang, "allDoneSub")}
         </div>
       </div>
@@ -883,7 +960,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       )}
       <div className="ask">
         <h2>
-          {t(lang, "askAbout")} {noun}
+          {heading}
         </h2>
         <label>
           <span className="sr">{t(lang, "askExample")}</span>
@@ -913,10 +990,11 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           <span>{listening ? t(lang, "listening") + "…" : <>{t(lang, "tapSpeak")}<br />{t(lang, "orType")}</>}</span>
         </div>
         <div className="chips">
-          {CHIPS[k].map((c) => (
+          {CHIP_KEYS[k].map((ck) => t(lang, ck)).map((c) => (
             <button
               key={c}
               className="chip"
+              disabled={busy}
               onClick={() => {
                 onQuestion(c);
                 onAsk(c);
@@ -960,6 +1038,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
 /* ---------- 8. talk to your guide ---------- */
 interface TalkProps {
   lang: string;
+  onSend?: (text: string) => boolean;
   state: AnamState;
   error: string | null;
   caption: string;
@@ -974,7 +1053,7 @@ interface TalkProps {
   onToggleMic?: () => void;
   onToggleSound?: () => void;
 }
-export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
+export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, onSend, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
   const live = state === "live";
   return (
     <div className="screen">
@@ -1022,9 +1101,13 @@ export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage
         </button>
         <span>{state === "connecting" ? "…" : live ? t(lang, "listening") + "…" : t(lang, "startTalk")}</span>
       </div>
-      <button className="txt" onClick={onType}>
-        {t(lang, "typeInstead")}
-      </button>
+      {live && onSend ? (
+        <TypeBar lang={lang} onSend={onSend} />
+      ) : (
+        <button className="txt" onClick={onType}>
+          {t(lang, "typeInstead")}
+        </button>
+      )}
     </div>
   );
 }
@@ -1036,7 +1119,8 @@ export interface Question {
   correct: number;
   icons: string[];
 }
-export function buildQuestions(g: Guide): Question[] {
+export function buildQuestions(g: Guide, lang = "en"): Question[] {
+  const T = (key: string) => t(lang, key);
   const k = kindOf(g);
   const out: Question[] = [];
   const mk = (q: string, correct: string, wrong: string[], pos: number): Question => {
@@ -1047,19 +1131,21 @@ export function buildQuestions(g: Guide): Question[] {
   };
   const f = g.facts;
   const c = g.content;
-  if (k === "medicine" && f?.frequency) out.push(mk("When do you use it?", f.frequency, ["Every morning", "Only at night"].filter((x) => x !== f.frequency), 1));
-  if (k === "medicine" && f?.dose) out.push(mk("How much do you take?", f.dose, ["As much as you like", "Half of it"], 0));
-  if (k === "letter" && c?.what_to_do?.[0]) out.push(mk("What do you need to do first?", c.what_to_do[0], ["Nothing. Ignore the letter.", "Throw the letter away."], 1));
-  if (k === "letter" && c?.by_when?.[0]) out.push(mk(`By when do you need to ${c.by_when[0].what}?`, c.by_when[0].date, ["There is no date", "Next year"], 2));
-  if (k === "form" && c?.fields?.[0]) out.push(mk(`What goes in the box "${c.fields[0].label}"?`, c.fields[0].what_to_write, ["Leave it empty", "Anything you like"], 0));
-  if (k === "howto" && g.steps[0]) out.push(mk("What do you do first?", g.steps[0].text, ["Skip the first steps", "Ask someone else to do it"], 1));
+  if (k === "medicine" && f?.frequency) out.push(mk(T("qWhen"), f.frequency, [T("dMorning"), T("dNight")].filter((x) => x !== f.frequency), 1));
+  if (k === "medicine" && (f?.conflicts?.length ?? 0) > 0)
+    out.push(mk(T("qConflict"), T("aPharm"), [T("dBigger"), T("dPick")], 1));
+  else if (k === "medicine" && f?.dose) out.push(mk(T("qHowMuch"), f.dose, [T("dAsMuch"), T("dHalf")], 0));
+  if (k === "letter" && c?.what_to_do?.[0]) out.push(mk(T("qLetterFirst"), c.what_to_do[0], [T("dIgnoreLetter"), T("dThrow")], 1));
+  if (k === "letter" && c?.by_when?.[0]) out.push(mk(tf(lang, "qByWhen", { what: c.by_when[0].what }), c.by_when[0].date, [T("dNoDate"), T("dNextYear")], 2));
+  if (k === "form" && c?.fields?.[0]) out.push(mk(tf(lang, "qBox", { label: c.fields[0].label }), c.fields[0].what_to_write, [T("dEmpty"), T("dAnything")], 0));
+  if (k === "howto" && g.steps[0]) out.push(mk(T("qHowFirst"), g.steps[0].text, [T("dSkip"), T("dAskElse")], 1));
   const warn = g.steps.find((s) => s.kind === "warning");
-  if (warn) out.push(mk("Which of these is a warning from your paper?", warn.text, ["Nothing to watch for", "You can ignore it"], 2));
+  if (warn) out.push(mk(T("qWarn"), warn.text, [T("dNothing"), T("dIgnore")], 2));
   return out.slice(0, 3);
 }
 
 export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang: string; onCheck: (answer: string) => void; onClose: () => void }) {
-  const qs = useMemo(() => buildQuestions(guide), [guide]);
+  const qs = useMemo(() => buildQuestions(guide, lang), [guide, lang]);
   const [qi, setQi] = useState(0);
   const [pick, setPick] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);
@@ -1088,7 +1174,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
           ))}
         </div>
         <div className="of">
-          {qi + 1} {t(lang, "of")} {qs.length}
+          <Counter lang={lang} n={qi + 1} total={qs.length} />
         </div>
       </div>
       <EmergencyLink lang={lang} />
@@ -1276,7 +1362,7 @@ export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {
   return (
     <>
       <button className="devtoggle" onClick={() => setOpen(!open)} aria-expanded={open}>
-        {t(lang, "devToggle")} ({log.length})
+        <Counted lang={lang} k="devToggle" count={log.length} />
       </button>
       {open && (
         <div className="devpanel">
@@ -1284,7 +1370,7 @@ export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {
             {log.map((e, i) => (
               <li key={i}>
                 <span className="tagd">{e.source}</span>
-                <code>{e.tool}</code>({JSON.stringify(e.args)}) {e.ms} ms
+                <code dir="ltr">{e.tool}</code>({JSON.stringify(e.args)}) <bdi>{e.ms} ms</bdi>
                 {e.say && <div className="say">{e.say}</div>}
               </li>
             ))}
@@ -1308,7 +1394,7 @@ export function PrintSheet({ guide, lang }: { guide: Guide; lang: string }) {
           </li>
         ))}
       </ol>
-      <p>{safetyLines(guide).join(" ")}</p>
+      <p dir="auto">{safetyLines(guide).join(" ")}</p>
       {guide.source.is_sample && <p>{t(lang, "printSample")}</p>}
     </div>
   );

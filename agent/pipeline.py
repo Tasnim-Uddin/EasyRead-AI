@@ -1,9 +1,9 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
-import asyncio, copy, json, os, pathlib, datetime as dt, logging
+import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
 from . import langs, llm, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
-from .doctypes import STYLE_RULES, content_to_steps, finish_steps, normalise, safety_lines
+from .doctypes import STYLE_RULES, content_to_steps, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
 
 log = logging.getLogger("agent.pipeline")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -17,13 +17,18 @@ a photo of their own device) and extract facts in ONE pass. Each file is introdu
 If the role says "detect", decide it: one of label, leaflet, device_photo, letter, form, other.
 Copy only what is in the documents; never invent. Use null for anything absent. Put anything you cannot read in "unreadable".
 
-First classify the whole set. doc_type is one of:
+First decide if this is a paper at all. Set "is_document": false only when NO file is a document, label, leaflet, letter,
+bill, form, instructions or a medicine or device (for example a drawing, a selfie, a pet, a view). Otherwise true.
+If you cannot read any words at all (too small, too blurred, too dark), put that in "unreadable" and leave the other fields empty.
+
+Then classify the whole set. doc_type is one of:
 - how_to: something to use or take, such as a medicine (set domain "medicine")
 - letter: a letter or notice that asks the reader to do something
 - bill: a bill, invoice or fine
 - form: a form the reader must fill in
 - other: anything else
-domain is one of medicine, money, legal, school, council, other.
+domain is one of medicine, money, legal, school, council, other. Use medicine for ANY health paper too: a GP or hospital letter,
+an appointment, a test, a discharge letter.
 
 {STYLE_RULES}
 
@@ -32,12 +37,15 @@ Return JSON only. Always include: "doc_type", "domain", "kind" (prescription|lea
 Then, by doc_type:
 - how_to (medicine): "medicine", "dose", "frequency", "route", "device_type", "device_confidence" (0-1), "warnings": [str], "get_help": [str]
   (copy warnings and get_help faithfully). device_type is one of {DEVICE_TYPES}; if a device_photo is included, use it
-  (a metered-dose inhaler is shaken; a dry-powder inhaler is not). If both a label and a leaflet are present, also give
+  (a metered-dose inhaler is shaken; a dry-powder inhaler is not). Pick a *_spacer type only if the paper says to always
+  use a spacer or the device photo shows one; "use a spacer if you have one" is not enough. If both a label and a leaflet are present, also give
   "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
 - how_to (not medicine, for example furniture, a phone, a boiler): "title", "source_steps": [the document's own steps, in order,
   one action each, copied faithfully], "warnings": [str], "get_help": [str]. Leave the medicine fields null.
-- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 3 short action sentences, action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts];
-  "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}]
+- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 5 short action sentences, action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts;
+  keep any exception the paper gives, for example "You can drink water"; for a list of medicine changes (stop, start, change a dose)
+  give one sentence per medicine with its name and dose, up to 10];
+  "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}] (at most 3, the total to pay first, then fees; leave out line items)
 - form: "fields": [{{"label": str, "what_to_write": str}}] in Easy Read words, one per box on the form"""
 
 
@@ -69,12 +77,35 @@ def load_library() -> list[dict]:
     return out
 
 
+_SUFFIX_MATCH = {"shake": ["shake"], "hold": ["hold your breath"],
+                 "press": ["press your inhaler", "press the inhaler", "press down"]}
+
+
+def _clip_keywords(clip: dict) -> list[str]:
+    kw = clip.get("match") or _SUFFIX_MATCH.get(clip["id"].rsplit("_", 1)[-1], [])
+    return [k.lower() for k in kw]
+
+
+def _device_applies(clip_dev: str, guide_dev: str | None) -> bool:
+    """A clip for "inhaler_mdi" also applies to "inhaler_mdi_spacer" (same family)."""
+    return bool(guide_dev) and (clip_dev == guide_dev or guide_dev.startswith(clip_dev + "_"))
+
+
 def attach_clips(guide: dict):
     dev = guide["facts"].get("device_type")
-    clips = sorted((c for c in load_library() if c["device_type"] == dev), key=lambda c: c.get("order", 0))
+    # A clip marked "exact_device" (e.g. press without a spacer) only applies to that exact device type.
+    clips = sorted((c for c in load_library() if (c["device_type"] == dev if c.get("exact_device")
+                                                  else _device_applies(c["device_type"], dev))),
+                   key=lambda c: c.get("order", 0))
     how = [s for s in guide["steps"] if s["kind"] == "how" and not s.get("technique_clip_id")]
-    for s, c in zip(how, clips):
-        s["technique_clip_id"] = c["id"]
+    for c in clips:
+        kws = _clip_keywords(c)
+        for s in how:
+            text = (s.get("text_en") or s.get("text") or "").lower()
+            if kws and any(k in text for k in kws):
+                s["technique_clip_id"] = c["id"]
+                how.remove(s)
+                break
 
 
 def new_guide(gid: str, language: str) -> dict:
@@ -148,6 +179,49 @@ async def translate_safety(guide: dict, language: str):
         log.warning("safety line translation failed")
 
 
+_DIGITS = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8",
+           "nine": "9", "ten": "10", "once": "1 time", "twice": "2 times"}
+
+
+def easy_numbers(text: str) -> str:
+    """Label shouting to Easy Read: 'TWO puffs' -> '2 puffs', 'into BOTH eyes' -> 'into both eyes' (STYLE: digits)."""
+    def word(m):
+        w = m.group(0)
+        d = _DIGITS.get(w.lower())
+        if d:
+            return d
+        return w.lower() if len(w) > 1 and w.isupper() and w.isalpha() and w not in ("NHS", "GP") else w
+    return re.sub(r"[A-Za-z]+", word, text)
+
+
+def summary_line_en(guide: dict) -> str:
+    f = guide.get("facts") or {}
+    line = ", ".join(str(x) for x in (f.get("dose"), f.get("frequency")) if x)
+    return easy_numbers(line[0].upper() + line[1:]) if line else line
+
+
+async def translate_summary(guide: dict, language: str):
+    """The dose / when line on the summary card, translated like the steps. The English original is kept in summary_line_en."""
+    en = guide.get("summary_line_en") or summary_line_en(guide)
+    if not en:
+        return
+    guide["summary_line_en"] = en
+    if language == "en":
+        guide["summary_line"] = en
+        return
+    if not llm.available():
+        guide.setdefault("summary_line", en)
+        return
+    try:
+        out = await llm.complete_json(
+            f"Translate this medicine dose line into {langs.name_of(language)}. Keep it short and simple, keep numbers as digits, "
+            "never change doses or timings. Return a JSON array with one string.", json.dumps([en], ensure_ascii=False))
+        if isinstance(out, list) and len(out) == 1 and isinstance(out[0], str) and out[0].strip():
+            guide["summary_line"] = out[0]
+    except Exception:
+        log.warning("summary line translation failed")
+
+
 async def _translate(steps: list[dict], language: str):
     if language == "en":
         for s in steps:
@@ -163,26 +237,77 @@ async def _translate(steps: list[dict], language: str):
         s["text"] = t
 
 
+def picture_concurrency() -> int:
+    """How many step pictures are made at once (PICTURE_CONCURRENCY, default 6, at least 1)."""
+    try:
+        return max(1, int(os.environ.get("PICTURE_CONCURRENCY", "6")))
+    except ValueError:
+        return 6
+
+
 async def illustrate(guide: dict, emit):
+    """Make step pictures concurrently (bounded). Each step goes generating -> ready/failed and emits step_updated."""
     try:
         from media import make_step_picture  # type: ignore
     except ImportError:
         make_step_picture = None
-    for s in guide["steps"]:
-        if s.get("image_url"):
-            s["status"] = "ready"  # already illustrated (fixture or earlier run)
-        elif not make_step_picture or not os.environ.get("FAL_KEY"):
-            s["status"] = "skipped"  # offline: no media module or no key, not an error
-        else:
-            s["status"] = "generating"
-            emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+    sem = asyncio.Semaphore(picture_concurrency())
+
+    async def one(s: dict):
+        async with sem:
             try:
                 s["image_url"] = await make_step_picture(s["picture_prompt"])
                 s["status"] = "ready"
             except Exception as e:
                 log.warning("picture failed: %s", e)
                 s["status"] = "failed"
+            emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+
+    todo = []
+    for s in guide["steps"]:
+        if s.get("image_url"):
+            s["status"] = "ready"  # already illustrated (fixture or earlier run)
+        elif not make_step_picture or not os.environ.get("FAL_KEY"):
+            s["status"] = "skipped"  # offline: no media module or no key, not an error
+        else:
+            todo.append(s)
+            continue
         emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+    # Every queued step is "generating" up front, so the UI shows a placeholder for it straight away.
+    for s in todo:
+        s["status"] = "generating"
+        emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+    await asyncio.gather(*(one(s) for s in todo))
+
+
+DEVICE_LABELS = {
+    "inhaler_mdi": ["cap", "mouthpiece", "canister"],
+    "inhaler_mdi_spacer": ["cap", "mouthpiece", "canister"],
+    "inhaler_dry_powder": ["mouthpiece", "counter"],
+    "cream_ointment": ["cap", "nozzle"],
+    "eye_drops": ["cap", "nozzle"],
+    "nasal_spray": ["cap", "nozzle"],
+}
+
+
+async def label_device_photo(guide: dict, device_photo, image_urls: list[str]):
+    """ONE fal edit of the user's own device photo: numbered circles on its parts. Never blocks or fails the guide."""
+    # Off by default: a live check put the numbered circles beside the device, not on its parts. DEVICE_PHOTO_LABELS=1 turns it on.
+    if os.environ.get("DEVICE_PHOTO_LABELS") != "1" or not device_photo or not os.environ.get("FAL_KEY"):
+        return
+    labels = DEVICE_LABELS.get((guide.get("facts") or {}).get("device_type"))
+    if not labels:
+        return
+    try:
+        from media import annotate_photo  # type: ignore
+        data, mime = device_photo[0], device_photo[1]
+        uri = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+        url = await annotate_photo(uri, labels, numbered=True)
+        guide["source"]["device_photo_url"] = image_urls[-1] if image_urls else None
+        guide["source"]["device_photo_labelled_url"] = url
+        guide["source"]["device_photo_labels"] = labels
+    except Exception as e:
+        log.warning("device photo labels skipped: %s", e)
 
 
 async def write_typed(facts: dict, language: str, dt: str, content: dict) -> list[dict]:
@@ -196,6 +321,20 @@ async def write_typed(facts: dict, language: str, dt: str, content: dict) -> lis
         except Exception as e:
             log.warning("typed rewrite failed, using content steps: %s", e)
     return content_to_steps(dt, content)
+
+
+NOT_READABLE = {"not_a_document": "This is not a photo of a paper. Try another.",
+                "unreadable": "We could not read this photo. Take a clearer photo in good light."}
+
+
+def not_readable(ex: dict) -> str | None:
+    """'not_a_document' (a drawing, a selfie) or 'unreadable' (no words could be read), else None. A guide made from
+    nothing would be invented, so these stop with a clear message instead."""
+    if not ex.get("is_document", True):
+        return "not_a_document"
+    if nothing_read(ex["facts"], ex["content"]):
+        return "unreadable"
+    return None
 
 
 async def run(store, gid: str, files, device_photo, language: str, image_urls: list[str]):
@@ -215,6 +354,12 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
         if llm.available():
             ex = await extract(files, device_photo)
             facts, dt, domain = ex["facts"], ex["doc_type"], ex["domain"]
+            problem = not_readable(ex)
+            if problem:
+                guide.update(facts=facts, error_code=problem, error=NOT_READABLE[problem])
+                guide["source"]["image_urls"] = image_urls
+                status("failed")
+                return
             guide["source"]["kind"] = ex["source_kind"]
             guide["source"]["image_urls"] = image_urls
             guide["source"]["documents"] = [{**d, "image_url": image_urls[d["index"] - 1] if d["index"] <= len(image_urls) else None}
@@ -223,7 +368,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                          safety_lines=safety_lines(dt, domain))
             status("writing")
             if ex["content"] is not None:
-                raw = await write_typed(facts, language, dt, ex["content"])
+                raw = ensure_content_facts(await write_typed(facts, language, dt, ex["content"]), dt, ex["content"])
             elif domain != "medicine":
                 raw = await write_generic_howto(facts, language)
             else:
@@ -234,6 +379,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                                "technique_clip_id": None, "status": "pending"} for i, r in enumerate(raw)]
             await translate_steps(guide["steps"], language)
             await translate_safety(guide, language)
+            await translate_summary(guide, language)
         else:
             fx = load_fixture()
             guide["source"] = {**fx["source"], "image_urls": image_urls}
@@ -245,9 +391,11 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             await asyncio.sleep(0.3)
             await translate_steps(guide["steps"], language)
             await translate_safety(guide, language)
+            await translate_summary(guide, language)
         attach_clips(guide)
         status("illustrating")
-        await illustrate(guide, emit)
+        await asyncio.gather(illustrate(guide, emit), label_device_photo(guide, device_photo, image_urls))
+        store.put(guide)
         status("ready")
     except Exception as e:
         log.exception("pipeline failed")

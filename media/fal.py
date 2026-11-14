@@ -87,12 +87,23 @@ async def make_step_picture(picture_prompt: str, seed: int | None = None) -> str
     return _first_url(await _run(MODELS["step_picture"], args))
 
 
-async def annotate_photo(photo_url: str, labels: list[str]) -> str:
-    """Edit the user's photo to add arrows/highlights for each label. Returns an image URL."""
+async def annotate_photo(photo_url: str, labels: list[str], numbered: bool = False) -> str:
+    """Edit the user's photo to name its parts. Returns an image URL.
+
+    Default: short arrows with the label words written next to each part.
+    numbered=True: wordless numbered circles 1..n (the UI shows the legend in the user's language).
+    photo_url may be a data URI.
+    """
     if not labels:
         raise MediaError("no labels to annotate")
-    prompt = ("Keep the photo exactly as it is. Add simple bold arrows and highlight circles "
-              f"pointing at these parts: {', '.join(labels)}. Use no text, no letters and no numbers.")
+    if numbered:
+        listing = "; ".join(f"{i}: {x}" for i, x in enumerate(labels, 1))
+        prompt = ("Keep the photo exactly as it is. Add small bold orange numbered circles with a thin line to each part: "
+                  f"{listing}. The circles contain only the digit. Do not add any other text.")
+    else:
+        prompt = ("Keep the photo exactly as it is. Add a short bold orange arrow to each of these parts, "
+                  "with its name written next to the arrow in clear large dark letters, spelled exactly: "
+                  + ", ".join(f'"{x}"' for x in labels) + ". Add no other text.")
     args = {"prompt": prompt, "image_url": photo_url, "num_images": 1}
     return _first_url(await _run(MODELS["annotate"], args))
 

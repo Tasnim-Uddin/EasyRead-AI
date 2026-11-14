@@ -6,6 +6,12 @@ import "./styles.css";
 
 installAccess();
 
+// Demo links (#/sample/..., #/settings) are read once on load. Typing a new one into the address bar of an open
+// app only fires hashchange, so reload to open that screen. The app itself never writes location.hash.
+window.addEventListener("hashchange", () => {
+  if (location.hash.startsWith("#/")) location.reload();
+});
+
 function AccessGate({ children }: { children: React.ReactNode }) {
   const [needed, setNeeded] = useState(false);
   const [code, setCode] = useState("");

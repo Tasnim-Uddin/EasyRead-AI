@@ -41,6 +41,8 @@ export interface GuideContent {
 export interface Guide {
   id: string;
   status: GuideStatus;
+  /** Set when status is failed because the upload is not a paper, or no words could be read. */
+  error_code?: "not_a_document" | "unreadable";
   language: string;
   doc_type?: "how_to" | "letter" | "bill" | "form" | "other"; // missing = how_to
   domain?: string;
@@ -48,11 +50,16 @@ export interface Guide {
     kind: string;
     image_urls: string[];
     is_sample: boolean;
+    device_photo_url?: string | null;
+    device_photo_labelled_url?: string;
+    device_photo_labels?: string[];
     documents?: { index: number; role: string; role_source: string; image_url: string | null }[];
   };
   facts: Facts | null;
   content?: GuideContent | null;
   safety_lines?: string[];
+  summary_line?: string;
+  summary_line_en?: string;
   steps: Step[];
   created_at: string;
 }

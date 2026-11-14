@@ -68,9 +68,9 @@
       "text_en": "This letter says your council tax bill has changed.",
       "kind": "what",
       "picture_prompt": "a person reading a letter at a table",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_0.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 1,
@@ -78,9 +78,9 @@
       "text_en": "Check the new amount in the letter.",
       "kind": "how",
       "picture_prompt": "a person calmly doing one simple task at a desk",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_1.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 2,
@@ -88,9 +88,9 @@
       "text_en": "Pay the first part by 1 December.",
       "kind": "how",
       "picture_prompt": "a person calmly doing one simple task at a desk",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_2.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 3,
@@ -98,9 +98,9 @@
       "text_en": "Call the council if you cannot pay.",
       "kind": "how",
       "picture_prompt": "a person calmly doing one simple task at a desk",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_3.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 4,
@@ -108,9 +108,9 @@
       "text_en": "By 1 December 2026: pay the first part",
       "kind": "when",
       "picture_prompt": "a calendar page with one day circled",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_4.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 5,
@@ -118,9 +118,9 @@
       "text_en": "By 15 December 2026: tell the council if you disagree",
       "kind": "when",
       "picture_prompt": "a calendar page with one day circled",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_5.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 6,
@@ -128,9 +128,9 @@
       "text_en": "New monthly bill: £112",
       "kind": "what",
       "picture_prompt": "a hand holding a few coins",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_6.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 7,
@@ -138,9 +138,9 @@
       "text_en": "First part to pay: £112",
       "kind": "what",
       "picture_prompt": "a hand holding a few coins",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_7.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     },
     {
       "index": 8,
@@ -148,9 +148,9 @@
       "text_en": "Get free advice before you sign or pay. For example, Citizens Advice.",
       "kind": "get_help",
       "picture_prompt": "a person on the phone talking to a helper",
-      "image_url": null,
+      "image_url": "/fixtures/img/council_step_8.jpg",
       "technique_clip_id": null,
-      "status": "skipped"
+      "status": "ready"
     }
   ],
   "created_at": "2026-11-14T00:00:00+00:00"

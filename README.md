@@ -1,6 +1,14 @@
 # EasyRead AI
 
-Take a photo of a confusing paper and get an Easy Read guide: short steps, a picture for each step, in your own language. The guide can read each step aloud and answer questions about the paper.
+Take a photo of a confusing paper. Get an Easy Read guide: short steps, a picture for each step, read aloud, in your own language.
+
+<table>
+<tr>
+<td align="center" valign="top"><img src="design/built/b03-step1.jpg" width="230" alt="One step: one picture, one sentence, a Listen button."><br>One step, one picture, one sentence.</td>
+<td align="center" valign="top"><img src="design/built/b18-clip.jpg" width="230" alt="Show me how: a technique clip with a not-yet-checked badge."><br>Show me how: a short clip.</td>
+<td align="center" valign="top"><img src="design/built/b09-council.jpg" width="230" alt="A council letter as Easy Read: what it is, what to do, by when."><br>A council letter, made easy.</td>
+</tr>
+</table>
 
 Built for Imperial AI Hack 2026, Track 03: Voice, Vision & Generative Media.
 
@@ -8,72 +16,214 @@ Built for Imperial AI Hack 2026, Track 03: Voice, Vision & Generative Media.
 
 ## The problem
 
-Easy Read (one short sentence and one picture for each idea) is an established format for people with learning disabilities. It is written by hand, so it exists for very few documents. A medicine label, a council letter or a bill almost never comes in Easy Read.
+- Easy Read (one short sentence and one picture for each idea) is an established format. It is written by hand, so almost no medicine label, letter or bill comes in Easy Read.
+- It helps people with learning disabilities, people with low literacy, people who do not read English well, older people, and the carers who read papers for them.
+- A misread medicine label or a missed payment date has real costs.
 
-People who have to deal with these papers include:
+**Built for medicines, works on any paper.** We built and tested it mainly on medicine (an inhaler label, its leaflet and a photo of the inhaler). The same engine handles letters, bills, forms and other how-tos.
 
-- people with learning disabilities
-- people with low literacy
-- people who do not read English well
-- older people
-- the carers who read papers on someone else's behalf
+## Contents
 
-A misread medicine label or a missed payment date has real costs.
-
-## What we built
-
-A phone-sized web app. You add one or more photos or PDFs of a paper, and the server turns them into a guide.
-
-- The engine is generic. It handles a how-to (a medicine device, a flat-pack bookshelf), a letter, a bill or a form. The extraction step decides which one it is (`doc_type`) and picks a matching output and safety line.
-- You can add several files for one guide. Each has a role: label, leaflet, device photo, letter, form or other. You can set the role, or the server detects it.
-- We built and tested it mainly on medicine. The demo uses an inhaler label, its leaflet and a photo of the inhaler. If the label and leaflet disagree on dose or frequency, the guide says so and tells you to ask a pharmacist. It does not pick one silently.
-- Each guide has a step viewer with one step per screen, a picture, large text, and a spoken line for each step.
-- The interface has dictionaries for English, Spanish, Arabic, Urdu and Polish. Arabic and Urdu switch the layout to right-to-left. Bengali is in the language list but its dictionary is not finished yet (issue 38). Guide text can be translated into more languages by the server.
-- A "call 999" link shows on every guide screen.
-- "Ask" answers questions from the paper only. "Tell me back" asks a short check question at the end.
-- Settings change text size and speaking speed. There is a printable sheet and a developer panel that logs tool calls.
-
-Three sample guides are built in and work offline: an inhaler (`demo/fixtures/guide_inhaler.json`), a council letter (`guide_council_letter.json`) and a flat-pack bookshelf (`guide_flatpack.json`).
-
-## Screenshots
-
-_To be added before submission._ The app screens are: home, photo check, file tray, reading, summary, step, technique clip, ask, talk to the guide, tell me back, error and settings. The approved phone-first design is in Figma: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w. The earlier Figma Make frames in `design/` were replaced by it.
+- [How it works](#how-it-works)
+- [fal in EasyRead](#fal-in-easyread)
+- [Anam in EasyRead](#anam-in-easyread)
+- [Designed in Figma](#designed-in-figma)
+- [Fine-tuned with Adaption](#fine-tuned-with-adaption)
+- [Safety](#safety)
+- [Tested on real-style papers](#tested-on-real-style-papers)
+- [What works today](#what-works-today)
+- [Run it](#run-it)
+- [APIs, models and datasets](#apis-models-and-datasets)
+- [Team](#team)
 
 ## How it works
 
-```
-Phone (web/, React)                       Server (agent/, FastAPI)
-  photos / PDFs + roles   --POST /api/guides-->   extract: one vision call over all files
-                                                   -> doc_type, domain, facts, content
-                                                   -> write steps (rewriter, or fixed rules for letters/forms)
-                                                   -> fal step pictures
-  step viewer  <--SSE /api/guides/{id}/events--   guide status and each finished picture
+```mermaid
+flowchart TD
+    A["Upload<br/>photos or PDFs, several files<br/>roles: label, leaflet, device photo, letter, form"] --> B["Claude vision: one call over all files<br/>doc type, facts, device type from the device photo"]
+    B --> C["Easy Read rewrite<br/>one idea per sentence, 15 words or fewer"]
+    C --> D["Safety post-processing<br/>label/leaflet conflict flag, 999/111 line,<br/>fact add-back for dates and amounts"]
+    D --> E["fal pictures<br/>6 at a time; the guide opens before they finish"]
+    E --> F["Listen<br/>ElevenLabs read-aloud"]
+    E --> G["Talk: Anam avatar<br/>drives the app with client tools"]
+    G --> H["Tell me back<br/>short check question"]
+    F --> H
+    H --> I["Print sheet<br/>take-home Easy Read page"]
+    L["Any language, including right to left"] -.-> C
+    L -.-> G
 ```
 
-1. Extract. All files go to Claude in one call. It returns the document type, the domain, and the facts (medicine, dose, frequency, device type, warnings, when to get help, anything unreadable). For letters, bills and forms it also returns a structured summary: what this is, what to do, by when, amounts. A device photo sets `device_type`, which decides the technique steps.
-2. Write the steps. For medicine, `finetune/` writes 6 to 8 Easy Read steps, one idea per sentence, 15 words or fewer. It calls the Adaption fine-tuned model if `ADAPTION_MODEL_ID` and `ADAPTION_API_KEY` are set. Otherwise it runs the same prompt on Claude. Non-medicine how-tos use a generic prompt. Letters, bills and forms try the rewriter and fall back to steps built from the extracted summary.
-3. Safety lines. The server adds a fixed final line for the document type (see Safety).
-4. Pictures. If `FAL_KEY` is set, fal draws one picture per step in one style with no text in the image. Without a key the steps show without pictures.
-5. Translate and speak. Changing the language re-translates the step text with Claude and reuses the pictures. Read-aloud uses ElevenLabs through `/api/tts` and falls back to the browser voice.
-6. Ask. `/api/guides/{id}/ask` answers only from the extracted facts and steps. A keyword check for emergencies (chest pain, cannot breathe, overdose, allergic reaction, in several languages) runs before any model call and returns "call 999".
-7. Take home. `/api/guides/{id}/sheet` returns a printable HTML page.
+1. **Upload.** Add one or more photos or PDFs. Each file has a role (label, leaflet, device photo, letter, form, other). You set it, or the server detects it.
+2. **Read.** All files go to Claude in one vision call. It returns the document type (how-to, letter, bill, form), the facts, and anything it could not read. A device photo sets `device_type` (for example a pressurised inhaler is shaken; a dry-powder inhaler is not). That decides the technique steps. A photo that is not a paper, or cannot be read, stops with a clear message.
+3. **Rewrite.** Facts become Easy Read steps (`finetune/`, `agent/pipeline.py`). Letters, bills and forms get what it is, what to do, by when, and how much.
+4. **Post-process.** Pure Python checks tidy the steps (`agent/postprocess.py`, `agent/doctypes.py`). See [Safety](#safety).
+5. **Pictures.** fal draws one picture per step, 6 at a time (`PICTURE_CONCURRENCY`). The guide opens as soon as the steps are written. Pictures stream in over SSE.
+6. **Listen and talk.** ElevenLabs reads each step aloud (`/api/tts`, browser voice as fallback). The Anam avatar talks you through the guide.
+7. **Check and take home.** "Tell me back" asks a short check question. `/api/guides/{id}/sheet` returns a printable page.
+8. **Any language.** Pick a language, or type one. Steps, safety lines and the avatar switch. Arabic, Urdu, Persian, Pashto, Hebrew and other right-to-left languages flip the layout. The interface is hand-translated in English, Spanish, Arabic, Urdu and Polish (Bengali is not finished).
 
 `CONTRACTS.md` has the exact Guide JSON, API and tool definitions.
 
-### What works today, and what does not
+## fal in EasyRead
+
+Every step has a picture. The pictures carry the meaning, so they work in any language. fal makes all of them. Code: `media/fal.py`, called from `agent/pipeline.py`.
+
+| fal model | Where it is used | Status |
+|---|---|---|
+| `fal-ai/flux/dev` | Live step pictures for every uploaded paper. One shared style prompt (the app palette, one character), no text inside the image | Live, needs `FAL_KEY` |
+| `fal-ai/flux/schnell` | Pictures for the sample guides, made once and stored in `demo/fixtures/img/`. Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
+| `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | 3 technique clips made from the step pictures: shake, press and breathe in, hold your breath (`library/clips/`) | Made offline. Not checked by a pharmacist, so shown only in demo mode (`SHOW_UNCHECKED_CLIPS=1`) with a "not yet checked" badge |
+| `fal-ai/flux-kontext/dev` | Labels on the user's own device photo (cap, mouthpiece, canister) | Built (`label_device_photo` in `agent/pipeline.py`). Off by default (`DEVICE_PHOTO_LABELS=1` turns it on), because live tests put the labels beside the parts, not on them |
+
+Step pictures from the sample guides (inhaler, council letter, bookshelf) and a clip poster:
+
+<table>
+<tr>
+<td align="center"><img src="demo/fixtures/img/step_2.png" width="160" alt="Shake the inhaler"><br>Shake the inhaler 4 times.</td>
+<td align="center"><img src="demo/fixtures/img/step_3.png" width="160" alt="Breathe out, press, breathe in"><br>Press once and breathe in.</td>
+<td align="center"><img src="demo/fixtures/img/step_4.png" width="160" alt="Hold your breath"><br>Hold your breath for 10 seconds.</td>
+<td align="center"><img src="demo/fixtures/img/step_7.png" width="160" alt="Call 999"><br>Cannot breathe? Call 999.</td>
+</tr>
+<tr>
+<td align="center"><img src="demo/fixtures/img/council_step_0.jpg" width="160" alt="A letter about council tax"><br>Your council tax has changed.</td>
+<td align="center"><img src="demo/fixtures/img/council_step_2.jpg" width="160" alt="Pay the first part"><br>Pay the first part by 1 December.</td>
+<td align="center"><img src="demo/fixtures/img/flatpack_step_2.jpg" width="160" alt="Join the sides with screws"><br>Join the 2 sides with 4 screws.</td>
+<td align="center"><img src="library/clips/inhaler_mdi_shake.poster.png" width="160" alt="Shake clip poster frame"><br>Kling clip: shake (poster frame).</td>
+</tr>
+</table>
+
+Why fal is central:
+
+- Every step has a picture. Without fal, a guide is only text, which is the problem we are solving.
+- The pictures have no words in them. The same picture works in every language, and it can never show a wrong dose. Captions come from the app in the chosen language.
+- One style prompt keeps every picture in one look across a guide.
+- Pictures are made 6 at a time and stream in, so the user starts reading straight away.
+- We chain 4 fal models: text-to-image (two models), image-to-video from those pictures, and image edit on the user's own photo.
+
+## Anam in EasyRead
+
+The avatar talks you through the guide and drives the app with client tools. Code: `agent/persona.py` (persona and tools), `agent/main.py` (`POST /api/anam/session`), `web/src/useAnam.ts` (SDK client), `web/src/App.tsx` (tool handlers).
+
+**Persona.**
+
+- Avatar "Liv" (`cara-4`). Anam's built-in LLM (GPT OSS 120B). We keep Anam's own LLM because the tool calls are the point.
+- Voice "Amanda - Warm Guide" by default. Anam voices are single-language, so `ANAM_VOICE_ID_<LANG>` (for example `ANAM_VOICE_ID_ES`) sets a voice per language. `tools/anam_voices.py` lists candidates.
+- Speech recognition is set to the user's language when Anam supports it. Otherwise the user can type.
+- The server builds the persona and asks Anam for a session token. The browser gets only the token, never the key.
+
+**Client tools.** All are `type: "client"`, `awaitResult: true`, timeout 30 s. Each returns a short line for the avatar to say.
+
+| Tool | What it does | Example |
+|---|---|---|
+| `show_step` | Opens a step by number and returns its text | "Show me step 3." |
+| `next_step` | Moves to the next step | "Next." |
+| `previous_step` | Goes back one step | "Go back." |
+| `play_technique` | Opens the technique clip for a step. Says if the clip is not checked yet, or that there is no checked video | "Show me how to press it." |
+| `answer_from_document` | Answers a question from the document only (server `/api/guides/{id}/ask`) | "How many puffs do I take?" |
+| `check_understanding` | Asks a "tell me back" question, or checks the user's reply | "Am I doing it right?" |
+| `set_language` | Switches the guide, captions and the avatar's listening language | "Can you say it in Arabic?" |
+
+**The guide as context.** When a session starts, the server puts the guide into the persona's system prompt: document type, facts, content, safety lines and every Easy Read step, plus the ground rules (`agent/persona.py`, `system_prompt`). The avatar starts on the step the user is on.
+
+**One avatar across screens.** There is one `<video>` element for the avatar. It moves to a slot on each screen (step, ask, talk), so the session and the video keep running as you move around the app (`web/src/screens.tsx`).
+
+**Safety boundary.**
+
+- The prompt tells the avatar to answer questions only through `answer_from_document`. That tool runs the same grounded Q&A and 999 check as the Ask screen.
+- If the answer says 999 or 111, the tool adds "If this is an emergency, call 999" or "Call 111 for urgent advice" to what the avatar says.
+- The prompt also tells it: never give medical advice or change doses, say "call 999" for serious symptoms in every language, and use only library clips.
+
+**Evidence: the Tool calls panel.** Every tool call, from the avatar or from an on-screen button, is logged with its arguments, time taken and the line returned. Open **Tool calls (n)** at the bottom of the screen to see it (`DevPanel` in `web/src/screens.tsx`).
+
+## Designed in Figma
+
+Figma file: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w (15 phone frames, 390 x 844).
+
+We designed the screens in Figma first, then built `web/` to match. The colour, type and radius tokens in `web/src/styles.css` come from the file.
+
+Design principles for low literacy:
+
+- **One idea per screen.** One picture, one short sentence (15 words or fewer), one big Next button.
+- **Big type.** Steps 32px, body 20px, buttons 22px, tap targets at least 64px. A text-size setting scales everything.
+- **High contrast.** Dark brown ink (#3A2A20) on warm cream (#FFF6E9). One orange colour for the main action. Atkinson Hyperlegible for body text, a typeface made for low-vision readers.
+- **Read-aloud everywhere.** A Listen button on every step and summary, and a talking guide. Every spoken line also shows as a caption.
+- **Pictures without words.** The same picture works in every language.
+- **Right to left.** Arabic, Urdu and other right-to-left languages flip the whole layout.
+- **999 always visible.** A "call 999" link is on every guide screen.
+- **Plain words.** Buttons are short verbs ("Take a photo", "Make my guide"). Errors say what went wrong and what to do.
+
+Figma (left) next to the built app (right), for every screen:
+
+<img src="design/evidence-grid.jpg" width="720" alt="Figma frames next to the built screens">
+
+Full table with routes: [design/EVIDENCE.md](design/EVIDENCE.md). Writing rules: `docs/STYLE.md`.
+
+## Fine-tuned with Adaption
+
+**What the model does.** It is an Easy Read writer: extracted facts in, Easy Read steps out (one idea per sentence, 15 words or fewer, numbers as digits, a picture description for each step).
+
+**Dataset.**
+
+- 555 seed rows built in this repo (`finetune/build_dataset.py`) from fictional fact sets (`finetune/seeds.py`), plus rows generated by Adaption.
+- Every row is filtered by our Easy Read rubric (`finetune/rubric.py`, `finetune/adaption_run.py filter`). 1,161 rows passed.
+- Mixed papers: medicines, letters, bills and forms. All fictional. Held-out seeds are never used for training.
+
+**Run.** On Tasnim's Adaption account. AutoScientist run `6ab34ef1`. Base model `Qwen/Qwen3.5-4B`. Best win rate against the base model: ADAPTION_RESULT. Details: [finetune/RESULTS.md](finetune/RESULTS.md).
+
+**Honest note.** The live app writes the steps with Claude. The rewriter in `finetune/__init__.py` switches to the tuned model when `ADAPTION_MODEL_ID` and `ADAPTION_API_KEY` are set.
+
+**Rubric.** `finetune/rubric.py` checks step count, sentence length, jargon, digits, dose and timing kept, no invented numbers, warning and get-help steps, and a picture prompt per step. A second rubric checks that every date and amount in a letter, bill or form survives. `python -m finetune.eval` compares models on held-out seeds.
+
+## Safety
+
+Ground rules, and where the code enforces them:
+
+| Rule | How it is enforced |
+|---|---|
+| Explain the user's paper only. No medical advice, no diagnosis, no dose changes | Prompts for extraction, rewrite, Q&A and the avatar (`agent/pipeline.py`, `agent/qa.py`, `agent/persona.py`) |
+| Serious symptoms: call 999, every time | `agent/qa.py` matches emergency words (chest pain, cannot breathe, overdose, allergic reaction, in several languages) **before any model call** and returns "call 999". Urgent words return 111. If the model says 999 but the answer lacks the number, the code adds it |
+| Out-of-scope questions are refused | If the answer is not in the document, Q&A returns "ask your pharmacist or GP" (or free advice for non-medicine papers) |
+| Label and leaflet disagree | The guide shows one fixed flag, "Your label and leaflet say different things. Ask your pharmacist.", and never picks a dose (`postprocess.normalise_conflict`, `doctypes.finish_steps`) |
+| Every guide ends with a safety line | Medicine: 999, 111, pharmacist or GP. How-to: stop and ask for help. Letter, bill, form: get free advice (`doctypes.safety_lines`, added if missing) |
+| Never drop or invent facts | Any date, time or amount the rewrite dropped is added back as its own step (`doctypes.ensure_content_facts`). Unreadable parts are listed and the guide says so |
+| No text inside pictures | The fal prompt forbids text, so a picture cannot show a wrong dose |
+| Technique clips only from a checked library | A clip shows only when `checked_by`, `checked_against` (an nhs.uk page) and `checked_at` are set. None are checked yet. Demo mode (`SHOW_UNCHECKED_CLIPS=1`) shows them with a "Not yet checked by a pharmacist" badge, and the avatar says so |
+| Demo data is labelled | All sample papers are fictional. Sample guides show "Sample document. Not a real patient." and the print sheet says "Sample only. Not a real person." |
+| Keys stay on the server | The browser gets only an Anam session token |
+
+Limits: the keyword list is not clinical triage, and answers have not been clinically reviewed. Do not use this as your only source for taking a medicine.
+
+## Tested on real-style papers
+
+Fictional papers in `demo/inputs/realistic/` test the real upload path on messy input.
+
+| File | What it tests | Expected |
+|---|---|---|
+| a_council_photo.jpg | council letter photographed at an angle, blur, shadow | amounts and date exact |
+| b_inhaler_dim.jpg | dim, low-contrast medicine label | reads dose; no spacer unless the label says always |
+| c_gp_letter.pdf | 2-page GP appointment letter (PDF) | date, time, room, fasting incl. "you may drink water", 999/111 line |
+| d_eyedrops_label.jpg | eye drops label | 1 drop, both eyes, 4 times a day, 5 days, discard after 28 days |
+| e_discharge.png | dense hospital discharge letter | one step per medicine change, follow-ups kept |
+| f_spanish_school.png | Spanish school letter | guide in the chosen language, trip date and times kept |
+| g_not_document.jpg | a picture that is not a paper | friendly "not a paper" error |
+| h1_bill.png | electricity bill | total £72.02 first, due date |
+| h2_dd_form.png | direct-debit form | one step per box |
+| i_unreadable.jpg | tiny blurred crop | friendly "unreadable, take a clearer photo" error |
+
+Three sample guides work offline: an inhaler (`demo/fixtures/guide_inhaler.json`), a council letter (`guide_council_letter.json`) and a flat-pack bookshelf (`guide_flatpack.json`).
+
+## What works today
 
 | Part | Status |
 |---|---|
 | Upload, extraction, steps, pictures, translation, Ask with the 999 check | Working. Needs `ANTHROPIC_API_KEY`; pictures need `FAL_KEY` |
-| Sample guides, all screens, settings, print sheet, dev panel | Working with no keys |
+| Sample guides, all screens, settings, print sheet, Tool calls panel | Working with no keys |
 | ElevenLabs voice | Working with `ELEVENLABS_API_KEY`; browser voice otherwise |
-| Adaption fine-tuned rewriter | Code is wired in and runs once a tuned model id is set. Results below are not filled in yet.|
-| Anam avatar | Planned for the live demo. The server builds the persona and tools and requests a session token, and the web app has the tool handlers. Without `ANAM_API_KEY` the server returns a mock token and the app shows an illustrated stand-in. A live Anam session is not shown in this repo |
-| Technique clips | Planned. The library index lists draft clips, but none has a video or a human check yet, so the server shows none |
-| Photo annotation (fal image edit) | The function exists in `media/`. The server does not call it yet |
-| MongoDB | Optional. Guides stay in memory when `MONGODB_URI` is not set |
-
-Technique clips are only shown from the library, and only when a named person has checked them against an nhs.uk page. They are never generated live.
+| Anam avatar | Working with `ANAM_API_KEY`. Without it the server returns a mock token and the app shows an illustrated stand-in |
+| Technique clips | 3 clips made with fal Kling. Not checked yet, so shown only in demo mode with a badge |
+| Labels on the user's device photo | Built, off by default (labels were misplaced in live tests) |
+| Adaption fine-tuned rewriter | Trained on Tasnim's account. The live app uses Claude until `ADAPTION_MODEL_ID` is set |
+| MongoDB | Optional. Guides stay in memory without `MONGODB_URI` |
 
 ## Run it
 
@@ -91,7 +241,7 @@ In a second terminal:
 cd web && npm install && npm run dev
 ```
 
-Open the URL Vite prints. The dev server sends `/api/*` to `http://localhost:8000`. On the home screen, choose a sample to see a finished guide. You can also open one by URL, for example `/#/sample/council`.
+Open the URL Vite prints. The dev server sends `/api/*` to `http://localhost:8000`. On the home screen, choose a sample. You can also open one by URL, for example `/#/sample/council`.
 
 With no keys, uploading your own paper does not make a real guide, because extraction needs a model. The samples, screens, language switch, settings and print sheet work.
 
@@ -99,19 +249,20 @@ Keys go in your own local `.env`, which is gitignored:
 
 | Variable | Unlocks |
 |---|---|
-| `ANTHROPIC_API_KEY` | Extraction from photos, rewriting, translation, grounded answers. `ANTHROPIC_MODEL` overrides the model |
-| `FAL_KEY` | Step pictures |
+| `ANTHROPIC_API_KEY` | Extraction, rewriting, translation, grounded answers. `ANTHROPIC_MODEL` overrides the model |
+| `FAL_KEY` | Step pictures. `PICTURE_CONCURRENCY` (default 6) sets how many are made at once |
 | `ELEVENLABS_API_KEY` | Natural voice. `ELEVENLABS_VOICE_ID` and `ELEVENLABS_MODEL_ID` are optional |
-| `ANAM_API_KEY` | Live avatar session token. `ANAM_AVATAR_ID`, `ANAM_VOICE_ID`, `ANAM_LLM_ID` are optional. `ANAM_VOICE_ID_ES/AR/UR/PL/BN` set a voice per language (list candidates with `python tools/anam_voices.py`) |
+| `ANAM_API_KEY` | Live avatar. `ANAM_AVATAR_ID`, `ANAM_VOICE_ID`, `ANAM_LLM_ID` are optional. `ANAM_VOICE_ID_<LANG>` sets a voice per language |
 | `ADAPTION_API_KEY` and `ADAPTION_MODEL_ID` | Fine-tuned rewriter (also needs `pip install adaption`) |
 | `MONGODB_URI` | Saved guides across restarts |
+| `SHOW_UNCHECKED_CLIPS=1` | Demo only: show unchecked technique clips with a badge |
+| `DEVICE_PHOTO_LABELS=1` | Turn on fal labels on the device photo (off by default) |
 
 Tests:
 
 ```bash
-EASYREAD_NO_DOTENV=1 pytest agent     # server tests, no keys needed
-pytest finetune                       # rubric and dataset tests
-cd web && npm run build               # type-check and production build
+EASYREAD_NO_DOTENV=1 pytest agent finetune media   # no keys needed
+cd web && npm run build                            # type-check and production build
 ```
 
 `GET /api/health` shows which keys the server can see.
@@ -120,48 +271,21 @@ cd web && npm run build               # type-check and production build
 
 | Service | Model or ID | Used for | Where |
 |---|---|---|---|
-| Anthropic API (Claude) | `claude-sonnet-5-5` (default; `ANTHROPIC_MODEL` changes it) | Reading photos and PDFs, document type, device type, base Easy Read rewriter, translation, grounded Q&A, training-data drafting | `agent/llm.py` |
-| fal | `fal-ai/flux/dev` | Step pictures | `media/fal.py` |
-| fal | `fal-ai/flux-kontext/dev` | Photo annotation edit (not called by the server yet) | `media/fal.py` |
-| fal | `fal-ai/kling-video/v2.1/standard/image-to-video` | Technique clips, offline library building only (none generated yet) | `media/fal.py` |
-| Adaption | `adaption` SDK. Tuned model id comes from `ADAPTION_MODEL_ID`; none is set in this repo yet, so the base Claude prompt runs until the fine-tune finishes (planned). Dataset upload, augmentation, rubric filter and training (AutoScientist) are in `finetune/adaption_run.py` | Fine-tuned Easy Read rewriter | `finetune/__init__.py`, `finetune/adaption_run.py` |
-| Anam | Avatar "Liv" (`cara-4`, id `071b0286-4cce-4808-bee2-e642f1062de3`); voice "Amanda - Warm Guide" (id `90313ddc-4fc0-11f1-84b0-52bacf74fa75`); LLM GPT OSS 120B, Anam's built-in model (id `a7cf662c-2ace-4de1-a21e-ef0fbf144bb7`); all overridable by env. Endpoints `POST /v1/auth/session-token` and `GET /v1/voices`; `@anam-ai/js-sdk` | Avatar, speech, client tool calling. Planned for the live demo, see the status table | `agent/persona.py`, `agent/main.py`, `tools/anam_voices.py`, `web/src/useAnam.ts` |
-| ElevenLabs | Model `eleven_multilingual_v2`; default voice "Sarah" (`EXAVITQu4vr4xnSDxMaL`); endpoint `POST /v1/text-to-speech/{voice}`; replies cached on disk | Read-aloud in several languages (browser voice if no key) | `agent/tts.py` |
+| Anthropic API (Claude) | `claude-sonnet-5-5` (default; `ANTHROPIC_MODEL` changes it) | Reading photos and PDFs, document and device type, Easy Read rewrite, translation, grounded Q&A, drafting training rows | `agent/llm.py` |
+| fal | `fal-ai/flux/dev` | Live step pictures | `media/fal.py` |
+| fal | `fal-ai/flux/schnell` | Sample-guide pictures (offline) and model comparison | `demo/fixtures/img/`, `media/samples/compare/` |
+| fal | `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | Technique clips, made offline | `media/fal.py`, `library/` |
+| fal | `fal-ai/flux-kontext/dev` | Labels on the device photo (off by default) | `media/fal.py`, `agent/pipeline.py` |
+| Anam | Avatar "Liv" (`cara-4`, id `071b0286-4cce-4808-bee2-e642f1062de3`); voice "Amanda - Warm Guide" (id `90313ddc-4fc0-11f1-84b0-52bacf74fa75`); LLM GPT OSS 120B, Anam's built-in model (id `a7cf662c-2ace-4de1-a21e-ef0fbf144bb7`); all overridable by env. Endpoints `POST /v1/auth/session-token`, `GET /v1/voices`; `@anam-ai/js-sdk` | Avatar, speech, client tool calling | `agent/persona.py`, `agent/main.py`, `tools/anam_voices.py`, `web/src/useAnam.ts` |
+| ElevenLabs | Model `eleven_multilingual_v2`; default voice "Sarah" (`EXAVITQu4vr4xnSDxMaL`); `POST /v1/text-to-speech/{voice}`; replies cached on disk | Read-aloud (browser voice if no key) | `agent/tts.py` |
+| Adaption | `adaption` SDK; AutoScientist run `6ab34ef1`, base `Qwen/Qwen3.5-4B`. Upload, augmentation, rubric filter and training in `finetune/adaption_run.py` | Fine-tuned Easy Read rewriter | `finetune/` |
 | MongoDB Atlas | `pymongo` | Optional guide storage | `agent/store.py` |
-| Figma | File `tNc9gbdjtkrXMAgsvRT30w` (earlier drafts: Figma Make, `design/`) | App design | `design/` |
+| Figma | File `tNc9gbdjtkrXMAgsvRT30w` (earlier drafts: Figma Make) | App design | `design/` |
 | Libraries | FastAPI, uvicorn, httpx, pypdf, React 18, Vite, TypeScript | App | `requirements.txt`, `web/package.json` |
 
-Datasets: none from outside. The Easy Read training and evaluation sets are built in this repo (`finetune/build_dataset.py`, `finetune/seeds.py`) from fictional medicine and document fact sets, drafted with Claude and filtered by the rubric. No real patient data. Held-out seeds are never used for training. Sample papers and pictures in `demo/` and `media/samples/` are fictional or generated.
+Datasets: none from outside. The Easy Read training and evaluation sets are built in this repo (`finetune/build_dataset.py`, `finetune/seeds.py`) from fictional fact sets, drafted with Claude, extended by Adaption and filtered by the rubric. No real patient data. Sample papers and pictures in `demo/`, `library/` and `media/samples/` are fictional or generated.
 
-NHS pages: each technique clip in `library/index.json` has a `checked_against` field for the nhs.uk page a person checks it against. All are empty for now. No NHS text or images are copied into the dataset, the app or the prompts. Claude (`claude-sonnet-5-5`) is also the base model that the fine-tune is compared against.
-
-## Easy Read rewriter and evaluation
-
-`finetune/rubric.py` scores a set of steps on mechanical checks: step count, 15 words or fewer per sentence, no jargon, digits for numbers, dose and timing the same as the paper, no invented numbers, warning and get-help steps present, and a drawable picture prompt for each step. A second rubric covers letters, bills and forms, where every date and amount must survive. The same rubric filters the training data and compares the tuned model with the base model on held-out seeds (`python -m finetune.eval`).
-
-Results: _to be filled in after the fine-tune run (dataset size, win rate, Adaption leaderboard rank)._
-
-## Safety
-
-- It explains the user's own paper. It does not give medical advice, diagnose, or change doses.
-- Answers come only from the extracted facts and steps. If the answer is not there, the guide says "I do not know" and points to a pharmacist or GP, or to free advice for non-medicine papers.
-- The emergency check is keyword matching that runs before any model call. An emergency match returns "call 999". A match on "urgent" or "getting worse" returns "call 111".
-- Every guide ends with a fixed safety line for its type:
-  - Medicine: "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP."
-  - Other how-to: "If something breaks or feels unsafe, stop and ask for help."
-  - Letter, bill, form: "Get free advice before you sign or pay. For example, Citizens Advice."
-- Anything the model could not read is listed as unreadable and the guide says so. The prompts tell the model not to add facts.
-- Pictures have no text in them, so they cannot show a wrong dose.
-- The keyword list is short and is not clinical triage. Answers have not been clinically reviewed. Do not use this as your only source for taking a medicine.
-- Keys stay on the server. The browser only gets an Anam session token.
-
-## Prizes we are entering
-
-- Track 03 main prize: a paper becomes a guide with pictures, a voice and answers.
-- fal: step pictures in one style from `fal-ai/flux/dev`. Image edit and image-to-video are in `media/` for annotation and the technique library, but are not in the live flow yet (see the status table).
-- Anam: an avatar with client tools (`show_step`, `next_step`, `previous_step`, `play_technique`, `answer_from_document`, `check_understanding`, `set_language`). The status table says what runs without a key.
-- Figma: designed in Figma first (https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w), then built as the web app. Accessibility choices: one step per screen, large type, read-aloud, right-to-left layouts.
-- Adaption: the Easy Read rewriter, ranked by win rate against the base model (result to be added above).
+NHS pages: each technique clip in `library/index.json` has a `checked_against` field for the nhs.uk page a person checks it against. All are empty for now. No NHS text or images are copied into the dataset, the app or the prompts.
 
 ## Team
 
