@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
-from . import docs, langs, llm, persona, pipeline, qa, tts
+from . import docs, langs, llm, persona, pipeline, qa, tellback, tts
 from . import sheet as sheet_mod
 from . import sheet as sheet_mod
 from .store import Store
@@ -221,23 +221,21 @@ async def ask(gid: str, req: AskReq):
 async def check_understanding(gid: str, req: CheckReq):
     g = _guide(gid)
     f = g.get("facts") or {}
+    lang = req.language if "language" in req.model_fields_set else g.get("language", "en")
+    t = tellback.strings(lang)
     if f.get("conflicts"):
         # The label and the leaflet disagree: never quiz a dose as if one of them were right.
         if not req.answer:
-            return {"say": "Your label and leaflet say different things. What do you do?", "correct": None}
-        ok = "pharmacist" in req.answer.lower()
-        say = ("Well done, that is right. Ask your pharmacist before you use it." if ok else
-               "Nearly. Ask your pharmacist before you use it, because your label and leaflet say different things.")
-        return {"say": say, "correct": ok}
+            return {"say": t["conflict_ask"], "correct": None}
+        ok = tellback.mentions_pharmacist(lang, req.answer)
+        return {"say": t["conflict_ok"] if ok else t["conflict_bad"], "correct": ok}
     if not req.answer:
-        say = "Can you tell me in your own words how many puffs, and when you use it?" if f.get("device_type", "").startswith("inhaler") \
-            else "Can you tell me in your own words how much to take, and when?"
+        say = t["ask_inhaler"] if f.get("device_type", "").startswith("inhaler") else t["ask_other"]
         return {"say": say, "correct": None}
     words = qa._words(req.answer)
     key = qa._words(" ".join(str(f.get(k) or "") for k in ("dose", "frequency")))
     ok = bool(key) and len(words & key) >= max(1, len(key) // 2)
-    say = ("Well done, that is right." if ok else
-           f"Nearly. Remember: {f.get('dose')}, {f.get('frequency')}. Please ask your pharmacist if unsure.")
+    say = t["ok"] if ok else t["nearly"].format(dose=f.get("dose"), frequency=f.get("frequency"))
     return {"say": say, "correct": ok}
 
 

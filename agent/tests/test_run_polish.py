@@ -72,3 +72,29 @@ def test_drop_know_prefix_on_fact_steps():
     out = postprocess.drop_know(steps)
     assert [s["text_en"] for s in out] == ["The council says you have not paid.",
                                            "The overdue instalment is £212.50.", "Know your rights."]
+
+
+def test_tellback_follows_guide_language(client):
+    from agent.main import store
+    g = _conflict_guide(client)
+    g["facts"] = {"medicine": "Salbutamol", "dose": "TWO puffs", "frequency": "When needed", "device_type": "inhaler_mdi"}
+    g["language"] = "es"
+    store.put(g)
+    ask = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf"}).json()
+    assert "inhalaciones" in ask["say"]
+    bad = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "answer": "no se"}).json()
+    assert bad["correct"] is False and "farmac" in bad["say"] and "TWO puffs" in bad["say"]
+    ar = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "language": "ar"}).json()
+    assert "بخة" in ar["say"]
+    unknown = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "language": "Somali"}).json()
+    assert "puffs" in unknown["say"]  # no table -> English
+
+
+def test_tellback_conflict_accepts_pharmacist_in_language(client):
+    g = _conflict_guide(client)
+    g["language"] = "pl"
+    from agent.main import store
+    store.put(g)
+    r = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "answer": "Zapytam farmaceutę"}).json()
+    assert r["correct"] is True
+    assert client.post("/api/tools/check_understanding", json={"guide_id": "g_conf"}).json()["say"].startswith("Etykieta")
