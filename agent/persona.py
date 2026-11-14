@@ -41,10 +41,10 @@ def _tool(name, desc, props=None, required=None):
 
 
 TOOLS = [
-    _tool("show_step", "Show a specific step on screen, then read it aloud.", {"index": {"type": "integer", "description": "0-based step index"}}, ["index"]),
+    _tool("show_step", "Show a specific step on screen, then read it aloud. Steps are numbered from 1 for the user but the index starts at 0: when the user says step 3, send index 2.", {"index": {"type": "integer", "description": "0-based step index (user's step number minus 1)"}}, ["index"]),
     _tool("next_step", "Move to the next step when the user is ready."),
     _tool("previous_step", "Go back to the previous step."),
-    _tool("play_technique", "Play the checked technique clip for a 'how' step.", {"step_index": {"type": "integer"}}, ["step_index"]),
+    _tool("play_technique", "Play the checked technique clip for a 'how' step.", {"step_index": {"type": "integer", "description": "0-based step index (user's step number minus 1)"}}, ["step_index"]),
     _tool("answer_from_document", "Answer any user question from the document. Always use this for questions.", {"question": {"type": "string"}}, ["question"]),
     _tool("check_understanding", "Ask a 'tell me back' question, or check the user's reply.", {"answer": {"type": "string", "description": "The user's reply, if checking"}}),
     _tool("set_language", "Switch the captions and your speaking language.", {"language": {"type": "string", "description": "BCP-47 code, e.g. es"}}, ["language"]),

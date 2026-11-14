@@ -225,8 +225,16 @@ export default function App() {
           : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
       },
       answer_from_document: async ({ question: q }) => {
-        if (!g() || isSample(g())) return SAFE_FALLBACK;
-        const r = await api.ask(g()!.id, String(q), langRef.current);
+        if (!g()) return SAFE_FALLBACK;
+        // Sample guides are loaded on the server too (g_sample_*), so they answer from their document as well.
+        // With no server (offline demo) a sample falls back to the safe line instead of an error.
+        let r: Awaited<ReturnType<typeof api.ask>>;
+        try {
+          r = await api.ask(g()!.id, String(q), langRef.current);
+        } catch (e) {
+          if (isSample(g())) return SAFE_FALLBACK;
+          throw e;
+        }
         const tail = r.escalate === "999" ? " If this is an emergency, call 999." : r.escalate === "111" ? " Call 111 for urgent advice." : "";
         return r.answer + tail;
       },
@@ -414,6 +422,7 @@ export default function App() {
     soundOff: anam.soundOff,
     onToggleMic: anam.toggleMic,
     onToggleSound: anam.toggleSound,
+    onSend: anam.send,
   };
 
   const status = uploading ? "uploading" : guide?.status ?? "uploading";
@@ -525,6 +534,7 @@ export default function App() {
             onToggleMic={anam.toggleMic}
             onToggleSound={anam.toggleSound}
             onType={() => { void anam.stop(); go("ask"); }}
+            onSend={anam.send}
           />
         )}
         {screen === "tellback" && guide && (

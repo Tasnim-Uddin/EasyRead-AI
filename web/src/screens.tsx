@@ -19,6 +19,7 @@ export interface LiveInfo {
   soundOff: boolean;
   onToggleMic: () => void;
   onToggleSound: () => void;
+  onSend?: (text: string) => boolean;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
 const useLive = () => {
@@ -93,9 +94,28 @@ function GuideOrAvatar({ live }: { live: LiveInfo | null }) {
 }
 
 /** Small End / mic / sound buttons next to the live tile. */
+/** Typed message to the live avatar (for people who cannot or prefer not to speak). */
+function TypeBar({ lang, onSend }: { lang: string; onSend: (text: string) => boolean }) {
+  const [typed, setTyped] = useState("");
+  return (
+    <form
+      className="typebar"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (onSend(typed)) setTyped("");
+      }}
+    >
+      <input dir="auto" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={t(lang, "typeToGuide")} aria-label={t(lang, "typeToGuide")} />
+      <button className="btn" type="submit" disabled={!typed.trim()}>
+        {t(lang, "send")}
+      </button>
+    </form>
+  );
+}
 function LiveControls({ live }: { live: LiveInfo }) {
   const { lang } = live;
   return (
+    <>
     <div className="livectl">
       <button className="end" onClick={live.onEnd}>
         {t(lang, "endTalk")}
@@ -107,6 +127,8 @@ function LiveControls({ live }: { live: LiveInfo }) {
         <Icon name="play" />
       </button>
     </div>
+    {live.onSend && <TypeBar lang={lang} onSend={live.onSend} />}
+    </>
   );
 }
 export const ROLES = ["auto", "label", "leaflet", "device_photo", "letter", "form", "other"] as const;
@@ -1016,6 +1038,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
 /* ---------- 8. talk to your guide ---------- */
 interface TalkProps {
   lang: string;
+  onSend?: (text: string) => boolean;
   state: AnamState;
   error: string | null;
   caption: string;
@@ -1030,7 +1053,7 @@ interface TalkProps {
   onToggleMic?: () => void;
   onToggleSound?: () => void;
 }
-export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
+export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, onSend, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
   const live = state === "live";
   return (
     <div className="screen">
@@ -1078,9 +1101,13 @@ export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage
         </button>
         <span>{state === "connecting" ? "…" : live ? t(lang, "listening") + "…" : t(lang, "startTalk")}</span>
       </div>
-      <button className="txt" onClick={onType}>
-        {t(lang, "typeInstead")}
-      </button>
+      {live && onSend ? (
+        <TypeBar lang={lang} onSend={onSend} />
+      ) : (
+        <button className="txt" onClick={onType}>
+          {t(lang, "typeInstead")}
+        </button>
+      )}
     </div>
   );
 }
