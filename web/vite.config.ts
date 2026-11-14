@@ -25,8 +25,8 @@ function serveFixtures(): Plugin {
 export default defineConfig({
   plugins: [react(), serveFixtures()],
   server: {
-    port: 5173,
-    proxy: { "/api": "http://localhost:8000" },
+    port: Number(process.env.PORT ?? 5173),
+    proxy: { "/api": process.env.API_URL ?? "http://localhost:8000" },
     fs: { allow: [".."] }, // lets the app import demo/fixtures
   },
 });

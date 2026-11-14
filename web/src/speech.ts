@@ -3,6 +3,9 @@
 let audio: HTMLAudioElement | null = null;
 let ttsMissing = false;
 
+/** Voice speed, 0.6 (slow) to 1.2 (quick). Set from the settings screen. */
+export const voiceSettings = { rate: 1 };
+
 export function stopSpeaking() {
   audio?.pause();
   audio = null;
@@ -13,6 +16,7 @@ function browserVoice(text: string, lang: string) {
   if (!("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;
+  u.rate = voiceSettings.rate;
   window.speechSynthesis.speak(u);
 }
 
@@ -28,6 +32,7 @@ export async function speak(text: string, lang: string): Promise<void> {
       });
       if (res.ok && (res.headers.get("content-type") ?? "").startsWith("audio")) {
         audio = new Audio(URL.createObjectURL(await res.blob()));
+        audio.playbackRate = voiceSettings.rate;
         await audio.play();
         return;
       }
