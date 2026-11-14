@@ -270,14 +270,7 @@ export default function App() {
     setError(null);
     go("reading");
     try {
-      const device = items.find((i) => i.role === "device_photo");
-      const docs = items.filter((i) => i !== device);
-      const f = new FormData();
-      const roles = docs.map((d) => (d.role === "auto" ? "" : d.role === "device_photo" ? "other" : d.role));
-      (docs.length ? docs : device ? [device] : []).forEach((d) => f.append("document", d.file));
-      if (docs.length && roles.some(Boolean)) f.append("roles", JSON.stringify(roles));
-      if (device && docs.length) f.append("device_photo", device.file);
-      f.append("language", lang);
+      const f = api.buildGuideForm(items, lang);
       const { guide_id } = await api.createGuide(f);
       const g = await api.getGuide(guide_id);
       setGuide(g);

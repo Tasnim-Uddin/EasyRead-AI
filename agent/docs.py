@@ -60,7 +60,7 @@ def parse_roles(raw: str | None, n: int) -> list[str | None]:
         elif r in ROLES:
             out.append(r)
         else:
-            raise UploadError(400, "bad_role", f"unknown role '{r}'; use one of {ROLES}")
+            raise UploadError(400, "bad_role", f"We do not know the paper kind '{r}'. Use one of: {', '.join(ROLES)}.")
     return out
 
 

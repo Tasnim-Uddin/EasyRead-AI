@@ -12,15 +12,51 @@ export const SAMPLES: Record<string, Guide> = {
 
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    // The server sends { error, detail } for upload problems (too many pages, bad file type, ...)
+    // The server sends { error, detail } for upload problems (too many pages, bad file type, ...).
+    // FastAPI's own validation errors have a list as detail, so only a string is shown.
     const body = await res.json().catch(() => null);
-    throw new Error(body?.detail ?? body?.error ?? `${res.status} ${res.statusText}`);
+    if (typeof body?.detail === "string") throw new Error(body.detail);
+    throw new Error(
+      res.status >= 500
+        ? "The server is not answering. Wait a moment and try again."
+        : "We could not use these files. Check them and try again.",
+    );
   }
   return res.json() as Promise<T>;
 }
 
+interface UploadItem {
+  file: File;
+  role: string;
+}
+
+/**
+ * Builds the POST /api/guides body (CONTRACTS.md section 2): each paper is a repeated `document` field,
+ * `roles` is aligned with them ("" = detect it), and the device photo keeps its own field.
+ */
+export function buildGuideForm(items: UploadItem[], language: string): FormData {
+  const device = items.find((i) => i.role === "device_photo");
+  const docs = items.filter((i) => i !== device);
+  const f = new FormData();
+  // A device photo on its own is the one document.
+  const main = docs.length ? docs : device ? [device] : [];
+  main.forEach((d) => f.append("document", d.file));
+  // Extra device photos have no field of their own, so they go as ordinary papers.
+  const roles = main.map((d) => (d.role === "auto" || d === device ? "" : d.role === "device_photo" ? "other" : d.role));
+  if (roles.some(Boolean)) f.append("roles", JSON.stringify(roles));
+  if (device && docs.length) f.append("device_photo", device.file);
+  f.append("language", language);
+  return f;
+}
+
 export async function createGuide(form: FormData): Promise<{ guide_id: string }> {
-  return json(await fetch("/api/guides", { method: "POST", body: form }));
+  let res: Response;
+  try {
+    res = await fetch("/api/guides", { method: "POST", body: form });
+  } catch {
+    throw new Error("We could not reach the server. Check your connection and try again.");
+  }
+  return json(res);
 }
 
 export async function getGuide(id: string): Promise<Guide> {
