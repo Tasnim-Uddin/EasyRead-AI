@@ -1,13 +1,18 @@
 """Anam persona config: system prompt (guide facts + ground rules) and the CONTRACTS section 3 client tools."""
 import json, os
 
-# Defaults are the public examples from the Anam docs; override via env.
+# Public stock IDs from Anam's catalogue (GET /v1/avatars, /v1/voices, /v1/llms); override via env.
+# Avatar: "Liv" (home), a friendly woman, cara-4. Voice: "Amanda - Warm Guide" (Cartesia, English, warm and calm).
+# LLM: GPT OSS 120B, Anam's built-in model, listed as strong at tool calling.
 DEFAULTS = {
     "avatarId": "071b0286-4cce-4808-bee2-e642f1062de3",
     "avatarModel": "cara-4",
-    "voiceId": "de23e340-1416-4dd8-977d-065a7ca11697",
+    "voiceId": "90313ddc-4fc0-11f1-84b0-52bacf74fa75",
     "llmId": "a7cf662c-2ace-4de1-a21e-ef0fbf144bb7",
 }
+
+# Anam speech-recognition codes we use. Bengali is beta (Anam's own transcription only).
+STT_LANGS = {"en", "es", "ar", "ur", "pl", "bn", "fr", "hi", "pt", "zh"}
 
 LANGS = {"en": "English", "es": "Spanish", "bn": "Bengali", "ar": "Arabic", "ur": "Urdu", "fr": "French",
          "hi": "Hindi", "pl": "Polish", "pt": "Portuguese", "zh": "Chinese"}
@@ -41,25 +46,27 @@ TOOLS = [
 ]
 
 
-def system_prompt(guide: dict, language: str) -> str:
+def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
     steps = "\n".join(f"{s['index']}. [{s['kind']}] {s['text_en']}" for s in guide.get("steps", []))
     return (f"You are a calm guide helping someone understand their own paper. "
             f"Speak {LANGS.get(language, language)} ({language}).\n\n{RULES}\n\n"
             f"DOCUMENT TYPE: {guide.get('doc_type', 'how_to')}\nDOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n"
             f"DOCUMENT CONTENT:\n{json.dumps(guide.get('content'), ensure_ascii=False, indent=1)}\n"
             f"SAFETY LINES (say these when relevant): {guide.get('safety_lines') or []}\n\n"
-            f"EASY READ STEPS:\n{steps}\n\nStart by greeting the user, then show step 0 and read it.")
+            f"EASY READ STEPS:\n{steps}\n\nStart by greeting the user, then use show_step with index {step_index} and read it.")
 
 
-def persona_config(guide: dict, language: str) -> dict:
+def persona_config(guide: dict, language: str, step_index: int = 0) -> dict:
     env = os.environ.get
     cfg = {"name": "Easy Read guide",
            "avatarId": env("ANAM_AVATAR_ID", DEFAULTS["avatarId"]),
            "avatarModel": env("ANAM_AVATAR_MODEL", DEFAULTS["avatarModel"]),
            "voiceId": env("ANAM_VOICE_ID", DEFAULTS["voiceId"]),
            "llmId": env("ANAM_LLM_ID", DEFAULTS["llmId"]),
-           "systemPrompt": system_prompt(guide, language),
+           "systemPrompt": system_prompt(guide, language, step_index),
            "tools": TOOLS}
-    if language in LANGS and language != "en":
+    if language in STT_LANGS and language != "en":
+        # Tells Anam's speech recognition which language the user speaks (ISO 639 only; others are rejected).
         cfg["languageCode"] = language
+    cfg["maxSessionLengthSeconds"] = int(env("ANAM_MAX_SESSION_SECONDS", "600"))
     return cfg

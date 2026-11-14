@@ -43,6 +43,7 @@ class TTSReq(BaseModel):
 class SessionReq(BaseModel):
     guide_id: str
     language: str = "en"
+    step_index: int = 0
 
 
 class CheckReq(BaseModel):
@@ -193,15 +194,21 @@ async def tool(name: str, body: dict):
 @app.post("/api/anam/session")
 async def anam_session(req: SessionReq):
     g = _guide(req.guide_id)
-    cfg = persona.persona_config(g, req.language)
+    step = max(0, min(req.step_index, len(g.get("steps", [])) - 1))
+    cfg = persona.persona_config(g, req.language, step)
     key = os.environ.get("ANAM_API_KEY")
     if not key:
         return {"sessionToken": "dev-mock-token", "mock": True, "personaConfig": cfg}
-    async with httpx.AsyncClient(timeout=20) as c:
-        r = await c.post("https://api.anam.ai/v1/auth/session-token",
-                         headers={"Authorization": f"Bearer {key}"}, json={"personaConfig": cfg})
+    try:
+        async with httpx.AsyncClient(timeout=20) as c:
+            r = await c.post("https://api.anam.ai/v1/auth/session-token",
+                             headers={"Authorization": f"Bearer {key}"},
+                             json={"clientLabel": "easyread-web", "expiresInSeconds": 600, "personaConfig": cfg})
+    except httpx.HTTPError:
+        raise HTTPException(502, "The avatar service did not answer.")
     if r.status_code >= 400:
-        raise HTTPException(502, f"Anam token request failed ({r.status_code}): {r.text[:300]}")
+        # The upstream body is not echoed: it can name the key or plan. The web app falls back to the stand-in.
+        raise HTTPException(502, f"Anam token request failed ({r.status_code}).")
     return {"sessionToken": r.json()["sessionToken"]}
 
 

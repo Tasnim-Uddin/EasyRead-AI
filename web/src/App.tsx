@@ -153,6 +153,7 @@ export default function App() {
     return clamped;
   }, []);
 
+  const anamLangRef = useRef<(code: string) => void>(() => {});
   const handlers = useMemo<Record<string, ToolHandler>>(() => {
     const stepSay = (i: number) => {
       const s = guideRef.current?.steps[i];
@@ -201,6 +202,7 @@ export default function App() {
         const code = String(language);
         if (!LANGUAGES.some((l) => l.code === code)) return "I can't switch to that language yet.";
         setLang(code);
+        anamLangRef.current(code);
         if (g() && !isSample(g())) setGuide(await api.setLanguage(g()!.id, code));
         return `Switched to ${LANGUAGES.find((l) => l.code === code)!.label}.`;
       },
@@ -208,6 +210,7 @@ export default function App() {
   }, [clips, goto]);
 
   const anam = useAnam(AVATAR_VIDEO_ID, handlers, addLog);
+  anamLangRef.current = anam.setLanguage;
 
   // The same client tools the avatar uses, driven by on-screen buttons. Logged to the dev
   // panel and read aloud, so the app works without Anam.
@@ -456,8 +459,12 @@ export default function App() {
             caption={lastSay}
             onLanguage={changeLanguage}
             onBack={() => { void anam.stop(); go("ask"); }}
-            onStart={() => void anam.start(guide.id, lang)}
+            onStart={() => void anam.start(guide.id, lang, index)}
             onStop={() => void anam.stop()}
+            micMuted={anam.micMuted}
+            soundOff={anam.soundOff}
+            onToggleMic={anam.toggleMic}
+            onToggleSound={anam.toggleSound}
             onType={() => { void anam.stop(); go("ask"); }}
           />
         )}
