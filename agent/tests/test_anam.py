@@ -49,7 +49,7 @@ def test_anam_real_token_request(client, monkeypatch):
     seen = {}
     _fake_httpx(monkeypatch, 200, {"sessionToken": "jwt-abc"}, seen)
     r = client.post("/api/anam/session", json={"guide_id": g["id"], "language": "es", "step_index": 2}).json()
-    assert r == {"sessionToken": "jwt-abc"}
+    assert r == {"sessionToken": "jwt-abc", "stt_supported": True}
     assert seen["url"] == "https://api.anam.ai/v1/auth/session-token"
     assert seen["headers"]["Authorization"] == "Bearer test-key-not-real"
     pc = seen["json"]["personaConfig"]

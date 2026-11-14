@@ -5,9 +5,9 @@ from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
-from . import docs, llm, persona, pipeline, qa, tts
+from . import docs, langs, llm, persona, pipeline, qa, tts
 from .store import Store
 
 if not os.environ.get("EASYREAD_NO_DOTENV"):  # tests set this so a real .env never leaks in
@@ -70,29 +70,35 @@ def load_samples(directory: pathlib.Path = FIXTURES) -> list[str]:
 load_samples()
 
 
-class LangReq(BaseModel):
+class _Lang(BaseModel):
+    """Any language code or name is accepted, cut down to letters, hyphens and spaces (max 40) before it can reach a prompt."""
     language: str = "en"
 
+    @field_validator("language", mode="before")
+    @classmethod
+    def _clean_language(cls, v):
+        return langs.clean(v)
 
-class AskReq(BaseModel):
+
+class LangReq(_Lang):
+    pass
+
+
+class AskReq(_Lang):
     question: str
-    language: str = "en"
 
 
-class TTSReq(BaseModel):
+class TTSReq(_Lang):
     text: str
-    language: str = "en"
 
 
-class SessionReq(BaseModel):
+class SessionReq(_Lang):
     guide_id: str
-    language: str = "en"
     step_index: int = 0
 
 
-class CheckReq(BaseModel):
+class CheckReq(_Lang):
     answer: str | None = None
-    language: str = "en"
 
 
 def _guide(gid: str) -> dict:
@@ -119,6 +125,7 @@ async def create_guide(document: list[UploadFile] = File(default=[]), device_pho
                        language: str = Form("en"), roles: str | None = Form(None)):
     """One or several files (images and/or PDFs). `roles`: optional JSON array or comma list aligned with `document`."""
     gid = "g_" + uuid.uuid4().hex[:10]
+    language = langs.clean(language)
     try:
         role_list = docs.parse_roles(roles, len(document))
         files, raw_files = [], []
@@ -187,6 +194,7 @@ async def set_language(gid: str, req: LangReq):
         await pipeline.translate_steps(g["steps"], req.language)
     except Exception:
         pass  # keep existing text if translation fails
+    await pipeline.translate_safety(g, req.language)
     g["language"] = req.language
     store.put(g)
     for s in g["steps"]:
@@ -223,14 +231,14 @@ async def check_understanding(gid: str, req: CheckReq):
 async def tool(name: str, body: dict):
     """Server-side Anam tools. Body: {guide_id, ...args}. Returns {say, ...}."""
     gid = body.get("guide_id", "")
-    lang = body.get("language", _guide(gid).get("language", "en"))
+    lang = langs.clean(body.get("language", _guide(gid).get("language", "en")))
     if name == "answer_from_document":
         r = await ask(gid, AskReq(question=body.get("question", ""), language=lang))
         return {"say": r["answer"], **r}
     if name == "check_understanding":
         return await check_understanding(gid, CheckReq(answer=body.get("answer"), language=lang))
     if name == "set_language":
-        g = await set_language(gid, LangReq(language=body.get("language", "en")))
+        g = await set_language(gid, LangReq(language=langs.clean(body.get("language", "en"))))
         return {"say": "Okay, I changed the language.", "language": g["language"], "guide": g}
     raise HTTPException(404, "unknown tool")
 
@@ -242,7 +250,7 @@ async def anam_session(req: SessionReq):
     cfg = persona.persona_config(g, req.language, step)
     key = os.environ.get("ANAM_API_KEY")
     if not key:
-        return {"sessionToken": "dev-mock-token", "mock": True, "personaConfig": cfg}
+        return {"sessionToken": "dev-mock-token", "mock": True, "personaConfig": cfg, "stt_supported": persona.stt_supported(req.language)}
     try:
         async with httpx.AsyncClient(timeout=20) as c:
             r = await c.post("https://api.anam.ai/v1/auth/session-token",
@@ -253,7 +261,7 @@ async def anam_session(req: SessionReq):
     if r.status_code >= 400:
         # The upstream body is not echoed: it can name the key or plan. The web app falls back to the stand-in.
         raise HTTPException(502, f"Anam token request failed ({r.status_code}).")
-    return {"sessionToken": r.json()["sessionToken"]}
+    return {"sessionToken": r.json()["sessionToken"], "stt_supported": persona.stt_supported(req.language)}
 
 
 @app.post("/api/tts")
@@ -263,6 +271,9 @@ async def tts_endpoint(req: TTSReq):
         return JSONResponse({"error": "text_required", "detail": "There is nothing to read aloud. Add some text and try again."}, status_code=400)
     if len(text) > tts.MAX_CHARS:
         return JSONResponse({"error": "text_too_long", "detail": f"This text is too long to read aloud. Use {tts.MAX_CHARS} characters or fewer."}, status_code=413)
+    if not tts.supported(req.language):
+        return JSONResponse({"error": "tts_unsupported_language",
+                             "detail": "A voice is not available for this language. You can read the words on the screen."}, status_code=422)
     if not tts.api_key():
         return JSONResponse({"error": "tts_unavailable", "detail": "The voice is not available now. Use the voice in your browser."},
                             status_code=503)

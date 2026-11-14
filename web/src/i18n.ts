@@ -8,7 +8,7 @@ export const LANGUAGES = [
   { code: "ur", label: "اردو" },
 ] as const;
 
-export const RTL = new Set(["ar", "ur", "he"]);
+export { RTL_CODES as RTL } from "./languages";
 
 type Dict = Record<string, string>;
 const en: Dict = {
@@ -27,6 +27,13 @@ const en: Dict = {
   noClip: "A checked video for this step is not available yet.",
   working: "Making your guide…",
   language: "Language",
+  otherLanguage: "Other language…",
+  searchLanguage: "Type a language, for example Somali",
+  useTyped: "Use",
+  noMatch: "No match. You can still use what you typed.",
+  closeX: "Close",
+  voiceNA: "A voice is not available for this language. You can read the words on the screen.",
+  sttTypeNote: "I cannot hear this language yet. Please type your questions instead.",
   emergency: "Serious problem? Call 999.",
   ask: "Ask a question about your document",
   askGo: "Ask",
@@ -1104,5 +1111,7 @@ const bn: Dict = {
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
 
 export function t(lang: string, key: string): string {
-  return (dicts[lang] ?? en)[key] ?? en[key] ?? key;
+  // A language without UI strings (any other language the user typed) shows the English interface.
+  const d = dicts[lang] ?? dicts[lang.toLowerCase().split("-")[0]] ?? en;
+  return d[key] ?? en[key] ?? key;
 }
