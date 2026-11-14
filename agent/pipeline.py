@@ -213,26 +213,47 @@ async def _translate(steps: list[dict], language: str):
         s["text"] = t
 
 
+def picture_concurrency() -> int:
+    """How many step pictures are made at once (PICTURE_CONCURRENCY, default 6, at least 1)."""
+    try:
+        return max(1, int(os.environ.get("PICTURE_CONCURRENCY", "6")))
+    except ValueError:
+        return 6
+
+
 async def illustrate(guide: dict, emit):
+    """Make step pictures concurrently (bounded). Each step goes generating -> ready/failed and emits step_updated."""
     try:
         from media import make_step_picture  # type: ignore
     except ImportError:
         make_step_picture = None
-    for s in guide["steps"]:
-        if s.get("image_url"):
-            s["status"] = "ready"  # already illustrated (fixture or earlier run)
-        elif not make_step_picture or not os.environ.get("FAL_KEY"):
-            s["status"] = "skipped"  # offline: no media module or no key, not an error
-        else:
-            s["status"] = "generating"
-            emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+    sem = asyncio.Semaphore(picture_concurrency())
+
+    async def one(s: dict):
+        async with sem:
             try:
                 s["image_url"] = await make_step_picture(s["picture_prompt"])
                 s["status"] = "ready"
             except Exception as e:
                 log.warning("picture failed: %s", e)
                 s["status"] = "failed"
+            emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+
+    todo = []
+    for s in guide["steps"]:
+        if s.get("image_url"):
+            s["status"] = "ready"  # already illustrated (fixture or earlier run)
+        elif not make_step_picture or not os.environ.get("FAL_KEY"):
+            s["status"] = "skipped"  # offline: no media module or no key, not an error
+        else:
+            todo.append(s)
+            continue
         emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+    # Every queued step is "generating" up front, so the UI shows a placeholder for it straight away.
+    for s in todo:
+        s["status"] = "generating"
+        emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
+    await asyncio.gather(*(one(s) for s in todo))
 
 
 DEVICE_LABELS = {
