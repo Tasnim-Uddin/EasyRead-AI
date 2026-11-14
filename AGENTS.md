@@ -88,7 +88,7 @@ Browser (web/)                                         Server (agent/, FastAPI)
 
 ## Design (Figma)
 
-**Figma folder for EasyRead AI:** https://www.figma.com/files/team/1703033153432357325/folder/690990562
+**Figma folder for EasyRead AI:** https://www.figma.com/files/team/1703033153432357325/folder/690990314
 (Team: https://www.figma.com/files/team/1703033153432357325.) Everyone on the team has access. Agents: this is where this project's designs live.
 
 - **Design owner:** `@Roddyw123` (design/).
