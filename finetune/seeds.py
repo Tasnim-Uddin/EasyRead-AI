@@ -56,3 +56,48 @@ _MORE = [
 ]
 SEEDS += [_f(*m) for m in _MORE]
 EVAL_IDS = [0, 3, 5, 8, 12]  # held out: never in the training set
+
+
+# Letters, bills and forms (docs/STYLE.md section 5). All fictional. Same shape as Guide.content in CONTRACTS.md.
+_NO_MED = {"medicine": None, "dose": None, "frequency": None, "route": None, "device_type": "unknown",
+           "device_confidence": 0.0, "warnings": [], "get_help": [], "unreadable": [], "conflicts": []}
+
+
+def _d(doc_type, content):
+    return {"doc_type": doc_type, "facts": dict(_NO_MED), "content": content}
+
+
+DOC_SEEDS = [
+    _d("letter", {"what_this_is": "A letter from your council about unpaid council tax.",
+                  "what_to_do": ["Pay the amount you owe.", "Call the council if you cannot pay."],
+                  "by_when": [{"date": "Friday 12 December", "what": "Pay in full"}],
+                  "amounts": [{"what": "You owe", "amount": "£212"}]}),
+    _d("bill", {"what_this_is": "An electricity bill from Northlight Energy.",
+                "what_to_do": ["Pay the bill by direct debit or online."],
+                "by_when": [{"date": "Monday 5 January", "what": "Pay the bill"}],
+                "amounts": [{"what": "Total to pay", "amount": "£86.40"}, {"what": "Used this month", "amount": "312 units"}]}),
+    _d("letter", {"what_this_is": "A letter from your child's school about a trip.",
+                  "what_to_do": ["Sign the slip.", "Send the slip back to school."],
+                  "by_when": [{"date": "Wednesday 3 December", "what": "Return the slip"}],
+                  "amounts": [{"what": "Trip cost", "amount": "£15"}]}),
+    _d("letter", {"what_this_is": "A letter from the hospital about your appointment.",
+                  "what_to_do": ["Go to the clinic on the day.", "Bring your appointment letter."],
+                  "by_when": [{"date": "Tuesday 9 December at 10:30", "what": "Your appointment"}],
+                  "amounts": []}),
+    _d("bill", {"what_this_is": "A water bill from ClearFlow Water.",
+                "what_to_do": ["Pay online or by phone."],
+                "by_when": [{"date": "Friday 19 December", "what": "Pay the bill"}],
+                "amounts": [{"what": "You owe", "amount": "£54.10"}]}),
+    _d("letter", {"what_this_is": "A letter from the housing office about your rent.",
+                  "what_to_do": ["Check your rent account.", "Call the housing office if the amount is wrong."],
+                  "by_when": [{"date": "Monday 15 December", "what": "Call about any mistake"}],
+                  "amounts": [{"what": "Rent due", "amount": "£480"}]}),
+    _d("form", {"fields": [{"label": "Box 1, Your name", "what_to_write": "Write your full name, for example Sam Jones."},
+                           {"label": "Box 2, Date of birth", "what_to_write": "Write the day, month and year, for example 04 03 1950."},
+                           {"label": "Box 3, Phone number", "what_to_write": "Write a number we can call. You can leave this empty."}]}),
+    _d("form", {"fields": [{"label": "Box 1, Name of child", "what_to_write": "Write your child's full name."},
+                           {"label": "Box 2, Allergies", "what_to_write": "Write any allergies. Write none if there are none."},
+                           {"label": "Box 3, Emergency contact", "what_to_write": "Write a name and phone number, for example Ali 07700 900123."},
+                           {"label": "Box 4, Signature", "what_to_write": "Sign your name."}]}),
+]
+DOC_EVAL_IDS = [0, 6]  # held out

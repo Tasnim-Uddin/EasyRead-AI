@@ -8,8 +8,8 @@ side for the slides.
 """
 import argparse, asyncio, json, os
 from . import _base, _tuned
-from .rubric import score
-from .seeds import SEEDS, EVAL_IDS
+from .rubric import score, score_doc
+from .seeds import SEEDS, EVAL_IDS, DOC_SEEDS, DOC_EVAL_IDS
 
 
 async def main(n: int):
@@ -22,6 +22,16 @@ async def main(n: int):
             w = 1.0 if st["score"] > sb["score"] else 0.5 if st["score"] == sb["score"] else 0.0
             wins += w
             results.append({"seed": i, "base": base, "tuned": tuned, "base_score": sb["score"],
+                            "tuned_score": st["score"], "win": w})
+    for i in DOC_EVAL_IDS:
+        for _ in range(n):
+            d = DOC_SEEDS[i]
+            args = (d["facts"], d["doc_type"], d["content"])
+            base, tuned = await _base(*args), await _tuned(*args)
+            sb, st = score_doc(d["doc_type"], d["content"], base), score_doc(d["doc_type"], d["content"], tuned)
+            w = 1.0 if st["score"] > sb["score"] else 0.5 if st["score"] == sb["score"] else 0.0
+            wins += w
+            results.append({"seed": f"doc{i}", "base": base, "tuned": tuned, "base_score": sb["score"],
                             "tuned_score": st["score"], "win": w})
     rate = wins / len(results)
     avg = lambda k: sum(r[k] for r in results) / len(results)

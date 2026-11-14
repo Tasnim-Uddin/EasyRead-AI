@@ -8,8 +8,8 @@ raise --per-seed and add seeds; upload with the Adaption SDK (datasets/upload) t
 import argparse, asyncio, json, os, random
 from agent import llm
 from .prompt import SYSTEM, user_message
-from .rubric import score
-from .seeds import SEEDS, EVAL_IDS
+from .rubric import score, score_doc
+from .seeds import SEEDS, EVAL_IDS, DOC_SEEDS, DOC_EVAL_IDS
 
 VARIANTS = ["Use very short, warm sentences.", "Prefer everyday words a child would know.",
             "Make each picture_prompt a clear single scene.", "Keep the how-to steps in the order a person does them."]
@@ -28,9 +28,21 @@ def perturb(f: dict, rng: random.Random) -> dict:
     return f
 
 
-async def draft(facts: dict, hint: str) -> list[dict] | None:
+def perturb_doc(d: dict, rng: random.Random) -> dict:
+    d = json.loads(json.dumps(d))
+    c = d["content"]
+    if rng.random() < 0.25 and c.get("amounts"):
+        c["amounts"] = c["amounts"][:1]
+    if rng.random() < 0.2 and c.get("by_when"):
+        c["by_when"] = []
+    if rng.random() < 0.2 and len(c.get("fields") or []) > 2:
+        c["fields"] = c["fields"][:-1]
+    return d
+
+
+async def draft(facts: dict, hint: str, doc_type: str = "how_to", content: dict | None = None) -> list[dict] | None:
     try:
-        steps = await llm.complete_json(SYSTEM + "\n" + hint, user_message(facts))
+        steps = await llm.complete_json(SYSTEM + "\n" + hint, user_message(facts, doc_type, content))
     except Exception:
         return None
     return steps if isinstance(steps, list) else None
@@ -50,6 +62,16 @@ async def main(per_seed: int, out: str):
             if steps and score(facts, steps)["passed"]:
                 rows.append({"prompt": SYSTEM + "\n\n" + user_message(facts),
                          "completion": json.dumps(steps, ensure_ascii=False)})
+    for i, seed in enumerate(DOC_SEEDS):
+        if i in DOC_EVAL_IDS:
+            continue
+        for k in range(per_seed):
+            d = perturb_doc(seed, rng)
+            tried += 1
+            steps = await draft(d["facts"], VARIANTS[k % len(VARIANTS)], d["doc_type"], d["content"])
+            if steps and score_doc(d["doc_type"], d["content"], steps)["passed"]:
+                rows.append({"prompt": SYSTEM + "\n\n" + user_message(d["facts"], d["doc_type"], d["content"]),
+                             "completion": json.dumps(steps, ensure_ascii=False)})
     with open(out, "w") as fh:
         fh.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
     print(f"kept {len(rows)}/{tried} rubric-passing examples -> {out}")
