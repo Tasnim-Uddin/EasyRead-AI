@@ -69,12 +69,33 @@ def load_library() -> list[dict]:
     return out
 
 
+_SUFFIX_MATCH = {"shake": ["shake"], "hold": ["hold your breath"],
+                 "press": ["press your inhaler", "press the inhaler", "press down"]}
+
+
+def _clip_keywords(clip: dict) -> list[str]:
+    kw = clip.get("match") or _SUFFIX_MATCH.get(clip["id"].rsplit("_", 1)[-1], [])
+    return [k.lower() for k in kw]
+
+
+def _device_applies(clip_dev: str, guide_dev: str | None) -> bool:
+    """A clip for "inhaler_mdi" also applies to "inhaler_mdi_spacer" (same family)."""
+    return bool(guide_dev) and (clip_dev == guide_dev or guide_dev.startswith(clip_dev + "_"))
+
+
 def attach_clips(guide: dict):
     dev = guide["facts"].get("device_type")
-    clips = sorted((c for c in load_library() if c["device_type"] == dev), key=lambda c: c.get("order", 0))
+    clips = sorted((c for c in load_library() if _device_applies(c["device_type"], dev)),
+                   key=lambda c: c.get("order", 0))
     how = [s for s in guide["steps"] if s["kind"] == "how" and not s.get("technique_clip_id")]
-    for s, c in zip(how, clips):
-        s["technique_clip_id"] = c["id"]
+    for c in clips:
+        kws = _clip_keywords(c)
+        for s in how:
+            text = (s.get("text_en") or s.get("text") or "").lower()
+            if kws and any(k in text for k in kws):
+                s["technique_clip_id"] = c["id"]
+                how.remove(s)
+                break
 
 
 def new_guide(gid: str, language: str) -> dict:
