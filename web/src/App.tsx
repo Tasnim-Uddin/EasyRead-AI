@@ -5,6 +5,7 @@ import { LANGUAGES, t } from "./i18n";
 import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
 import { useAnam, type ToolHandler } from "./useAnam";
 import { speak, stopSpeaking, voiceSettings } from "./speech";
+import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
@@ -85,6 +86,11 @@ export default function App() {
   const [scale, setScale] = useState(() => load("er.scale", 1));
   const [rate, setRate] = useState(() => load("er.rate", 1));
   const [voice, setVoice] = useState(() => load("er.voice", true));
+  const [theme, setTheme] = useState<Theme>(() => {
+    const th = initialTheme();
+    applyTheme(th); // before the first paint, so the page never flashes the old look
+    return th;
+  });
 
   const voiceRef = useRef(voice);
   const indexRef = useRef(0);
@@ -114,6 +120,7 @@ export default function App() {
     document.documentElement.style.setProperty("--scale", String(scale));
     save("er.scale", scale);
   }, [scale]);
+  useEffect(() => applyTheme(theme), [theme]);
   useEffect(() => save("er.rate", rate), [rate]);
   useEffect(() => save("er.voice", voice), [voice]);
   useEffect(() => {
@@ -413,6 +420,8 @@ export default function App() {
 
   // `?fakelive` (dev builds only) shows the live layout without a real Anam session, for screenshots.
   const fakeLive = import.meta.env.DEV && location.search.includes("fakelive");
+  const status = uploading ? "uploading" : guide?.status ?? "uploading";
+  const lastSay = log.find((l) => l.say)?.say ?? "";
   const liveState = fakeLive ? "live" : anam.state;
   const liveInfo: LiveInfo = {
     live: liveState === "live",
@@ -423,10 +432,11 @@ export default function App() {
     onToggleMic: anam.toggleMic,
     onToggleSound: anam.toggleSound,
     onSend: anam.send,
+    dock: dockOn(theme),
+    caption: lastSay,
+    onTalk: () => go("talk"),
   };
 
-  const status = uploading ? "uploading" : guide?.status ?? "uploading";
-  const lastSay = log.find((l) => l.say)?.say ?? "";
 
   return (
     <LiveContext.Provider value={liveInfo}>
@@ -558,6 +568,8 @@ export default function App() {
             scale={scale}
             rate={rate}
             voice={voice}
+            theme={theme}
+            onTheme={setTheme}
             onScale={setScale}
             onRate={setRate}
             onVoice={setVoice}
