@@ -102,7 +102,7 @@ Keys go in your own local `.env`, which is gitignored:
 | `ANTHROPIC_API_KEY` | Extraction from photos, rewriting, translation, grounded answers. `ANTHROPIC_MODEL` overrides the model |
 | `FAL_KEY` | Step pictures |
 | `ELEVENLABS_API_KEY` | Natural voice. `ELEVENLABS_VOICE_ID` and `ELEVENLABS_MODEL_ID` are optional |
-| `ANAM_API_KEY` | Live avatar session token. `ANAM_AVATAR_ID`, `ANAM_VOICE_ID`, `ANAM_LLM_ID` are optional |
+| `ANAM_API_KEY` | Live avatar session token. `ANAM_AVATAR_ID`, `ANAM_VOICE_ID`, `ANAM_LLM_ID` are optional. `ANAM_VOICE_ID_ES/AR/UR/PL/BN` set a voice per language (list candidates with `python tools/anam_voices.py`) |
 | `ADAPTION_API_KEY` and `ADAPTION_MODEL_ID` | Fine-tuned rewriter (also needs `pip install adaption`) |
 | `MONGODB_URI` | Saved guides across restarts |
 
