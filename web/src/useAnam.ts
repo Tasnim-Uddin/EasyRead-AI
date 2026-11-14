@@ -17,6 +17,7 @@ export function useAnam(
 ) {
   const [state, setState] = useState<AnamState>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [sttMissing, setSttMissing] = useState(false); // the avatar cannot hear this language: the user types instead
   const [micMuted, setMicMuted] = useState(false);
   const [soundOff, setSoundOff] = useState(false);
   const clientRef = useRef<ReturnType<typeof createClient> | null>(null);
@@ -52,8 +53,9 @@ export function useAnam(
       setState("connecting");
       setError(null);
       try {
-        const { token, mock } = await getAnamToken(guideId, language, stepIndex);
+        const { token, mock, stt } = await getAnamToken(guideId, language, stepIndex);
         if (session !== sessionRef.current) return; // End was pressed while connecting
+        setSttMissing(!stt);
         if (mock) {
           startingRef.current = false;
           setState("standin");
@@ -139,5 +141,5 @@ export function useAnam(
 
   useEffect(() => () => void stop(), [stop]);
 
-  return { state, error, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage };
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage };
 }

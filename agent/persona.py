@@ -1,5 +1,6 @@
 """Anam persona config: system prompt (guide facts + ground rules) and the CONTRACTS section 3 client tools."""
 import json, os
+from . import langs
 
 # Public stock IDs from Anam's catalogue (GET /v1/avatars, /v1/voices, /v1/llms); override via env.
 # Avatar: "Liv" (home), a friendly woman, cara-4. Voice: "Amanda - Warm Guide" (Cartesia, English, warm and calm).
@@ -14,8 +15,12 @@ DEFAULTS = {
 # Anam speech-recognition codes we use. Bengali is beta (Anam's own transcription only).
 STT_LANGS = {"en", "es", "ar", "ur", "pl", "bn", "fr", "hi", "pt", "zh"}
 
-LANGS = {"en": "English", "es": "Spanish", "bn": "Bengali", "ar": "Arabic", "ur": "Urdu", "fr": "French",
-         "hi": "Hindi", "pl": "Polish", "pt": "Portuguese", "zh": "Chinese"}
+LANGS = {c: langs.NAMES[c] for c in ("en", "es", "bn", "ar", "ur", "fr", "hi", "pl", "pt", "zh")}
+
+
+def stt_supported(language: str) -> bool:
+    """False for languages Anam cannot transcribe: the avatar then listens in English and the user can type instead."""
+    return language in STT_LANGS
 
 RULES = """GROUND RULES (never break these):
 - You explain the user's OWN document. You never give medical advice, diagnose, or change doses or timings.
@@ -49,7 +54,7 @@ TOOLS = [
 def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
     steps = "\n".join(f"{s['index']}. [{s['kind']}] {s['text_en']}" for s in guide.get("steps", []))
     return (f"You are a calm guide helping someone understand their own paper. "
-            f"Speak {LANGS.get(language, language)} ({language}).\n\n{RULES}\n\n"
+            f"Speak {langs.name_of(language)} ({language}). If you cannot speak it well, use short simple words and say so once.\n\n{RULES}\n\n"
             f"DOCUMENT TYPE: {guide.get('doc_type', 'how_to')}\nDOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n"
             f"DOCUMENT CONTENT:\n{json.dumps(guide.get('content'), ensure_ascii=False, indent=1)}\n"
             f"SAFETY LINES (say these when relevant): {guide.get('safety_lines') or []}\n\n"
@@ -60,7 +65,7 @@ def voice_id(language: str) -> str:
     """Anam voices are single-language: ANAM_VOICE_ID_<LANG> (e.g. ANAM_VOICE_ID_ES) wins for that language,
     then ANAM_VOICE_ID, then the English default."""
     env = os.environ.get
-    per_lang = env(f"ANAM_VOICE_ID_{language.upper()}") if language and language.isalpha() else None
+    per_lang = env(f"ANAM_VOICE_ID_{language.upper()}") if language and language.isalpha() and len(language) <= 8 else None
     return per_lang or env("ANAM_VOICE_ID", DEFAULTS["voiceId"])
 
 
@@ -73,7 +78,7 @@ def persona_config(guide: dict, language: str, step_index: int = 0) -> dict:
            "llmId": env("ANAM_LLM_ID", DEFAULTS["llmId"]),
            "systemPrompt": system_prompt(guide, language, step_index),
            "tools": TOOLS}
-    if language in STT_LANGS and language != "en":
+    if stt_supported(language) and language != "en":
         # Tells Anam's speech recognition which language the user speaks (ISO 639 only; others are rejected).
         cfg["languageCode"] = language
     cfg["maxSessionLengthSeconds"] = int(env("ANAM_MAX_SESSION_SECONDS", "600"))

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { Clip, Guide, ToolLogEntry } from "./types";
-import { LANGUAGES, RTL, t } from "./i18n";
+import { LANGUAGES, t } from "./i18n";
+import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
 import { useAnam, type ToolHandler } from "./useAnam";
 import { speak, stopSpeaking, voiceSettings } from "./speech";
 import {
@@ -93,7 +94,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.lang = lang;
-    document.documentElement.dir = RTL.has(lang) ? "rtl" : "ltr";
+    document.documentElement.dir = isRtl(lang) ? "rtl" : "ltr";
     save("er.lang", lang);
   }, [lang]);
   useEffect(() => {
@@ -202,12 +203,12 @@ export default function App() {
             : `In your own words, how do you use ${g()!.facts?.medicine ?? "your medicine"}?`
           : server("check_understanding", args),
       set_language: async ({ language }) => {
-        const code = String(language);
-        if (!LANGUAGES.some((l) => l.code === code)) return "I can't switch to that language yet.";
+        const code = languageValue(String(language));
+        if (!cleanLanguage(code)) return "I can't switch to that language yet.";
         setLang(code);
         anamLangRef.current(code);
         if (g() && !isSample(g())) setGuide(await api.setLanguage(g()!.id, code));
-        return `Switched to ${LANGUAGES.find((l) => l.code === code)!.label}.`;
+        return `Switched to ${languageLabel(code)}.`;
       },
     };
   }, [clips, goto]);
@@ -472,6 +473,7 @@ export default function App() {
             lang={lang}
             state={liveState}
             error={anam.error}
+            sttMissing={anam.sttMissing}
             caption={lastSay}
             onLanguage={changeLanguage}
             onBack={() => { void anam.stop(); go("ask"); }}

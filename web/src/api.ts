@@ -112,15 +112,15 @@ export async function postTool(
 }
 
 /** `mock` is true when the server has no Anam key: the app then keeps the illustrated stand-in. */
-export async function getAnamToken(guideId: string, language: string, stepIndex = 0): Promise<{ token: string; mock: boolean }> {
-  const r = await json<{ sessionToken: string; mock?: boolean }>(
+export async function getAnamToken(guideId: string, language: string, stepIndex = 0): Promise<{ token: string; mock: boolean; stt: boolean }> {
+  const r = await json<{ sessionToken: string; mock?: boolean; stt_supported?: boolean }>(
     await fetch("/api/anam/session", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ guide_id: guideId, language, step_index: stepIndex }),
     }),
   );
-  return { token: r.sessionToken, mock: !!r.mock || r.sessionToken === "dev-mock-token" };
+  return { token: r.sessionToken, mock: !!r.mock || r.sessionToken === "dev-mock-token", stt: r.stt_supported !== false };
 }
 
 /** Only clips a human has checked may reach a user (CONTRACTS.md §5). */

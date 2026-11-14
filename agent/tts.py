@@ -1,6 +1,7 @@
 """ElevenLabs text-to-speech with an on-disk cache so the demo never pays twice."""
 import hashlib, os, pathlib
 import httpx
+from . import langs
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = pathlib.Path(os.environ.get("TTS_CACHE_DIR", ROOT / ".cache" / "tts"))
@@ -11,6 +12,14 @@ MAX_CHARS = 600
 
 class TTSError(Exception):
     pass
+
+
+class UnsupportedLanguage(TTSError):
+    """The voice model does not speak this language: never read foreign text with an English voice."""
+
+
+def supported(language: str) -> bool:
+    return langs.tts_supported(language)
 
 
 def api_key() -> str | None:
@@ -31,6 +40,8 @@ def cache_path(text: str, language: str, voice: str, model: str) -> pathlib.Path
 
 
 async def synthesize(text: str, language: str) -> bytes:
+    if not supported(language):
+        raise UnsupportedLanguage(language)
     voice, model = voice_id(), model_id()
     p = cache_path(text, language, voice, model)
     if p.exists():
