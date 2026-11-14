@@ -2,7 +2,7 @@ def test_sample_guides_work_on_the_server(client):
     for gid in ("g_sample_inhaler", "g_sample_council_letter", "g_sample_flatpack"):
         r = client.post("/api/anam/session", json={"guide_id": gid, "language": "en", "step_index": 1})
         assert r.status_code == 200 and r.json()["mock"] is True
-        assert "show_step with index 1" in r.json()["personaConfig"]["systemPrompt"]
+        assert "read step with index 1" in r.json()["personaConfig"]["systemPrompt"]
         assert client.get(f"/api/guides/{gid}").json()["id"] == gid
 
 

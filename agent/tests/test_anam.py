@@ -53,7 +53,7 @@ def test_anam_real_token_request(client, monkeypatch):
     assert seen["url"] == "https://api.anam.ai/v1/auth/session-token"
     assert seen["headers"]["Authorization"] == "Bearer test-key-not-real"
     pc = seen["json"]["personaConfig"]
-    assert pc["languageCode"] == "es" and "show_step with index 2" in pc["systemPrompt"]
+    assert pc["languageCode"] == "es" and "read step with index 2" in pc["systemPrompt"]
     assert pc["avatarId"] and pc["voiceId"] and pc["llmId"] and pc["maxSessionLengthSeconds"] <= 600
     assert all(t["type"] == "client" for t in pc["tools"])
 

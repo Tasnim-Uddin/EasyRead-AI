@@ -52,6 +52,19 @@ TOOLS = [
 ]
 
 
+def _flow(guide: dict, step_index: int) -> str:
+    """How the avatar starts and moves. The screen already shows the current step, so it never re-calls show_step for it."""
+    last = max(len(guide.get("steps", [])) - 1, 0)
+    return (f"START: greet the user in one short sentence, then read step with index {step_index} aloud. "
+            f"That step is already on screen, so do NOT call show_step for it.\n"
+            f"MOVING: call show_step, next_step or previous_step only when the user asks to move (for example \"next\", \"go back\", "
+            f"\"show me step 3\"). Do not move on by yourself.\n"
+            f"CONTEXT MESSAGES: if you receive a message like \"User moved to step N\" (N counts from 1), the screen already shows "
+            f"that step. Read it aloud (steps list index N-1) and do not call a step tool.\n"
+            f"INDEXES: step indexes run from 0 to {last}. Never call show_step or play_technique without an integer index in that range. "
+            f"If you are not sure which step the user means, ask them.")
+
+
 def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
     steps = "\n".join(f"{s['index']}. [{s['kind']}] {s['text_en']}" for s in guide.get("steps", []))
     return (f"You are a calm guide helping someone understand their own paper. "
@@ -59,7 +72,7 @@ def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
             f"DOCUMENT TYPE: {guide.get('doc_type', 'how_to')}\nDOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n"
             f"DOCUMENT CONTENT:\n{json.dumps(guide.get('content'), ensure_ascii=False, indent=1)}\n"
             f"SAFETY LINES (say these when relevant): {guide.get('safety_lines') or []}\n\n"
-            f"EASY READ STEPS:\n{steps}\n\nStart by greeting the user, then use show_step with index {step_index} and read it.")
+            f"EASY READ STEPS:\n{steps}\n\n{_flow(guide, step_index)}")
 
 
 def voice_id(language: str) -> str:
