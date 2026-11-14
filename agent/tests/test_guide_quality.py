@@ -93,6 +93,20 @@ def test_rewriter_gets_outline_and_result_is_finished(monkeypatch):
     assert seen["facts"]["technique_outline"] == technique.outline_for_prompt("inhaler_mdi_spacer")
 
 
+def test_inhaler2_long_conflict_step_collapses_and_technique_split():
+    """Second paid run: the model wrote a long conflict step that did not contain the canonical sentence
+    verbatim, so a second flag was inserted; hold + wait came as one step."""
+    g, steps = finish("inhaler2")
+    t = texts(steps)
+    assert sum(postprocess.is_conflict(x) for x in t) == 1 and t[0] == postprocess.CONFLICT_TEXT
+    assert no_duplicates(steps)
+    assert not any("hold your breath" in x.lower() and "wait" in x.lower() for x in t)
+    assert not any("breathe out" in x.lower() and "mouthpiece" in x.lower() for x in t)
+    assert any(x.startswith("Wait about 30 seconds") for x in t)
+    assert any("999" in x for x in t)
+    print(len(steps), t)
+
+
 def test_every_technique_has_nhs_source_and_unsigned_check():
     for dev in technique.TECHNIQUES:
         s = technique.sources(dev)
