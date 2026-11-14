@@ -1,5 +1,5 @@
 // Optional access gate for shared test builds. The server answers 401 on /api/* when ACCESS_CODE is set.
-// The code comes from the link (/?code=... or /#code), is kept in localStorage, is sent as X-Access-Code on every
+// The code comes from the link (/?code=... or /#code=...), is kept in localStorage, is sent as X-Access-Code on every
 // /api request, and is mirrored into the er_access cookie so EventSource, <img> and <audio> requests (which cannot
 // set headers) are let through too.
 const KEY = "er.access";
@@ -24,12 +24,14 @@ export function setAccessCode(code: string) {
 
 /** Call once at start-up: picks the code out of the link, then wraps fetch. */
 export function installAccess() {
-  const hash = location.hash.replace(/^#\/?(code=)?/, "");
+  // Only an explicit #code=... counts, so app routes such as #/settings are never mistaken for a code.
+  const hashCode = location.hash.match(/^#\/?code=([\w-]{3,64})$/)?.[1] ?? "";
   const query = new URLSearchParams(location.search).get("code");
-  const fromLink = query || (/^[\w-]{3,64}$/.test(hash) ? hash : "");
+  const fromLink = query || hashCode;
   if (fromLink) {
     setAccessCode(fromLink);
-    history.replaceState(null, "", location.pathname); // keep the code out of the address bar and history
+    // keep the code out of the address bar and history, but keep any app route in the hash
+    history.replaceState(null, "", location.pathname + (hashCode ? "" : location.hash));
   } else if (read()) {
     setAccessCode(read());
   }
