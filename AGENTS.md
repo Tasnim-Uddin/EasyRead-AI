@@ -94,6 +94,7 @@ Browser (web/)                                         Server (agent/, FastAPI)
    - Use it to read designs and build the UI to match (exact colours, spacing, type). Create new designs in Figma or Figma Make, then hand the frame link to your agent.
 3. **Credits:** claim yours on imperialaihack.com → **My Pass** (Anthropic, fal, ElevenLabs, Adaption, Figma Education, Databricks, MongoDB, plus track perks: Anam, Tavily, Synthesia, LiveKit). Create API keys on each provider's dashboard.
 4. **Keys:** `cp .env.example .env` and fill in what your area needs (`ANTHROPIC_API_KEY`, `FAL_KEY`, `ANAM_API_KEY`, `ELEVENLABS_API_KEY`, `ADAPTION_API_KEY`, `MONGODB_URI`). The server runs on fixtures without any keys.
+   - **Each person needs the keys for what they run in their OWN local `.env`.** Keys are never committed or shared through the repo, board or Figma. Who needs what: server/agent → `ANTHROPIC_API_KEY` (API credit from My Pass; a Claude Max/Pro subscription does **not** cover API calls), `ANAM_API_KEY`; media/library → `FAL_KEY`; finetune → `ADAPTION_API_KEY` (+ `ADAPTION_MODEL_ID` once trained); narration → `ELEVENLABS_API_KEY` (`npx -y @elevenlabs/cli@latest onboard init` writes it for you); optional `MONGODB_URI`. A missing key makes that feature fall back to fixtures/mocks. The **demo laptop** needs the full set.
    - **Run:** `pip install -r requirements.txt && uvicorn agent.main:app --reload --port 8000`; tests: `pytest agent`.
 5. **Never commit secrets.** `.env` is gitignored. Don't paste keys into chats, board posts or Figma.
 
