@@ -134,6 +134,19 @@ async def illustrate(guide: dict, emit):
         emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
 
 
+async def write_typed(facts: dict, language: str, dt: str, content: dict) -> list[dict]:
+    """letter/bill/form: tuned rewriter with doc_type + content; fall back to the deterministic steps."""
+    if dt in ("letter", "bill", "form"):
+        try:
+            raw = await write_easy_read(facts, language, dt, content)
+            if raw and all(isinstance(r, dict) and r.get("text_en") for r in raw):
+                return [{"text_en": r["text_en"], "kind": r.get("kind") or "how",
+                         "picture_prompt": r.get("picture_prompt") or "a person doing one simple task"} for r in raw]
+        except Exception as e:
+            log.warning("typed rewrite failed, using content steps: %s", e)
+    return content_to_steps(dt, content)
+
+
 async def run(store, gid: str, files, device_photo, language: str, image_urls: list[str]):
     guide = store.get(gid)
 
@@ -159,7 +172,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                          safety_lines=safety_lines(dt, domain))
             status("writing")
             if ex["content"] is not None:
-                raw = content_to_steps(dt, ex["content"])
+                raw = await write_typed(facts, language, dt, ex["content"])
             elif domain != "medicine":
                 raw = await write_generic_howto(facts, language)
             else:

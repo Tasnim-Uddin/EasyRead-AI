@@ -13,16 +13,20 @@ Return 6-8 steps as a JSON array of
 {"text_en": str, "kind": "what|when|how|warning|get_help", "picture_prompt": str}. JSON only."""
 
 
-async def write_easy_read(facts: dict, language: str = "en") -> list[dict]:
+async def write_easy_read(facts: dict, language: str = "en", doc_type: str = "how_to", content: dict | None = None) -> list[dict]:
+    """how_to/medicine keeps the old call. letter/bill/form pass doc_type + content to finetune and raise
+    if finetune is missing (the medicine rubric below does not fit them), so the caller can fall back."""
+    typed = doc_type in ("letter", "bill", "form")
     try:
         from finetune import write_easy_read as ft  # type: ignore
         import inspect
-        r = ft(facts, language)
+        r = ft(facts, language, doc_type, content) if typed else ft(facts, language)
         if inspect.isawaitable(r):
             r = await r
         return r
     except ImportError:
-        pass
+        if typed:
+            raise
     import json
     steps = await llm.complete_json(RUBRIC, "Facts:\n" + json.dumps(facts, ensure_ascii=False))
     return steps
