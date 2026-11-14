@@ -32,7 +32,8 @@ def load_samples(directory: pathlib.Path = FIXTURES) -> list[str]:
     """Load the built-in sample guides (demo/fixtures/guide_*.json, read-only) under their own stable ids
     (g_sample_inhaler, g_sample_council_letter, g_sample_flatpack), so the avatar and Q&A work on them."""
     ids = []
-    for f in sorted(directory.glob("guide_*.json")):
+    # cached/guide_*.json are saved real runs (demo/cache_run.py), served the same way as the samples
+    for f in sorted(directory.glob("guide_*.json")) + sorted((directory / "cached").glob("guide_*.json")):
         try:
             g = json.loads(f.read_text(encoding="utf-8"))
         except (OSError, ValueError):
