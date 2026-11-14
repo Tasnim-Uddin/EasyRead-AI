@@ -1,10 +1,21 @@
 import fixture from "../../demo/fixtures/guide_inhaler.json";
+import council from "../../demo/fixtures/guide_council_letter.json";
+import flatpack from "../../demo/fixtures/guide_flatpack.json";
 import type { AskResult, Clip, Guide, ServerEvent } from "./types";
 
 export const sampleGuide = fixture as unknown as Guide;
+export const SAMPLES: Record<string, Guide> = {
+  inhaler: sampleGuide,
+  council: council as unknown as Guide,
+  flatpack: flatpack as unknown as Guide,
+};
 
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    // The server sends { error, detail } for upload problems (too many pages, bad file type, ...)
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.detail ?? body?.error ?? `${res.status} ${res.statusText}`);
+  }
   return res.json() as Promise<T>;
 }
 

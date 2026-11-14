@@ -1,7 +1,7 @@
 // Mirrors CONTRACTS.md §1–§5. Do not invent fields here; change the contract first.
 export type GuideStatus = "extracting" | "writing" | "illustrating" | "ready" | "failed";
 export type StepKind = "what" | "when" | "how" | "warning" | "get_help";
-export type StepStatus = "pending" | "generating" | "ready" | "failed";
+export type StepStatus = "pending" | "generating" | "ready" | "failed" | "skipped";
 
 export interface Step {
   index: number;
@@ -24,14 +24,34 @@ export interface Facts {
   warnings: string[];
   get_help: string[];
   unreadable: string[];
+  conflicts?: { field: string; label: string; leaflet: string }[];
+  title?: string;
+  source_steps?: string[];
+}
+
+export interface GuideContent {
+  what_this_is?: string;
+  what_to_do?: string[];
+  by_when?: { date: string; what: string }[];
+  amounts?: { what: string; amount: string }[];
+  fields?: { label: string; what_to_write: string }[];
 }
 
 export interface Guide {
   id: string;
   status: GuideStatus;
   language: string;
-  source: { kind: string; image_urls: string[]; is_sample: boolean };
+  doc_type?: "how_to" | "letter" | "bill" | "form" | "other"; // missing = how_to
+  domain?: string;
+  source: {
+    kind: string;
+    image_urls: string[];
+    is_sample: boolean;
+    documents?: { index: number; role: string; role_source: string; image_url: string | null }[];
+  };
   facts: Facts | null;
+  content?: GuideContent | null;
+  safety_lines?: string[];
   steps: Step[];
   created_at: string;
 }
