@@ -1,6 +1,6 @@
 """Build the Easy Read training set: Claude drafts steps for each seed, the rubric filters, JSONL out.
 
-    python -m finetune.build_dataset --per-seed 4 --out finetune/data/train.jsonl
+    python -m finetune.build_dataset --per-seed 45 --out finetune/data/train.jsonl
 
 Rows are {"prompt", "completion"} (Adaption SFT column mapping). Adaption SFT needs >= 1,000 effective rows, so
 raise --per-seed and add seeds; upload with the Adaption SDK (datasets/upload) then autoscientist.create(). Needs ANTHROPIC_API_KEY. Eval seeds (EVAL_IDS) are excluded.
@@ -19,6 +19,12 @@ def perturb(f: dict, rng: random.Random) -> dict:
     f = json.loads(json.dumps(f))
     if rng.random() < 0.3:
         f["warnings"] = f["warnings"][:1]
+    if rng.random() < 0.2:
+        f["warnings"] = []
+    if rng.random() < 0.2:
+        f["get_help"] = []
+    if rng.random() < 0.15:
+        f["unreadable"] = [rng.choice(["the frequency", "the end of the warning", "the pharmacy name"])]
     return f
 
 
@@ -51,7 +57,7 @@ async def main(per_seed: int, out: str):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--per-seed", type=int, default=4)
+    ap.add_argument("--per-seed", type=int, default=45)
     ap.add_argument("--out", default="finetune/data/train.jsonl")
     a = ap.parse_args()
     asyncio.run(main(a.per_seed, a.out))
