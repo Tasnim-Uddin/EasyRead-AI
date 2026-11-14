@@ -92,9 +92,10 @@ export default function App() {
   const [rate, setRate] = useState(() => load("er.rate", 1));
   const [voice, setVoice] = useState(() => load("er.voice", true));
   // Guide-led: the live guide is on by default (it still needs one tap to start, browsers block audio before that).
-  const [guideOn, setGuideOn] = useState(() => load("er.guideOn", true));
-  const [moved, setMoved] = useState<number | null>(null); // "Your guide moved to step N"
-  const [askOpen, setAskOpen] = useState(false);
+  const [guideOn, setGuideOn] = useState(() => (/[?&]guide=0/.test(location.search) ? false : load("er.guideOn", true)));
+  const [moved, setMoved] = useState<number | null>(null); // "Your guide moved you to step N"
+  const movedFrom = useRef(0);
+  const [askOpen, setAskOpen] = useState(() => import.meta.env.DEV && /[?&]asksheet/.test(location.search)); // screenshot hook
   // Customer mode by default; demo mode (?demo=1, the Settings switch, or a #/sample link) shows samples and dev tools.
   const [demo, setDemo] = useState(initialDemo);
   const [mine, setMine] = useState<string[]>(myGuideIds);
@@ -124,7 +125,7 @@ export default function App() {
   // Each screen change is a browser history entry, so the phone's Back button moves within the app.
   const go = useCallback((s: Screen, replace = false) => {
     stopSpeaking();
-    setAskOpen(false);
+    if (s !== "step") setAskOpen(false);
     if (s !== screenRef.current) {
       try {
         // Same URL, screen kept in history state: writing the hash would fire hashchange, which reloads (main.tsx).
@@ -261,7 +262,10 @@ export default function App() {
     const guideMove = (i: number) => {
       const before = indexRef.current;
       const to = goto(i);
-      if (to !== before) setMoved(to + 1);
+      if (to !== before) {
+        movedFrom.current = before;
+        setMoved(to + 1);
+      }
       if (screenRef.current === "clip") go("step");
       return stepSay(to);
     };
@@ -688,6 +692,7 @@ export default function App() {
             onPapers={openPapers}
             onBack={leaveSummary}
             onStart={() => { setIndex(0); go("step"); }}
+            onStartGuide={guideOn ? () => { setIndex(0); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
             onListen={() => void speak(summaryText(guide), lang)}
           />
         )}
@@ -699,15 +704,16 @@ export default function App() {
             clips={clips}
             onClose={() => go("summary")}
             onIndex={setStep}
-            onFinish={() => go("ask")}
+            onFinish={() => { go("tellback"); }}
             onShowHow={() => void runTool("play_technique", { step_index: index })}
             moved={moved}
+            onUndoMove={() => setStep(movedFrom.current)}
             askOpen={askOpen}
             onAskOpen={setAskOpen}
             onAsk={(q) => void askOnStep(q)}
             answer={answer}
             busy={busy}
-            onCheck={() => { void runTool("check_understanding", {}); go("tellback"); }}
+            onCheck={() => { go("tellback"); }}
           />
         )}
         {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}
@@ -721,7 +727,7 @@ export default function App() {
             onQuestion={setQuestion}
             onAsk={(q) => void onAsk(q)}
             onTalk={() => go("talk")}
-            onTellBack={() => { void runTool("check_understanding", {}); go("tellback"); }}
+            onTellBack={() => { go("tellback"); }}
             onPrint={print}
             onBack={() => go("step")}
           />
@@ -750,7 +756,7 @@ export default function App() {
             guide={guide}
             lang={lang}
             onCheck={(a, correct) => void runTool("check_understanding", { answer: a, correct })}
-            onClose={() => (window.history.length > 1 ? window.history.back() : go("ask"))}
+            onClose={() => go("ask")}
           />
         )}
         {screen === "error" && (

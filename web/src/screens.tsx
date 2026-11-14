@@ -98,10 +98,6 @@ function GuideDock({ text, lang }: { text: string; lang: string }) {
             {t(lang, "pauseGuide")}
           </button>
         )}
-        <button type="button" className="btn quiet small" onClick={info.onToggleSound} aria-pressed={info.soundOff}>
-          <Icon name="volume" />
-          {t(lang, info.soundOff ? "soundOn" : "soundOff")}
-        </button>
         {info.onHide && (
           <button type="button" className="btn quiet small" onClick={info.onHide}>
             {t(lang, "hideGuide")}
@@ -710,8 +706,10 @@ interface SummaryProps {
   onBack: () => void;
   onStart: () => void;
   onListen: () => void;
+  /** The one audio tap: start the live guide, which then explains step 1. */
+  onStartGuide?: () => void;
 }
-export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen }: SummaryProps) {
+export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, onStartGuide }: SummaryProps) {
   const k = kindOf(guide);
   const f = guide.facts;
   const c = guide.content;
@@ -865,6 +863,12 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen }: 
       </p>
 
       <div className="foot sticky">
+        {onStartGuide && (
+          <button className="btn start-guide" onClick={onStartGuide}>
+            <GuideFace />
+            {t(lang, "startWithGuide")}
+          </button>
+        )}
         <div className="pair">
           {canSpeak(lang) && (
             <button className="btn soft" onClick={onListen}>
@@ -934,6 +938,7 @@ interface StepProps {
   onFinish: () => void;
   onShowHow: () => void;
   moved?: number | null;
+  onUndoMove?: () => void;
   askOpen?: boolean;
   onAskOpen?: (open: boolean) => void;
   onAsk?: (q: string) => void;
@@ -945,7 +950,7 @@ export function stepHasHow(guide: Guide, step: Step, clips: Clip[]) {
   const clip = step.technique_clip_id ? clips.find((c) => c.id === step.technique_clip_id) : undefined;
   return !!clip || (kindOf(guide) !== "letter" && kindOf(guide) !== "form" && step.kind === "how");
 }
-export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow, moved, askOpen, onAskOpen, onAsk, answer, busy, onCheck }: StepProps) {
+export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow, moved, onUndoMove, askOpen, onAskOpen, onAsk, answer, busy, onCheck }: StepProps) {
   const live = useLive();
   const dock = !!useDock();
   const step = guide.steps[index];
@@ -980,6 +985,11 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
       {moved != null && (
         <p className="moved-note" role="status">
           <span dir={isFallback(lang, "guideMoved") ? "ltr" : undefined}>{tf(lang, "guideMoved", { n: moved })}</span>
+          {onUndoMove && (
+            <button className="link-btn" onClick={onUndoMove}>
+              {t(lang, "undo")}
+            </button>
+          )}
         </p>
       )}
       <StepPicture step={step} lang={lang} />
@@ -1017,7 +1027,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
         </div>
       )}
       {askOpen && onAskOpen && onAsk && (
-        <AskSheet lang={lang} live={!!live} answer={answer ?? null} busy={!!busy} onAsk={onAsk} onClose={() => onAskOpen(false)} />
+        <AskSheet lang={lang} n={index + 1} live={!!live} answer={answer ?? null} busy={!!busy} onAsk={onAsk} onClose={() => onAskOpen(false)} />
       )}
       {!dock && (
         <div className="guide">
@@ -1048,7 +1058,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
 }
 
 /** Ask on the step screen: type or speak; the guide (or the document answer) replies, the user stays on the step. */
-function AskSheet({ lang, live, answer, busy, onAsk, onClose }: { lang: string; live: boolean; answer: string | null; busy: boolean; onAsk: (q: string) => void; onClose: () => void }) {
+function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: string; n: number; live: boolean; answer: string | null; busy: boolean; onAsk: (q: string) => void; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [sent, setSent] = useState(false);
   const [listening, setListening] = useState(false);
@@ -1083,6 +1093,7 @@ function AskSheet({ lang, live, answer, busy, onAsk, onClose }: { lang: string; 
             <Icon name="x" />
           </button>
         </div>
+        <p className="sub">{tf(lang, "stillOnStep", { n })}</p>
         <textarea dir="auto" value={q} onChange={(e) => setQ(e.target.value)} rows={2} placeholder={t(lang, "askExample")} />
         <div className="sheet-actions">
           {Rec && (
@@ -1098,6 +1109,9 @@ function AskSheet({ lang, live, answer, busy, onAsk, onClose }: { lang: string; 
         </div>
         {sent && !live && (busy ? <p role="status">…</p> : answer ? <div className="answer" dir="auto" aria-live="polite">{answer}</div> : null)}
         {sent && live && <p className="sub" role="status">{t(lang, "guideSays")}…</p>}
+        <button className="btn quiet" onClick={onClose}>
+          {tf(lang, "backToStep", { n })}
+        </button>
       </div>
     </div>
   );
@@ -1526,7 +1540,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
           <Counter lang={lang} n={qi + 1} total={qs.length} />
         </div>
       </div>
-      <EmergencyLink lang={lang} />
+      <p className="sub">{t(lang, "notATest")}</p>
       <h1 className="qtitle">{q.q}</h1>
       <div className="choices" role="radiogroup" aria-label={q.q}>
         {q.options.map((o, i) => (
@@ -1561,6 +1575,11 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
             }}
           >
             {t(lang, "tbCheck")}
+          </button>
+        ) : null}
+        {!checked ? (
+          <button className="btn quiet" onClick={onClose}>
+            {t(lang, "skip")}
           </button>
         ) : qi < qs.length - 1 ? (
           <button
