@@ -108,6 +108,31 @@ Browser (web/)                                         Server (agent/, FastAPI)
 - **Agents reading Figma:** see Setup step 2 above.
 - Never put API keys, tokens or join codes in Figma.
 
+## How we work: 16 agents (read this first)
+
+Our team has 4 people (`@Tasnim-Uddin`, `@Roddyw123`, `@rtkyboba`, `@AhmedBlackEye`) and 4 projects (HCA-GenAI, HCA-AutonomousAgents, HCA-AICampus, HCA-Poker). **Every person runs one agent in every repo, so 4 agents work in this repo at the same time (16 across the team).** You are one of them. The others are your teammates' agents, and they are editing this repo right now. Track lead here: `@Tasnim-Uddin`.
+
+**Every session, in order:**
+1. `git checkout main && git pull --rebase`, then `tools/board unread`. Act on anything that mentions your human's login or `@all`.
+2. Re-read §0 (brief), Contracts and §4 (owners) if they changed. Never work from a stale copy.
+3. Start one background `tools/board wait`, and re-arm it every time it wakes.
+
+**Picking work (so 4 agents don't collide):**
+- **First, your human's own area:** the rows in §4 with their login, and issues assigned to them.
+- **Then unassigned issues.** Claim one *before* touching code: `gh issue edit N --add-assignee @me`, comment "taking this", and post on the board. If two agents claim the same issue, the earlier claim wins.
+- **Never take an issue assigned to someone else**, unless the lead reassigns it on the board, or it has had no activity for 45 minutes and the owner says yes on the board.
+- **Nothing left?** Post on the board offering help to the lead (tests, fixtures, README, demo prep) instead of starting unrequested features.
+
+**While working:**
+- Edit only your human's folders (§4). If you need a change in someone else's folder, post the request on the board, tagging the owner, and keep building against fixtures or mocks meanwhile.
+- One issue → one branch `<issue#>-<slug>` → small commits → PR `Closes #N` → merge once it works locally. Rebase on `main` before pushing; never force-push; never `git add -A`.
+- Interfaces live in `CONTRACTS.md`. Change them only through a PR, and post when it lands so the other 3 agents adapt.
+- Post on the board when you take an issue, when you merge, and when you're blocked. Keep posts short, start them with `[<Name>'s agent]`, and tag only the people who need to act.
+- **Commit messages, PR titles and PR bodies must not mention Claude, AI or any assistant, and must have no Co-Authored-By or "Generated with" lines.**
+- Secrets only in your own local `.env` / shell (Setup step 4). Never in commits, posts or Figma.
+
+**Deadlines:** the building closes Sat 21:00 (push everything before leaving). Sun 12:00: submissions close and repos must be public. Prefer a small, working, merged change over a big unfinished one.
+
 ## 1. The board (pinned GitHub issue)
 
 Every agent reads and posts on the pinned "Message Board" issue (#1) via `tools/board` (needs only `gh`, logged in).
@@ -117,7 +142,7 @@ Every agent reads and posts on the pinned "Message Board" issue (#1) via `tools/
 - **Mentions you or `@all`:** act on it and reply promptly.
 - **Not addressed to you:** still read it. Reassess your own work only if it is affected (a contract, a file you own, something already done). Do not redo finished work, and do not reply just to acknowledge.
 - Before editing another teammate's files, ask for a handoff on the board and wait for the owner or the track lead.
-- One agent per person on this board. Two agents under one GitHub login cannot see each other's posts.
+- One agent per person on this board (4 per repo). Two agents under one GitHub login cannot see each other's posts, so never run two of your agents in the same repo.
 
 Polling is incremental (about one cheap API call per poll, 30 s default). Commands: `tools/board unread` (new posts, marks read; flags MENTION), `tools/board read -n 20`, `tools/board post "[Name's Agent] text"` (or pipe stdin), `tools/board wait` (blocks until someone else posts), `tools/board whoami`.
 
