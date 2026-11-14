@@ -9,13 +9,16 @@ from pathlib import Path
 import httpx
 
 MODELS = {
-    "step_picture": "fal-ai/flux/schnell",        # fast + cheap text-to-image
+    "step_picture": "fal-ai/flux/dev",            # ~$0.025/image, same quality as flux-pro 1.1 in our test
     "annotate": "fal-ai/flux-kontext/dev",        # instruction-based image edit
     "clip": "fal-ai/kling-video/v2.1/standard/image-to-video",  # offline library building only
 }
 
 STYLE = ("simple flat friendly illustration, thick outlines, soft colours, plain white background, "
          "one clear action, no text, no letters, no numbers")
+# Keeps the same person and inhaler across all pictures of a guide.
+CHARACTER = ("If a person is shown, they are always the same friendly adult with short dark hair and a green sweater. "
+             "If an inhaler is shown, it is always a blue L-shaped metered-dose inhaler with a grey cap")
 
 _BASE = "https://fal.run/"
 _ENV_FILES = [Path(__file__).resolve().parent.parent / ".env"]
@@ -71,7 +74,7 @@ async def make_step_picture(picture_prompt: str, seed: int | None = None) -> str
     if not picture_prompt or not picture_prompt.strip():
         raise MediaError("empty picture_prompt")
     args = {
-        "prompt": f"{picture_prompt.strip()}. {STYLE}",
+        "prompt": f"{picture_prompt.strip()}. {CHARACTER}. {STYLE}",
         "image_size": "square_hd",
         "num_images": 1,
         "enable_safety_checker": True,
