@@ -500,7 +500,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
   const warnings = (f?.warnings ?? []).filter((w) => !w.startsWith("Your label and leaflet say different"));
   const title =
     k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper");
-  const subline = k === "medicine" ? [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
+  const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   return (
     <div className="screen">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} />
@@ -1048,7 +1048,9 @@ export function buildQuestions(g: Guide): Question[] {
   const f = g.facts;
   const c = g.content;
   if (k === "medicine" && f?.frequency) out.push(mk("When do you use it?", f.frequency, ["Every morning", "Only at night"].filter((x) => x !== f.frequency), 1));
-  if (k === "medicine" && f?.dose) out.push(mk("How much do you take?", f.dose, ["As much as you like", "Half of it"], 0));
+  if (k === "medicine" && (f?.conflicts?.length ?? 0) > 0)
+    out.push(mk("Your label and leaflet say different things. What do you do?", "Ask your pharmacist before you use it", ["Use the bigger dose", "Pick the one you like"], 1));
+  else if (k === "medicine" && f?.dose) out.push(mk("How much do you take?", f.dose, ["As much as you like", "Half of it"], 0));
   if (k === "letter" && c?.what_to_do?.[0]) out.push(mk("What do you need to do first?", c.what_to_do[0], ["Nothing. Ignore the letter.", "Throw the letter away."], 1));
   if (k === "letter" && c?.by_when?.[0]) out.push(mk(`By when do you need to ${c.by_when[0].what}?`, c.by_when[0].date, ["There is no date", "Next year"], 2));
   if (k === "form" && c?.fields?.[0]) out.push(mk(`What goes in the box "${c.fields[0].label}"?`, c.fields[0].what_to_write, ["Leave it empty", "Anything you like"], 0));

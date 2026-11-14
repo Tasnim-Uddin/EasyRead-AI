@@ -169,6 +169,33 @@ async def translate_safety(guide: dict, language: str):
         log.warning("safety line translation failed")
 
 
+def summary_line_en(guide: dict) -> str:
+    f = guide.get("facts") or {}
+    return ", ".join(str(x) for x in (f.get("dose"), f.get("frequency")) if x)
+
+
+async def translate_summary(guide: dict, language: str):
+    """The dose / when line on the summary card, translated like the steps. The English original is kept in summary_line_en."""
+    en = guide.get("summary_line_en") or summary_line_en(guide)
+    if not en:
+        return
+    guide["summary_line_en"] = en
+    if language == "en":
+        guide["summary_line"] = en
+        return
+    if not llm.available():
+        guide.setdefault("summary_line", en)
+        return
+    try:
+        out = await llm.complete_json(
+            f"Translate this medicine dose line into {langs.name_of(language)}. Keep it short and simple, keep numbers as digits, "
+            "never change doses or timings. Return a JSON array with one string.", json.dumps([en], ensure_ascii=False))
+        if isinstance(out, list) and len(out) == 1 and isinstance(out[0], str) and out[0].strip():
+            guide["summary_line"] = out[0]
+    except Exception:
+        log.warning("summary line translation failed")
+
+
 async def _translate(steps: list[dict], language: str):
     if language == "en":
         for s in steps:
@@ -255,6 +282,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                                "technique_clip_id": None, "status": "pending"} for i, r in enumerate(raw)]
             await translate_steps(guide["steps"], language)
             await translate_safety(guide, language)
+            await translate_summary(guide, language)
         else:
             fx = load_fixture()
             guide["source"] = {**fx["source"], "image_urls": image_urls}
@@ -266,6 +294,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             await asyncio.sleep(0.3)
             await translate_steps(guide["steps"], language)
             await translate_safety(guide, language)
+            await translate_summary(guide, language)
         attach_clips(guide)
         status("illustrating")
         await illustrate(guide, emit)
