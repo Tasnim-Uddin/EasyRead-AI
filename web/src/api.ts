@@ -51,12 +51,16 @@ const ERROR_KEYS: Record<string, string> = {
   too_many_pages: "errTooPages",
   document_required: "errNoDoc",
   server: "errServer",
+  ai_timeout: "errTimeout",
+  image_unreadable: "errImage",
+  demo_mode_no_key: "errDemoKey",
   client: "errGeneric",
 };
 
 /** The error text in the user's language when we have it; otherwise the server's English detail. */
 export function errorText(lang: string, e: unknown): string {
-  if (!(e instanceof ApiError)) return e instanceof Error ? e.message : String(e);
+  // fetch() itself failed (offline, server down): a plain translated line, never a raw "Failed to fetch".
+  if (!(e instanceof ApiError)) return t(lang, "serverDown");
   const key = ERROR_KEYS[e.code];
   if (!key || isFallback(lang, key)) return e.message;
   return t(lang, key).replace("{max}", e.message.match(/\d+/)?.[0] ?? "");

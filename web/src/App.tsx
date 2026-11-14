@@ -4,7 +4,7 @@ import type { Clip, Guide, ToolLogEntry } from "./types";
 import { LANGUAGES, t } from "./i18n";
 import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
 import { useAnam, type ToolHandler } from "./useAnam";
-import { claimAudio, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
+import { audioOwner, claimAudio, onAudioChange, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
 import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
 import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
 import {
@@ -332,6 +332,8 @@ export default function App() {
   setGuideQuiet(anam.quiet);
   const fakeLiveEarly = import.meta.env.DEV && demo && location.search.includes("fakelive");
   const isLive = fakeLiveEarly || anam.state === "live";
+  const [owner, setOwner] = useState(audioOwner());
+  useEffect(() => onAudioChange(() => setOwner(audioOwner())), []);
   const liveRef = useRef(isLive);
   liveRef.current = isLive;
   useEffect(() => {
@@ -604,7 +606,21 @@ export default function App() {
     onToggleSound: anam.toggleSound,
     onSend: anam.send,
     dock: dockOn(),
-    caption: lastSay,
+    caption: anam.liveCaption || lastSay,
+    status: anam.soundOff
+      ? "stSoundOff"
+      : owner === "clip"
+      ? "stClip"
+      : owner === "tts"
+      ? "stReading"
+      : anam.activity === "paused"
+      ? "stPaused"
+      : anam.activity === "listening"
+      ? "stListening"
+      : anam.activity === "talking" || fakeLiveEarly
+      ? "stTalking"
+      : "stReady",
+    onAsk: () => setAskOpen(true),
     onTalk: () => go("talk"),
     state: liveState,
     // "Talk to your guide" on a step opens the live avatar in the dock, on that step. Only ever on a tap.

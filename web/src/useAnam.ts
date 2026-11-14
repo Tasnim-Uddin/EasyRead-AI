@@ -20,6 +20,10 @@ export function useAnam(
   const [sttMissing, setSttMissing] = useState(false); // the avatar cannot hear this language: the user types instead
   const [micMuted, setMicMuted] = useState(false);
   const [soundOff, setSoundOff] = useState(false);
+  /** What the guide is doing, for the dock's status chip. */
+  const [activity, setActivity] = useState<"idle" | "talking" | "listening" | "paused">("idle");
+  const [liveCaption, setLiveCaption] = useState("");
+  const captionId = useRef("");
   const clientRef = useRef<ReturnType<typeof createClient> | null>(null);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
@@ -79,6 +83,17 @@ export function useAnam(
             },
           });
         }
+        client.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (e: { id: string; content: string; role: string; endOfSpeech: boolean; interrupted: boolean }) => {
+          if (e.role !== "persona") return;
+          if (e.id !== captionId.current) {
+            captionId.current = e.id;
+            setLiveCaption(e.content);
+          } else setLiveCaption((c) => c + e.content);
+          setActivity(e.endOfSpeech || e.interrupted ? "idle" : "talking");
+        });
+        client.addListener(AnamEvent.USER_SPEECH_STARTED, () => setActivity("listening"));
+        client.addListener(AnamEvent.USER_SPEECH_ENDED, () => setActivity("idle"));
+        client.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => setActivity((a) => (a === "paused" ? a : "idle")));
         client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
           if (clientRef.current === client) {
             clientRef.current = null;
@@ -144,6 +159,7 @@ export function useAnam(
     const msg = text.trim();
     if (!msg) return false;
     try {
+      setActivity("idle");
       clientRef.current?.sendUserMessage(msg);
       return !!clientRef.current;
     } catch {
@@ -164,6 +180,7 @@ export function useAnam(
   const interrupt = useCallback(() => {
     try {
       clientRef.current?.interruptPersona();
+      if (clientRef.current) setActivity("paused");
     } catch {
       /* not live */
     }
@@ -184,5 +201,5 @@ export function useAnam(
 
   useEffect(() => () => void stop(), [stop]);
 
-  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet };
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption };
 }

@@ -37,6 +37,10 @@ export interface LiveInfo {
   onShow?: () => void;
   /** Stop the guide mid-sentence. */
   onPause?: () => void;
+  /** i18n key of the dock status chip. */
+  status?: string;
+  /** Open the question sheet. */
+  onAsk?: () => void;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
 /** Home and Summary shortcuts for every title bar. */
@@ -80,38 +84,36 @@ function GuideDock({ text, lang }: { text: string; lang: string }) {
     );
   }
   const caption = info.caption || text;
+  // Compact, one row: video tile, status chip + two-line caption, icon buttons. Typing lives in the question sheet.
   return (
-    <section className="dock dock-live" aria-label={t(lang, "guideSays")}>
-      <div className="dock-row">
-        <div className="avslot dockvid" data-avatar-slot="dock" />
-        <div className="dock-cap" aria-live="polite">
-          <b>{t(lang, "guideSays")}</b>
-          <span dir="auto">{caption}</span>
-        </div>
-        <button className="icon-btn end" onClick={info.onHide ?? info.onEnd} aria-label={t(lang, "hideGuide")} title={t(lang, "hideGuide")}>
-          <Icon name="x" />
-        </button>
+    <section className="dock dock-live dock-compact" aria-label={t(lang, "guideSays")}>
+      <div className="avslot dockvid" data-avatar-slot="dock" />
+      <div className="dock-mid">
+        <span className={"st-chip st-" + (info.status ?? "stReady")} role="status">
+          {t(lang, info.status ?? "stReady")}
+        </span>
+        <span className="dock-cap2" dir="auto" aria-live="polite">
+          {caption}
+        </span>
       </div>
-      <div className="dock-ctl">
+      <div className="dock-icons">
         {info.onPause && (
-          <button type="button" className="btn quiet small" onClick={info.onPause}>
-            {t(lang, "pauseGuide")}
+          <button type="button" className="icon-btn" onClick={info.onPause} aria-label={t(lang, "pauseGuide")} title={t(lang, "pauseGuide")}>
+            <Icon name="pause" />
           </button>
         )}
-        {info.onHide && (
-          <button type="button" className="btn quiet small" onClick={info.onHide}>
-            {t(lang, "hideGuide")}
-          </button>
-        )}
-      </div>
-      <TypeBar lang={lang} onSend={info.onSend}>
-        <button type="button" className="icon-btn mic" onClick={info.onToggleMic} aria-pressed={info.micMuted} aria-label={t(lang, info.micMuted ? "unmuteMic" : "muteMic")}>
-          <Icon name="mic" />
-        </button>
         <button type="button" className="icon-btn" onClick={info.onToggleSound} aria-pressed={info.soundOff} aria-label={t(lang, info.soundOff ? "soundOn" : "soundOff")}>
           <Icon name="volume" />
         </button>
-      </TypeBar>
+        {info.onAsk && (
+          <button type="button" className="icon-btn" onClick={info.onAsk} aria-label={t(lang, "askQ")} title={t(lang, "askQ")}>
+            <Icon name="chat" />
+          </button>
+        )}
+        <button type="button" className="icon-btn end" onClick={info.onHide ?? info.onEnd} aria-label={t(lang, "hideGuide")} title={t(lang, "hideGuide")}>
+          <Icon name="x" />
+        </button>
+      </div>
     </section>
   );
 }

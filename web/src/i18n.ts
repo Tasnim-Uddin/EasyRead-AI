@@ -1787,6 +1787,12 @@ Object.assign(bn, {
 });
 
 // v3 guide-led
+Object.assign(en, { stTalking: "Guide is talking", stListening: "Listening to you", stPaused: "Paused", stReading: "Reading aloud", stClip: "Quiet while clip plays", stSoundOff: "Sound off", stReady: "Your guide" });
+Object.assign(es, { stTalking: "La guía está hablando", stListening: "Le escucho", stPaused: "En pausa", stReading: "Leyendo en voz alta", stClip: "En silencio durante el vídeo", stSoundOff: "Sin sonido", stReady: "Su guía" });
+Object.assign(ar, { stTalking: "المرشد يتحدث", stListening: "أستمع إليك", stPaused: "متوقف مؤقتًا", stReading: "قراءة بصوت عالٍ", stClip: "صامت أثناء الفيديو", stSoundOff: "الصوت مغلق", stReady: "مرشدك" });
+Object.assign(ur, { stTalking: "گائیڈ بول رہا ہے", stListening: "آپ کی بات سن رہا ہے", stPaused: "رکا ہوا", stReading: "بلند آواز سے پڑھ رہا ہے", stClip: "ویڈیو کے دوران خاموش", stSoundOff: "آواز بند", stReady: "آپ کا گائیڈ" });
+Object.assign(pl, { stTalking: "Przewodnik mówi", stListening: "Słucham cię", stPaused: "Wstrzymano", stReading: "Czytam na głos", stClip: "Cisza podczas filmu", stSoundOff: "Dźwięk wyłączony", stReady: "Twój przewodnik" });
+Object.assign(bn, { stTalking: "গাইড কথা বলছে", stListening: "আপনার কথা শুনছে", stPaused: "থামানো", stReading: "জোরে পড়ছে", stClip: "ভিডিওর সময় চুপ", stSoundOff: "শব্দ বন্ধ", stReady: "আপনার গাইড" });
 Object.assign(en, { startWithGuide: "Start with my guide", guideMoved: "Your guide moved you to step {n}", undo: "Undo", stillOnStep: "You are still on step {n}.", backToStep: "Back to step {n}", notATest: "Not a test. Just a quick check.", skip: "Skip" });
 Object.assign(es, { startWithGuide: "Empezar con mi guía", guideMoved: "Su guía le llevó al paso {n}", undo: "Deshacer", stillOnStep: "Sigue en el paso {n}.", backToStep: "Volver al paso {n}", notATest: "No es un examen. Solo una comprobación.", skip: "Saltar" });
 Object.assign(ar, { startWithGuide: "ابدأ مع مرشدي", guideMoved: "نقلك مرشدك إلى الخطوة {n}", undo: "تراجع", stillOnStep: "ما زلت في الخطوة {n}.", backToStep: "العودة إلى الخطوة {n}", notATest: "ليس اختبارًا. مجرد تحقق سريع.", skip: "تخطَّ" });

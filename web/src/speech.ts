@@ -31,18 +31,32 @@ export function claimAudio(who: AudioOwner) {
   if (who === "guide") guideQuiet(false);
   else if (who !== "none") guideQuiet(true);
   owner = who;
+  notify();
+}
+const listeners = new Set<() => void>();
+function notify() {
+  for (const fn of listeners) fn();
+}
+/** Re-render on audio owner changes (the dock status chip). */
+export function onAudioChange(fn: () => void) {
+  listeners.add(fn);
+  return () => void listeners.delete(fn);
 }
 /** Give the audio back (a clip ended): the guide may speak again. */
 export function releaseAudio(who: AudioOwner) {
   if (owner !== who) return;
   owner = "none";
   if (who === "clip") guideQuiet(false);
+  notify();
 }
 export const audioOwner = () => owner;
 
 export function stopSpeaking() {
   stopTts();
-  if (owner === "tts") owner = "none";
+  if (owner === "tts") {
+    owner = "none";
+    notify();
+  }
 }
 
 function browserVoice(text: string, lang: string) {
@@ -72,6 +86,12 @@ export async function speak(text: string, lang: string): Promise<void> {
         const blob = await res.blob();
         if (mine !== token) return;
         const a = new Audio(URL.createObjectURL(blob));
+        a.onended = () => {
+          if (audio === a && owner === "tts") {
+            owner = "none";
+            notify();
+          }
+        };
         a.playbackRate = voiceSettings.rate;
         audio = a;
         try {
