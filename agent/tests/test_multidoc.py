@@ -192,7 +192,7 @@ def test_too_many_pages(client):
 def test_bad_role_and_bad_type(client):
     f = [("document", ("a.jpg", JPEG, "image/jpeg"))]
     r = client.post("/api/guides", files=f, data={"roles": "banana"})
-    assert r.status_code == 400 and r.json()["error"] == "bad_role"
+    assert r.status_code == 400 and r.json()["error"] == "bad_role" and "[" not in r.json()["detail"]
     r = client.post("/api/guides", files=f, data={"roles": "label,leaflet"})
     assert r.status_code == 400 and r.json()["error"] == "bad_roles"
     r = client.post("/api/guides", files=[("document", ("a.txt", b"hello", "text/plain"))])

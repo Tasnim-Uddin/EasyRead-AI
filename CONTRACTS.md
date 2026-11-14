@@ -51,6 +51,7 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
   "text": "Take 2 puffs when you feel wheezy.",  // in guide.language, ≤15 words, one idea
   "text_en": "Take 2 puffs when you feel wheezy.", // English source (for checks + translation)
   "kind": "what|when|how|warning|get_help",
+  "say": "Take 2 puffs when you feel wheezy. Take your time.", // optional: the line the guide speaks in its bubble, in guide.language. Server default = text plus a short English tail by kind (translated guides: text only). Missing = show `text`
   "picture_prompt": "…",                         // for media/, never shown to users
   "image_url": null,                              // live fal picture (no text in image)
   "technique_clip_id": null,                      // a library clip id when kind == "how"

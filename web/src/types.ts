@@ -8,6 +8,7 @@ export interface Step {
   text: string;
   text_en: string;
   kind: StepKind;
+  say?: string; // the guide's bubble line; show `text` when missing
   picture_prompt: string;
   image_url: string | null;
   technique_clip_id: string | null;

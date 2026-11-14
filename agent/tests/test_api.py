@@ -51,6 +51,17 @@ def test_anam_mock_and_persona(client):
     assert "999" in cfg["systemPrompt"] and "Salbutamol" in cfg["systemPrompt"]
 
 
+def test_every_step_has_say(client):
+    g = make_guide(client)
+    for s in g["steps"]:
+        assert s["say"].startswith(s["text"])
+    warn = next(s for s in g["steps"] if s["kind"] == "warning")
+    assert warn["say"] == f"{warn['text']} Take care with this one."
+    # other languages keep the translated text only (no English tail on a translated line)
+    es = client.post(f"/api/guides/{g['id']}/language", json={"language": "es"}).json()
+    assert all(s["say"] == s["text"] for s in es["steps"])
+
+
 def test_language_and_library_and_404(client):
     g = make_guide(client)
     assert client.post(f"/api/guides/{g['id']}/language", json={"language": "es"}).json()["language"] == "es"
