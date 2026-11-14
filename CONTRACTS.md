@@ -24,7 +24,10 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
   "id": "g_…",
   "status": "extracting|writing|illustrating|ready|failed",
   "language": "en",
-  "source": { "kind": "prescription|leaflet|letter|other", "image_urls": ["…"], "is_sample": true },
+  "doc_type": "how_to",                        // how_to | letter | bill | form | other. Missing = how_to (older guides, fixtures)
+  "domain": "medicine",                        // medicine | money | legal | school | council | other
+  "source": { "kind": "prescription|leaflet|letter|other", "image_urls": ["…"], "is_sample": true,
+              "documents": [ { "index": 1, "role": "label", "role_source": "client|detected", "image_url": "…" } ] },  // one per uploaded file, same order as image_urls
   "facts": {                                   // extracted from the document; null when not present
     "medicine": "Salbutamol 100 micrograms inhaler",
     "dose": "2 puffs", "frequency": "when needed, up to 4 times a day",
@@ -32,8 +35,11 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
     "device_type": "inhaler_mdi",              // see library device types; "unknown" if unsure
     "device_confidence": 0.86,                 // from the device photo or the text
     "warnings": ["…"], "get_help": ["…"],      // copied faithfully from the document
-    "unreadable": ["…"]                        // parts we couldn't read: the avatar must say so
+    "unreadable": ["…"],                       // parts we couldn't read: the avatar must say so
+    "conflicts": []                            // medicine: label vs leaflet disagreements, see below. [] when none
   },
+  "content": null,                             // null for how_to; the letter/bill/form shape below otherwise
+  "safety_lines": ["…"],                       // fixed lines for this doc type (shown as the last step too)
   "steps": [ Step ],
   "created_at": "ISO-8601"
 }
@@ -52,8 +58,31 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 }
 ```
 
+### Document types (additive)
+The extraction step classifies the whole upload set into `doc_type`. **`steps` is always filled, for every type, in the Step shape above**, so a UI that only knows steps keeps working. `content` carries the structured version for UIs that want it.
+
+| `doc_type` | `content` | Steps |
+|---|---|---|
+| `how_to` (medicine = `domain: "medicine"`) | `null`; use `facts` | Easy Read rewriter output (unchanged), pictures, technique clips |
+| `letter`, `bill`, `other` | `{ "what_this_is": str, "what_to_do": [str], "by_when": [{ "date": str, "what": str }], "amounts": [{ "what": str, "amount": str }] }` | what, then one `how` per action, one `when` per deadline, one `what` per amount, then the safety step |
+| `form` | `{ "fields": [{ "label": str, "what_to_write": str }] }` | one `how` step per field, then the safety step |
+
+For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields `null` and empty lists.
+
+**Safety lines** (`guide.safety_lines`, also added as a final `get_help` step if not already there):
+- medicine: "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP." (the deterministic 999 guard in `/ask` still runs before any model call)
+- everything else: "Get free advice before you sign or pay. For example, Citizens Advice."
+
+**Label vs leaflet (medicine).** When both are uploaded, dose and frequency come from the label. If the leaflet says something different, `facts.conflicts` is `[{ "field": "dose|frequency", "label": str, "leaflet": str }]`, `facts.warnings` starts with "Your label and leaflet say different things. Ask your pharmacist.", and one `warning` step with that exact text is included. Neither value is dropped silently.
+
+**Sample:** `demo/fixtures/guide_council_letter.json` (fictional, labelled sample; no images, `image_url: null`, `status: "skipped"`).
+
 ## 2. Server HTTP API (`agent/`)
-- `POST /api/guides` (multipart: `document` file(s), optional `device_photo`, `language`) → `{ guide_id }`. Processing continues in the background.
+- `POST /api/guides` (multipart: `document` (repeat the field for several files), optional `roles`, optional `device_photo`, `language`) → `{ guide_id }`. Processing continues in the background.
+  - Files may be JPEG, PNG, WebP, GIF or PDF (type is sniffed from the bytes). A single `document` works exactly as before.
+  - `roles`: optional, aligned with the `document` order. A JSON array (`["label","leaflet"]`) or a comma list (`label,leaflet`). Each is `label | leaflet | device_photo | letter | form | other`; an empty or `auto` entry means "detect it". `device_photo` keeps its own field and always has role `device_photo`. The roles used (client-given or detected) come back in `source.documents`.
+  - All files go to the vision model in **one** extraction call.
+  - Limits: at most **8 files** (device photo included), **20 pages** in total (a PDF counts its pages), 15 MB per file. Errors are JSON `{ error, detail }`: `413 too_many_files`, `413 too_many_pages`, `413 file_too_large`, `400 unsupported_file_type`, `400 bad_role`, `400 bad_roles` (more roles than files, or not a list), `400 document_required` (when the server has a model key and no file was sent).
 - `GET /api/guides/{id}` → Guide.
 - `GET /api/guides/{id}/events` → **Server-Sent Events**:
   ```jsonc

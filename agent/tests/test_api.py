@@ -3,18 +3,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-@pytest.fixture
-def client(monkeypatch, tmp_path):
-    for k in ("ANTHROPIC_API_KEY", "ANAM_API_KEY", "MONGODB_URI", "FAL_KEY", "ELEVENLABS_API_KEY",
-              "ELEVENLABS_VOICE_ID", "ADAPTION_MODEL_ID"):
-        monkeypatch.delenv(k, raising=False)
-    from agent import tts
-    monkeypatch.setattr(tts, "CACHE", tmp_path / "tts")
-    from agent.main import app
-    with TestClient(app) as c:
-        yield c
-
-
 def make_guide(client):
     gid = client.post("/api/guides", data={"language": "en"}).json()["guide_id"]
     for _ in range(50):

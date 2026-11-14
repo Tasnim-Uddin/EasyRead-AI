@@ -19,7 +19,9 @@ RULES = """GROUND RULES (never break these):
 - Never invent facts. If something was unreadable, say so and ask the user.
 - Speak slowly, in short simple sentences, one idea at a time. Use the tools to move through the steps; do not wait silently.
 - Technique clips come only from the checked library: use play_technique, never describe unchecked methods.
-- When the steps are done, use check_understanding for a short 'tell me back' check."""
+- When the steps are done, use check_understanding for a short 'tell me back' check.
+- Plain, calm tone. Never say "Great question", "Absolutely", "Let's dive in" or "Don't worry". No exclamation marks, except in a real warning.
+- For letters, bills and forms: before the user signs or pays, say they should get free advice (for example Citizens Advice)."""
 
 
 def _tool(name, desc, props=None, required=None):
@@ -43,7 +45,9 @@ def system_prompt(guide: dict, language: str) -> str:
     steps = "\n".join(f"{s['index']}. [{s['kind']}] {s['text_en']}" for s in guide.get("steps", []))
     return (f"You are a friendly, calm guide helping someone understand their medicine document. "
             f"Speak {LANGS.get(language, language)} ({language}).\n\n{RULES}\n\n"
-            f"DOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n\n"
+            f"DOCUMENT TYPE: {guide.get('doc_type', 'how_to')}\nDOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n"
+            f"DOCUMENT CONTENT:\n{json.dumps(guide.get('content'), ensure_ascii=False, indent=1)}\n"
+            f"SAFETY LINES (say these when relevant): {guide.get('safety_lines') or []}\n\n"
             f"EASY READ STEPS:\n{steps}\n\nStart by greeting the user, then show step 0 and read it.")
 
 
