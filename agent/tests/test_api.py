@@ -4,9 +4,12 @@ from fastapi.testclient import TestClient
 
 
 @pytest.fixture
-def client(monkeypatch):
-    for k in ("ANTHROPIC_API_KEY", "ANAM_API_KEY", "MONGODB_URI"):
+def client(monkeypatch, tmp_path):
+    for k in ("ANTHROPIC_API_KEY", "ANAM_API_KEY", "MONGODB_URI", "FAL_KEY", "ELEVENLABS_API_KEY",
+              "ELEVENLABS_VOICE_ID", "ADAPTION_MODEL_ID"):
         monkeypatch.delenv(k, raising=False)
+    from agent import tts
+    monkeypatch.setattr(tts, "CACHE", tmp_path / "tts")
     from agent.main import app
     with TestClient(app) as c:
         yield c
@@ -73,3 +76,35 @@ def test_tools_endpoint(client):
     assert r["escalate"] == "999" and "999" in r["say"]
     assert client.post("/api/tools/check_understanding", json={"guide_id": g["id"]}).json()["say"]
     assert client.post("/api/tools/set_language", json={"guide_id": g["id"], "language": "es"}).json()["language"] == "es"
+
+
+def test_illustrate_never_fails_offline(client):
+    g = make_guide(client)
+    assert all(s["status"] in ("ready", "skipped") for s in g["steps"])
+
+
+def test_tts_503_without_key(client):
+    r = client.post("/api/tts", json={"text": "Hello", "language": "en"})
+    assert r.status_code == 503 and r.json()["error"] == "tts_unavailable"
+
+
+def test_tts_validation_and_cache(client, monkeypatch):
+    import httpx
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    assert client.post("/api/tts", json={"text": "  "}).status_code == 400
+    assert client.post("/api/tts", json={"text": "x" * 601}).status_code == 413
+    calls = []
+
+    class Fake:
+        def __init__(self, *a, **k): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        async def post(self, url, **kw):
+            calls.append((url, kw["json"]))
+            return httpx.Response(200, content=b"ID3fake")
+
+    monkeypatch.setattr("agent.tts.httpx.AsyncClient", Fake)
+    for _ in range(2):
+        r = client.post("/api/tts", json={"text": "Take 2 puffs", "language": "en"})
+        assert r.status_code == 200 and r.headers["content-type"] == "audio/mpeg" and r.content == b"ID3fake"
+    assert len(calls) == 1 and "text-to-speech" in calls[0][0] and calls[0][1]["model_id"]
