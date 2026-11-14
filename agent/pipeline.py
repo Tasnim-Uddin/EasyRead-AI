@@ -1,6 +1,6 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, copy, json, os, pathlib, datetime as dt, logging
-from . import llm, technique
+from . import langs, llm, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, finish_steps, normalise, safety_lines
@@ -129,6 +129,25 @@ async def translate_steps(steps: list[dict], language: str):
         s["say"] = make_say(s, language)
 
 
+async def translate_safety(guide: dict, language: str):
+    """The 999 / pharmacist / advice lines must read in the guide's language. The English originals are kept."""
+    en = guide.setdefault("safety_lines_en", list(guide.get("safety_lines") or []))
+    if language == "en" or not en:
+        guide["safety_lines"] = list(en)
+        return
+    if not llm.available():
+        return
+    try:
+        out = await llm.complete_json(
+            f"Translate each safety sentence into {langs.name_of(language)}. Keep it short and simple, keep numbers such as 999 and 111 "
+            "as digits, never weaken or change the meaning. Return a JSON array of strings, same order.",
+            json.dumps(en, ensure_ascii=False))
+        if isinstance(out, list) and len(out) == len(en) and all(isinstance(x, str) and x.strip() for x in out):
+            guide["safety_lines"] = out
+    except Exception:
+        log.warning("safety line translation failed")
+
+
 async def _translate(steps: list[dict], language: str):
     if language == "en":
         for s in steps:
@@ -137,7 +156,7 @@ async def _translate(steps: list[dict], language: str):
     if not llm.available():
         return  # keep current text; no key to translate with
     out = await llm.complete_json(
-        f"Translate each Easy Read sentence into BCP-47 language '{language}'. Keep it short and simple, "
+        f"Translate each Easy Read sentence into {langs.name_of(language)}. Keep it short and simple, "
         "keep numbers as digits, never change doses or timings. Return a JSON array of strings, same order.",
         json.dumps([s["text_en"] for s in steps], ensure_ascii=False))
     for s, t in zip(steps, out):
@@ -214,6 +233,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                                "picture_prompt": r["picture_prompt"], "image_url": None,
                                "technique_clip_id": None, "status": "pending"} for i, r in enumerate(raw)]
             await translate_steps(guide["steps"], language)
+            await translate_safety(guide, language)
         else:
             fx = load_fixture()
             guide["source"] = {**fx["source"], "image_urls": image_urls}
@@ -224,6 +244,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             status("writing")
             await asyncio.sleep(0.3)
             await translate_steps(guide["steps"], language)
+            await translate_safety(guide, language)
         attach_clips(guide)
         status("illustrating")
         await illustrate(guide, emit)

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Clip, Guide, GuideStatus, Step, ToolLogEntry } from "./types";
-import { LANGUAGES, RTL, t } from "./i18n";
+import { LANGUAGES, t } from "./i18n";
+import { canSpeak, findWorld, isRtl, languageLabel, languageValue, searchLanguages } from "./languages";
 import Icon, { GuideFace } from "./icons";
 import { speak } from "./speech";
 import type { AnamState } from "./useAnam";
@@ -136,21 +137,92 @@ export function kindOf(g: Guide): Kind {
 }
 
 /* ---------- shared bars ---------- */
-export function LangPill({ lang, onLanguage }: { lang: string; onLanguage: (c: string) => void }) {
-  const current = LANGUAGES.find((l) => l.code === lang)?.label ?? lang;
+const OTHER = "__other__";
+const isPreset = (lang: string) => LANGUAGES.some((l) => l.code === lang);
+
+/* "Other language…": search a built-in list of common languages, or type any language. */
+export function LanguageDialog({ lang, onPick, onClose }: { lang: string; onPick: (c: string) => void; onClose: () => void }) {
+  const [q, setQ] = useState("");
+  const found = searchLanguages(q);
+  const typed = q.trim();
+  const typedValue = typed ? languageValue(typed) : "";
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => ref.current?.focus(), []);
   return (
+    <div className="langdlg" role="dialog" aria-modal="true" aria-label={t(lang, "otherLanguage")} onKeyDown={(e) => e.key === "Escape" && onClose()}>
+      <div className="card">
+        <div className="row">
+          <input
+            ref={ref}
+            type="text"
+            value={q}
+            maxLength={40}
+            placeholder={t(lang, "searchLanguage")}
+            aria-label={t(lang, "searchLanguage")}
+            onChange={(e) => setQ(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && typedValue && onPick(found.length === 1 ? found[0].code : typedValue)}
+          />
+          <button className="round" onClick={onClose} aria-label={t(lang, "closeX")}>
+            <Icon name="x" />
+          </button>
+        </div>
+        {typed && !found.some((w) => w.code === typedValue) && (
+          <button className="chip on" onClick={() => onPick(typedValue)}>
+            {t(lang, "useTyped")} “{typed}”
+          </button>
+        )}
+        <ul>
+          {found.map((w) => (
+            <li key={w.code}>
+              <button className={"chip" + (w.code === lang ? " on" : "")} onClick={() => onPick(w.code)}>
+                <span dir="auto">{w.native}</span>
+                {w.native !== w.en && <small> {w.en}</small>}
+              </button>
+            </li>
+          ))}
+        </ul>
+        {typed && !found.length && <p className="help">{t(lang, "noMatch")}</p>}
+      </div>
+    </div>
+  );
+}
+
+export function LangPill({ lang, onLanguage }: { lang: string; onLanguage: (c: string) => void }) {
+  const [other, setOther] = useState(false);
+  const current = languageLabel(lang);
+  return (
+    <>
     <label className="lang">
       <span className="sr">{t(lang, "language")}</span>
       {current}
       <b />
-      <select value={lang} onChange={(e) => onLanguage(e.target.value)}>
+      <select
+        value={lang}
+        onChange={(e) => {
+          if (e.target.value === OTHER) setOther(true);
+          else onLanguage(e.target.value);
+        }}
+      >
         {LANGUAGES.map((l) => (
           <option key={l.code} value={l.code}>
             {l.label}
           </option>
         ))}
+        {!isPreset(lang) && <option value={lang}>{current}</option>}
+        <option value={OTHER}>{t(lang, "otherLanguage")}</option>
       </select>
     </label>
+    {other && (
+      <LanguageDialog
+        lang={lang}
+        onClose={() => setOther(false)}
+        onPick={(c) => {
+          setOther(false);
+          onLanguage(c);
+        }}
+      />
+    )}
+    </>
   );
 }
 
@@ -553,10 +625,12 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
         <button className="btn" onClick={onStart}>
           {t(lang, k === "letter" || k === "form" ? "showSteps" : "startStep")}
         </button>
-        <button className="btn soft" onClick={onListen}>
-          <Icon name="play" />
-          {t(lang, "listenThis")}
-        </button>
+        {canSpeak(lang) && (
+          <button className="btn soft" onClick={onListen}>
+            <Icon name="play" />
+            {t(lang, "listenThis")}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -632,10 +706,12 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
         {step.text}
       </div>
       <div className="actions">
-        <button className="btn" onClick={() => void speak(step.text, lang)}>
-          <Icon name="play" />
-          {t(lang, "listen")}
-        </button>
+        {canSpeak(lang) && (
+          <button className="btn" onClick={() => void speak(step.text, lang)}>
+            <Icon name="play" />
+            {t(lang, "listen")}
+          </button>
+        )}
         {stepHasHow(guide, step, clips) && (
           <button className="btn soft" onClick={onShowHow}>
             <Icon name="play" style={{ width: 24, height: 24 }} />
@@ -774,7 +850,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       return;
     }
     const r = new Rec();
-    r.lang = lang;
+    r.lang = findWorld(lang)?.code ?? lang;
     r.interimResults = false;
     r.onresult = (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => {
       const text = e.results[0][0].transcript;
@@ -892,12 +968,13 @@ interface TalkProps {
   onStart: () => void;
   onStop: () => void;
   onType: () => void;
+  sttMissing?: boolean;
   micMuted?: boolean;
   soundOff?: boolean;
   onToggleMic?: () => void;
   onToggleSound?: () => void;
 }
-export function TalkScreen({ lang, state, error, caption, onLanguage, onBack, onStart, onStop, onType, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
+export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
   const live = state === "live";
   return (
     <div className="screen">
@@ -917,6 +994,11 @@ export function TalkScreen({ lang, state, error, caption, onLanguage, onBack, on
         <p className="banner" role="alert">
           {t(lang, "talkError")}
           {error ? ` ${error}` : ""}
+        </p>
+      )}
+      {sttMissing && (
+        <p className="banner" role="status">
+          {t(lang, "sttTypeNote")}
         </p>
       )}
       {state === "standin" && (
@@ -1127,6 +1209,7 @@ interface SettingsProps {
   onBack: () => void;
 }
 export function Settings({ lang, scale, rate, voice, onScale, onRate, onVoice, onLanguage, onBack }: SettingsProps) {
+  const [other, setOther] = useState(false);
   return (
     <div className="screen">
       <TitleBar title={t(lang, "settings")} lang={lang} onBack={onBack} />
@@ -1161,10 +1244,19 @@ export function Settings({ lang, scale, rate, voice, onScale, onRate, onVoice, o
                 {l.label}
               </button>
             ))}
+            {!isPreset(lang) && (
+              <button className="chip on" aria-pressed="true">
+                {languageLabel(lang)}
+              </button>
+            )}
+            <button className="chip" onClick={() => setOther(true)}>
+              {t(lang, "otherLanguage")}
+            </button>
           </div>
-          {RTL.has(lang) && (
+          {other && <LanguageDialog lang={lang} onClose={() => setOther(false)} onPick={(c) => { setOther(false); onLanguage(c); }} />}
+          {isRtl(lang) && (
             <div className="rtlnote">
-              <span>{LANGUAGES.find((l) => l.code === lang)?.label}</span>
+              <span>{languageLabel(lang)}</span>
               <small>{t(lang, "rtlNote")}</small>
             </div>
           )}

@@ -1,5 +1,7 @@
 // Stand-in voice while the Anam avatar is unavailable. Tries the server's ElevenLabs
 // endpoint (POST /api/tts {text, language} -> audio), then falls back to the browser voice.
+import { canSpeak, findWorld, markVoiceUnsupported } from "./languages";
+
 let audio: HTMLAudioElement | null = null;
 let ttsMissing = false;
 
@@ -15,7 +17,7 @@ export function stopSpeaking() {
 function browserVoice(text: string, lang: string) {
   if (!("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
+  u.lang = findWorld(lang)?.code ?? lang;
   u.rate = voiceSettings.rate;
   window.speechSynthesis.speak(u);
 }
@@ -23,6 +25,7 @@ function browserVoice(text: string, lang: string) {
 export async function speak(text: string, lang: string): Promise<void> {
   stopSpeaking();
   if (!text) return;
+  if (!canSpeak(lang)) return; // never read foreign text with an English voice
   if (!ttsMissing) {
     try {
       const res = await fetch("/api/tts", {
@@ -34,6 +37,12 @@ export async function speak(text: string, lang: string): Promise<void> {
         audio = new Audio(URL.createObjectURL(await res.blob()));
         audio.playbackRate = voiceSettings.rate;
         await audio.play();
+        return;
+      }
+      if (res.status === 422) {
+        // The server has no voice for this language: use a matching browser voice, or stay silent.
+        markVoiceUnsupported(lang);
+        if (canSpeak(lang)) browserVoice(text, lang);
         return;
       }
       if (res.status === 404 || res.status === 405) ttsMissing = true; // endpoint not built yet

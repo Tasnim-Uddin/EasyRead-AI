@@ -1,6 +1,6 @@
 """Grounded Q&A with the 999/111 guardrail. The emergency check is deterministic and runs before any model call."""
 import json, re
-from . import llm
+from . import langs, llm
 from .pipeline import load_library
 
 EMERGENCY = [  # multilingual substrings, lowercase
@@ -22,6 +22,7 @@ MSG = {
 
 
 def msg(kind: str, lang: str) -> str:
+    # Languages without a table here get the English line (it always has the number to call); the model answer is in their language.
     return MSG.get(lang, MSG["en"])[kind]
 
 
@@ -56,24 +57,40 @@ If the question describes a serious symptom (chest pain, cannot breathe, overdos
 Answer in language '{lang}' in 1-2 short simple sentences. Return JSON only: {{"answer": str, "grounded": bool, "escalate": "none|pharmacist|111|999"}}"""
 
 
+async def lmsg(kind: str, lang: str) -> str:
+    """Safety line in the user's language. Languages without a table: the model translates it and the English line
+    follows, so the number to call is always readable. No key or a failed call: English alone."""
+    if lang in MSG:
+        return MSG[lang][kind]
+    en = MSG["en"][kind]
+    if lang == "en" or not llm.available():
+        return en
+    try:
+        out = await llm.complete(f"Translate into {langs.name_of(lang)}. Keep numbers as digits. Reply with the translation only.", en, 200)
+        out = out.strip()
+        return f"{out} {en}" if out else en
+    except Exception:
+        return en
+
+
 async def ask(guide: dict, question: str, language: str) -> dict:
     level = emergency_level(question)
     if level == "999":
-        return {"answer": msg("999", language), "grounded": True, "escalate": "999"}
+        return {"answer": await lmsg("999", language), "grounded": True, "escalate": "999"}
     ans = None
     if llm.available():
         try:
             ctx = json.dumps({"facts": guide.get("facts"), "content": guide.get("content"), "doc_type": guide.get("doc_type"), "steps": [s["text_en"] for s in guide.get("steps", [])],
                               "library": [{"device_type": c["device_type"], "caption": c["caption_en"]} for c in load_library()]},
                              ensure_ascii=False)
-            r = await llm.complete_json(QA_SYSTEM.format(lang=language), f"DOCUMENT:\n{ctx}\n\nQUESTION: {question}", 500)
+            r = await llm.complete_json(QA_SYSTEM.format(lang=langs.name_of(language)), f"DOCUMENT:\n{ctx}\n\nQUESTION: {question}", 500)
             esc = r.get("escalate", "none")
             if esc not in ("none", "pharmacist", "111", "999"):
                 esc = "pharmacist"
             if level == "111" and esc == "none":
                 esc = "111"
             if esc == "999" and "999" not in r["answer"]:
-                r["answer"] += " " + msg("999", language)
+                r["answer"] += " " + await lmsg("999", language)
             ans = {"answer": r["answer"], "grounded": bool(r.get("grounded")), "escalate": esc}
             if not ans["grounded"] and esc == "none":
                 ans["escalate"] = "pharmacist"
@@ -85,5 +102,5 @@ async def ask(guide: dict, question: str, language: str) -> dict:
             ans = {"answer": local, "grounded": True, "escalate": level if level != "none" else "none"}
         else:
             esc = "111" if level == "111" else "pharmacist"
-            ans = {"answer": msg("111" if esc == "111" else "pharmacist", language), "grounded": False, "escalate": esc}
+            ans = {"answer": await lmsg("111" if esc == "111" else "pharmacist", language), "grounded": False, "escalate": esc}
     return ans
