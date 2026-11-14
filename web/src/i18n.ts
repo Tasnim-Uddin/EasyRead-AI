@@ -1116,3 +1116,17 @@ export function t(lang: string, key: string): string {
   const d = dicts[lang] ?? dicts[lang.toLowerCase().split("-")[0]] ?? en;
   return d[key] ?? en[key] ?? key;
 }
+
+/** True when `t(lang, key)` would show English because this language has no string for the key. */
+export function isFallback(lang: string, key: string): boolean {
+  const d = dicts[lang] ?? dicts[lang.toLowerCase().split("-")[0]];
+  return !d || d[key] === undefined;
+}
+
+/** Wrap an interpolated value in Unicode first-strong isolates so it keeps its own direction inside RTL text. */
+export const isolate = (v: string | number): string => `⁨${v}⁩`;
+
+/** Fill {placeholders} with isolated values (for text that cannot hold JSX, e.g. aria-labels). */
+export function tf(lang: string, key: string, vars: Record<string, string | number>): string {
+  return t(lang, key).replace(/\{(\w+)\}/g, (m, k) => (k in vars ? isolate(vars[k]) : m));
+}
