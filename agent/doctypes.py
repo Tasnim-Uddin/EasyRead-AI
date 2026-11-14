@@ -6,6 +6,7 @@ DOMAINS = ["medicine", "money", "legal", "school", "council", "other"]
 
 CONFLICT_TEXT = "Your label and leaflet say different things. Ask your pharmacist."
 SAFETY_MEDICINE = "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP."
+SAFETY_HOWTO = "If something breaks or feels unsafe, stop and ask for help."
 SAFETY_ADVICE = "Get free advice before you sign or pay. For example, Citizens Advice."
 
 STYLE_RULES = """STYLE (Easy Read):
@@ -64,6 +65,8 @@ def merge_medicine(facts: dict, label: dict | None, leaflet: dict | None) -> dic
 def safety_lines(doc_type: str, domain: str) -> list[str]:
     if domain == "medicine":
         return [SAFETY_MEDICINE]
+    if doc_type == "how_to":
+        return [SAFETY_HOWTO]
     if doc_type in ("letter", "bill", "form", "other") or domain in ("money", "legal", "council", "school"):
         return [SAFETY_ADVICE]
     return []
@@ -78,6 +81,7 @@ def normalise(raw: dict) -> dict:
     facts = {"medicine": _s(raw.get("medicine")), "dose": _s(raw.get("dose")), "frequency": _s(raw.get("frequency")),
              "route": _s(raw.get("route")), "device_type": raw.get("device_type") or "unknown",
              "device_confidence": raw.get("device_confidence") if isinstance(raw.get("device_confidence"), (int, float)) else 0,
+             "title": _s(raw.get("title")), "source_steps": _list(raw.get("source_steps")),
              "warnings": _list(raw.get("warnings")), "get_help": _list(raw.get("get_help")),
              "unreadable": _list(raw.get("unreadable")), "conflicts": []}
     content = None
@@ -129,7 +133,7 @@ def finish_steps(steps: list[dict], doc_type: str, domain: str, conflicts: list)
     if conflicts and not any(CONFLICT_TEXT in s["text_en"] for s in steps):
         steps.insert(min(1, len(steps)), _step("warning", CONFLICT_TEXT, "a person holding a medicine box and a leaflet, looking unsure"))
     for line in safety_lines(doc_type, domain):
-        key = "999" if domain == "medicine" else "free advice"
+        key = "999" if domain == "medicine" else "ask for help" if doc_type == "how_to" else "free advice"
         if not any(key in s["text_en"] for s in steps):
             steps.append(_step("get_help", line, "a person on the phone talking to a helper"))
     return steps

@@ -71,6 +71,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 
 **Safety lines** (`guide.safety_lines`, also added as a final `get_help` step if not already there):
 - medicine: "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP." (the deterministic 999 guard in `/ask` still runs before any model call)
+- how_to, not medicine (furniture, a phone, a boiler; `domain` "other"): "If something breaks or feels unsafe, stop and ask for help." Facts carry `title` and `source_steps`; steps use kinds `what|how|warning|get_help`.
 - everything else: "Get free advice before you sign or pay. For example, Citizens Advice."
 
 **Label vs leaflet (medicine).** When both are uploaded, dose and frequency come from the label. If the leaflet says something different, `facts.conflicts` is `[{ "field": "dose|frequency", "label": str, "leaflet": str }]`, `facts.warnings` starts with "Your label and leaflet say different things. Ask your pharmacist.", and one `warning` step with that exact text is included. Neither value is dropped silently.

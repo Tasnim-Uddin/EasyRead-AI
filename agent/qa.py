@@ -13,8 +13,8 @@ EMERGENCY = [  # multilingual substrings, lowercase
 URGENT = ["urgent", "getting worse", "urgente", "empeora"]
 MSG = {
     "en": {"999": "This sounds serious. Call 999 now.",
-           "111": "This may need quick advice. Please call 111 now.",
-           "pharmacist": "I can't find that in your document. Please ask your pharmacist or GP."},
+           "111": "This may need quick advice. Call 111 now.",
+           "pharmacist": "I do not know. It is not in your paper. Ask your pharmacist or GP."},
     "es": {"999": "Esto puede ser grave. Llame al 999 ahora.",
            "111": "Esto puede necesitar consejo rápido. Llame al 111 ahora.",
            "pharmacist": "No encuentro eso en su documento. Pregunte a su farmacéutico o a su médico."},

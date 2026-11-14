@@ -221,3 +221,69 @@ def test_extraction_prompt_style_rules():
     p = pipeline.EXTRACT_SYSTEM
     for phrase in ("15 words", "Great question", "Let's dive in", "Absolutely", "Don't worry", "emoji", "digits"):
         assert phrase in p
+
+
+# ---- generic (non-medicine) how-to ----
+FLATPACK = {"doc_type": "how_to", "domain": "other", "kind": "other", "title": "How to build your bookshelf",
+            "source_steps": ["Lay out the parts.", "Screw the sides to the top."], "warnings": ["Ask a second person to help you lift it."],
+            "get_help": [], "unreadable": [], "documents": [{"index": 1, "role": "other"}]}
+
+
+def test_generic_howto_uses_own_path(mocked, monkeypatch):
+    from agent import pipeline
+    seen = {}
+
+    async def fake_generic(facts, language="en"):
+        seen["facts"] = facts
+        return [{"text_en": "Lay out the parts.", "kind": "how", "picture_prompt": "parts on a floor"}]
+
+    async def boom(*a, **k):
+        raise AssertionError("medicine rewriter must not run")
+
+    monkeypatch.setattr(pipeline, "write_generic_howto", fake_generic)
+    monkeypatch.setattr(pipeline, "write_easy_read", boom)
+    mocked["raw"] = FLATPACK
+    g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
+    assert g["status"] == "ready" and g["domain"] == "other"
+    assert seen["facts"]["title"] == "How to build your bookshelf" and seen["facts"]["source_steps"]
+    assert g["safety_lines"] == [doctypes.SAFETY_HOWTO]
+    assert g["steps"][-1]["text_en"] == doctypes.SAFETY_HOWTO and g["steps"][-1]["kind"] == "get_help"
+    assert not any("999" in s["text_en"] or "pharmacist" in s["text_en"] for s in g["steps"])
+
+
+def test_generic_rewrite_prompt_and_kinds(monkeypatch):
+    import asyncio
+    from agent import llm, rewriter
+    got = {}
+
+    async def fake_json(system, content, max_tokens=2000):
+        got["system"] = system
+        return [{"text_en": "Lay out the parts.", "kind": "bogus", "picture_prompt": ""}, {"text_en": "", "kind": "how"}]
+
+    monkeypatch.setattr(llm, "complete_json", fake_json)
+    out = asyncio.run(rewriter.write_generic_howto({"title": "x"}))
+    assert "not about medicine" in got["system"] and "what|how|warning|get_help" in got["system"]
+    assert out == [{"text_en": "Lay out the parts.", "kind": "how", "picture_prompt": "a person doing one simple task"}]
+
+
+def test_medicine_safety_unchanged():
+    assert doctypes.safety_lines("how_to", "medicine") == [doctypes.SAFETY_MEDICINE]
+    assert doctypes.safety_lines("how_to", "other") == [doctypes.SAFETY_HOWTO]
+
+
+def test_flatpack_fixture():
+    fx = json.loads((pathlib.Path(__file__).resolve().parents[2] / "demo" / "fixtures" / "guide_flatpack.json").read_text())
+    assert fx["doc_type"] == "how_to" and fx["domain"] == "other"
+    assert all(s["image_url"] is None and s["status"] == "skipped" and s["picture_prompt"] for s in fx["steps"])
+    assert {s["kind"] for s in fx["steps"]} <= {"what", "how", "warning", "get_help"}
+    assert fx["steps"][-1]["text_en"] == doctypes.SAFETY_HOWTO
+    assert "medicine" not in json.dumps(fx["steps"]).lower()
+
+
+def test_count_pages_pypdf_and_fallback(monkeypatch):
+    import sys, types
+    assert docs.count_pages(pdf(3), "application/pdf") == 3  # regex fallback when pypdf cannot parse the stub
+    fake = types.ModuleType("pypdf")
+    fake.PdfReader = lambda f: types.SimpleNamespace(pages=[0] * 7)
+    monkeypatch.setitem(sys.modules, "pypdf", fake)
+    assert docs.count_pages(pdf(3), "application/pdf") == 7

@@ -67,12 +67,12 @@ def parse_roles(raw: str | None, n: int) -> list[str | None]:
 def check_limits(items: list[tuple[bytes, str]]) -> int:
     """items: (data, media_type) for every file, device photo included. Returns the page total."""
     if len(items) > MAX_FILES:
-        raise UploadError(413, "too_many_files", f"at most {MAX_FILES} files per guide (got {len(items)})")
+        raise UploadError(413, "too_many_files", f"That is too many files. Add {MAX_FILES} or fewer. You added {len(items)}.")
     pages = 0
     for data, mt in items:
         if len(data) > MAX_FILE_BYTES:
-            raise UploadError(413, "file_too_large", f"each file must be under {MAX_FILE_BYTES // 2**20} MB")
+            raise UploadError(413, "file_too_large", f"This file is too big. Use a file under {MAX_FILE_BYTES // 2**20} MB.")
         pages += count_pages(data, mt)
     if pages > MAX_PAGES:
-        raise UploadError(413, "too_many_pages", f"at most {MAX_PAGES} pages per guide (got {pages})")
+        raise UploadError(413, "too_many_pages", f"That is too many pages. Use {MAX_PAGES} pages or fewer. You added {pages}.")
     return pages
