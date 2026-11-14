@@ -25,7 +25,7 @@ def file_block(data: bytes, media_type: str) -> dict:
     return {"type": kind, "source": {"type": "base64", "media_type": media_type, "data": b64}}
 
 
-async def complete(system: str, content, max_tokens: int = 2000) -> str:
+async def complete(system: str, content, max_tokens: int = 4000) -> str:
     """content: str or list of content blocks. Returns text."""
     client = _client()
     msg = await client.messages.create(
@@ -45,5 +45,5 @@ def parse_json(text: str):
     return json.JSONDecoder().raw_decode(text[start:])[0]
 
 
-async def complete_json(system: str, content, max_tokens: int = 2000):
+async def complete_json(system: str, content, max_tokens: int = 4000):
     return parse_json(await complete(system, content, max_tokens))
