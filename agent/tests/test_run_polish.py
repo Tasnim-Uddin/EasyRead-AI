@@ -98,3 +98,32 @@ def test_tellback_conflict_accepts_pharmacist_in_language(client):
     r = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "answer": "Zapytam farmaceutę"}).json()
     assert r["correct"] is True
     assert client.post("/api/tools/check_understanding", json={"guide_id": "g_conf"}).json()["say"].startswith("Etykieta")
+
+
+def test_tellback_speaks_the_screen_verdict(client):
+    from agent.main import store
+    g = _conflict_guide(client)
+    g["facts"] = {"medicine": "Salbutamol", "dose": "TWO puffs", "frequency": "When needed", "device_type": "inhaler_mdi"}
+    store.put(g)
+    # The answer text would grade as wrong, but the screen said right: the server must not re-grade.
+    ok = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "answer": "xyz", "correct": True}).json()
+    assert ok["correct"] is True and ok["say"].startswith("Well done")
+    bad = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "correct": False}).json()
+    assert bad["correct"] is False and "TWO puffs" in bad["say"]
+
+
+def test_tellback_has_every_language_the_persona_offers():
+    from agent import persona, tellback
+    for code in persona.LANGS:
+        assert tellback.strings(code) is tellback.TABLE[code], code
+        assert set(tellback.TABLE[code]) == set(tellback.TABLE["en"]), code
+
+
+def test_persona_narrates_current_step_without_show_step(client):
+    from agent import persona
+    g = _conflict_guide(client)
+    for i, st in enumerate(g["steps"]):
+        st["index"] = i
+    p = persona.system_prompt(g, "en", 1)
+    assert "read step with index 1 aloud" in p and "do NOT call show_step" in p
+    assert "User moved to step N" in p and "from 0 to 1" in p

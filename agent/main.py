@@ -103,6 +103,7 @@ class SessionReq(_Lang):
 
 class CheckReq(_Lang):
     answer: str | None = None
+    correct: bool | None = None  # the on-screen multiple-choice result; when set, the server only speaks it
 
 
 def _guide(gid: str) -> dict:
@@ -246,7 +247,14 @@ async def check_understanding(gid: str, req: CheckReq):
     f = g.get("facts") or {}
     lang = req.language if "language" in req.model_fields_set else g.get("language", "en")
     t = tellback.strings(lang)
-    if f.get("conflicts"):
+    conflict = bool(f.get("conflicts"))
+    if req.correct is not None:
+        # The screen already graded the user's choice: speak that verdict, never re-grade it here.
+        if conflict:
+            return {"say": t["conflict_ok"] if req.correct else t["conflict_bad"], "correct": req.correct}
+        return {"say": t["ok"] if req.correct else t["nearly"].format(dose=f.get("dose"), frequency=f.get("frequency")),
+                "correct": req.correct}
+    if conflict:
         # The label and the leaflet disagree: never quiz a dose as if one of them were right.
         if not req.answer:
             return {"say": t["conflict_ask"], "correct": None}
@@ -271,7 +279,7 @@ async def tool(name: str, body: dict):
         r = await ask(gid, AskReq(question=body.get("question", ""), language=lang))
         return {"say": r["answer"], **r}
     if name == "check_understanding":
-        return await check_understanding(gid, CheckReq(answer=body.get("answer"), language=lang))
+        return await check_understanding(gid, CheckReq(answer=body.get("answer"), correct=body.get("correct"), language=lang))
     if name == "set_language":
         g = await set_language(gid, LangReq(language=langs.clean(body.get("language", "en"))))
         return {"say": "Okay, I changed the language.", "language": g["language"], "guide": g}
