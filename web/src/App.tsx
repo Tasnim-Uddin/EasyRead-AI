@@ -7,6 +7,7 @@ import Upload from "./components/Upload";
 import StepViewer from "./components/StepViewer";
 import AvatarPanel, { AVATAR_VIDEO_ID } from "./components/AvatarPanel";
 import FactsCard from "./components/FactsCard";
+import { speak } from "./speech";
 import DevPanel from "./components/DevPanel";
 
 const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
@@ -22,6 +23,9 @@ export default function App() {
   const [log, setLog] = useState<ToolLogEntry[]>([]);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
+  const [voice, setVoice] = useState(true);
+  const voiceRef = useRef(true);
+  voiceRef.current = voice;
 
   const indexRef = useRef(0);
   const guideRef = useRef<Guide | null>(null);
@@ -104,7 +108,12 @@ export default function App() {
           r.escalate === "999" ? " If this is an emergency, call 999." : r.escalate === "111" ? " Call 111 for urgent advice." : "";
         return r.answer + tail;
       },
-      check_understanding: (args) => server("check_understanding", args),
+      check_understanding: (args) =>
+        g() && g()!.id.startsWith("g_sample")
+          ? args.answer
+            ? "Thank you. If you are not sure, go back through the steps or ask your pharmacist."
+            : `In your own words, how do you use ${g()!.facts?.medicine ?? "your medicine"}?`
+          : server("check_understanding", args),
       set_language: async ({ language }) => {
         const code = String(language);
         if (!LANGUAGES.some((l) => l.code === code)) return "I can't switch to that language yet.";
@@ -116,6 +125,24 @@ export default function App() {
   }, [clips, goto]);
 
   const anam = useAnam(AVATAR_VIDEO_ID, handlers, addLog);
+
+  // Same client tools as the avatar uses, driven by on-screen buttons. Logged to the dev
+  // panel and read aloud, so the app works without Anam.
+  const runTool = useCallback(
+    async (name: string, args: Record<string, unknown> = {}) => {
+      const t0 = performance.now();
+      let say: string;
+      try {
+        say = await handlers[name](args);
+      } catch {
+        say = SAFE_FALLBACK;
+      }
+      addLog(name, args, Math.round(performance.now() - t0), say);
+      if (voiceRef.current) void speak(say, langRef.current);
+      return say;
+    },
+    [handlers, addLog],
+  );
 
   async function submit(form: FormData) {
     setBusy(true);
@@ -134,17 +161,12 @@ export default function App() {
   async function onAsk(e: React.FormEvent) {
     e.preventDefault();
     if (!guide || !question.trim()) return;
-    try {
-      const r = await api.ask(guide.id, question, lang);
-      setAnswer(r.answer + (r.escalate === "999" ? " Call 999." : ""));
-    } catch {
-      setAnswer(SAFE_FALLBACK);
-    }
+    setAnswer(await runTool("answer_from_document", { question }));
   }
 
   function changeLanguage(code: string) {
-    setLang(code);
-    if (guide && !guide.id.startsWith("g_sample")) void api.setLanguage(guide.id, code).then(setGuide);
+    if (guide) void runTool("set_language", { language: code });
+    else setLang(code);
   }
 
   return (
@@ -198,6 +220,8 @@ export default function App() {
             onQuestion={setQuestion}
             onAsk={(e) => void onAsk(e)}
             answer={answer}
+            voice={voice}
+            onVoice={setVoice}
             onStart={() => void anam.start(guide.id, lang)}
             onStop={() => void anam.stop()}
           />
@@ -206,8 +230,15 @@ export default function App() {
             {guide.source.is_sample && <p className="note">{t(lang, "sampleNote")}</p>}
             {guide.facts && <FactsCard facts={guide.facts} lang={lang} />}
             {guide.steps.length > 0 && (
-              <StepViewer guide={guide} index={index} lang={lang} clips={clips} playClip={playClip} onIndex={(i) => goto(i)} />
+              <StepViewer guide={guide} index={index} lang={lang} clips={clips} playClip={playClip} onIndex={(i) =>
+                  void runTool(i === index + 1 ? "next_step" : i === index - 1 ? "previous_step" : "show_step", { index: i })
+                }
+                onWatch={() => void runTool("play_technique", { step_index: index })}
+              />
             )}
+            <button className="btn" onClick={() => void runTool("check_understanding", {}).then(setAnswer)}>
+              {t(lang, "tellBack")}
+            </button>{" "}
             <button className="btn" onClick={() =>
                 guide.id.startsWith("g_sample") ? window.print() : window.open(`/api/guides/${guide.id}/sheet`, "_blank")
               }>
