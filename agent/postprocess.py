@@ -10,7 +10,8 @@ STOP = {"a", "an", "the", "your", "you", "to", "of", "is", "are", "and", "this",
 MONEY = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?")
 # Step caps by guide shape (STYLE.md section 5: a letter is 1 line + 1-3 actions + by when + help;
 # how-to steps are one action each, so they get more room).
-CAPS = {"letter": 8, "bill": 8, "other": 8, "form": 14, "medicine": 12, "how_to": 12}
+CAPS = {"letter": 8, "bill": 8, "other": 8, "form": 14, "medicine": 16, "how_to": 12}
+CONFLICT_TEXT = "Your label and leaflet say different things. Ask your pharmacist."
 RANK = {"what": 0, "how": 1, "when": 2, "warning": 3, "get_help": 4}
 
 
@@ -35,6 +36,51 @@ def similar(a: str, b: str) -> bool:
 def is_conflict(text: str) -> bool:
     t = text.lower()
     return "label" in t and "leaflet" in t and ("different" in t or "disagree" in t)
+
+
+def normalise_conflict(steps: list[dict]) -> list[dict]:
+    """A model-written conflict step often carries extra sentences (the two doses, the limits). Keep the one
+    canonical flag, and turn extra sentences that do not talk about label/leaflet into their own warning steps."""
+    out = []
+    for s in steps:
+        if not is_conflict(s["text_en"]):
+            out.append(s)
+            continue
+        parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s["text_en"].strip()) if p.strip()]
+        extra = [p for p in parts if not re.search(r"label|leaflet|pharmacist|\bsays?\b", p, re.I)]
+        out.append({**s, "text_en": CONFLICT_TEXT})
+        out += [{**s, "text_en": p, "kind": "warning"} for p in extra]
+    return out
+
+
+def _items_in(sentence: str, items: list[dict]) -> set[int]:
+    low = sentence.lower()
+    return {n for n, it in enumerate(items) if any(k in low for k in it["keywords"])}
+
+
+def split_technique(steps: list[dict], device_type: str | None) -> list[dict]:
+    """A how step that covers two different technique lines (hold + wait, breathe out + mouthpiece) is split
+    into one step per line (one idea per step)."""
+    items = technique.outline(device_type)
+    if not items:
+        return steps
+    out = []
+    for s in steps:
+        parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s["text_en"].strip()) if p.strip()]
+        if s["kind"] != "how" or len(parts) < 2:
+            out.append(s)
+            continue
+        chunks, cur_items = [[parts[0]]], _items_in(parts[0], items)
+        for p in parts[1:]:
+            ids = _items_in(p, items)
+            if ids and cur_items and not (ids & cur_items):
+                chunks.append([p])
+                cur_items = ids
+            else:
+                chunks[-1].append(p)
+                cur_items = cur_items | ids
+        out += [{**s, "text_en": " ".join(c)} for c in chunks]
+    return out
 
 
 def split_warnings(steps: list[dict]) -> list[dict]:
@@ -144,7 +190,8 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
 
 
 def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None) -> list[dict]:
-    steps = dedupe(drop_restated(split_warnings(dedupe(steps)), doc_type))
+    steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
     if doc_type == "how_to" and domain == "medicine":
+        steps = dedupe(split_technique(steps, device_type))
         steps = ensure_technique(steps, device_type)
     return order(steps, doc_type)

@@ -1,0 +1,80 @@
+{
+ "doc_type": "how_to",
+ "domain": "medicine",
+ "facts": {
+  "medicine": "Salbutamol 100 micrograms Evohaler (pressurised inhaler)",
+  "dose": "TWO puffs when needed for wheeze or breathlessness",
+  "frequency": "Maximum 4 times in 24 hours",
+  "route": "Inhaled through the mouth",
+  "device_type": "inhaler_mdi_spacer",
+  "device_confidence": 0.9,
+  "title": null,
+  "source_steps": [],
+  "warnings": [
+   "Your label and leaflet say different things. Ask your pharmacist.",
+   "Maximum 4 times in 24 hours.",
+   "Use with a spacer if you have one.",
+   "Tell your doctor if your usual dose stops working. Do not use more often than advised.",
+   "Do not take more than 8 puffs in 24 hours."
+  ],
+  "get_help": [
+   "Call 999 if you have severe difficulty breathing or swelling of the face or lips."
+  ],
+  "unreadable": [],
+  "conflicts": [
+   {
+    "field": "dose",
+    "label": "TWO puffs when needed for wheeze or breathlessness",
+    "leaflet": "Usual dose: ONE puff when needed. Adults may take up to 2 puffs if needed."
+   },
+   {
+    "field": "frequency",
+    "label": "Maximum 4 times in 24 hours",
+    "leaflet": "Do not take more than 8 puffs in 24 hours"
+   }
+  ]
+ },
+ "content": null,
+ "steps": [
+  {
+   "text_en": "Your label and leaflet say different things. Your label says 2 puffs. Your leaflet says the usual dose is 1 puff. It says adults may take up to 2 puffs if needed. Ask your pharmacist. Use it no more than 4 times in 24 hours. Do not take more than 8 puffs in 24 hours. Tell your doctor if your usual dose stops working. Do not use it more often than advised.",
+   "kind": "warning",
+   "picture_prompt": "A pharmacist behind a counter looking at a medicine box label and a folded leaflet side by side, with a gentle stop hand symbol"
+  },
+  {
+   "text_en": "This is your Salbutamol inhaler. It is for wheeze or breathlessness. You breathe it in through your mouth.",
+   "kind": "what",
+   "picture_prompt": "A blue and grey pressurised inhaler with a spacer tube beside it on a plain table"
+  },
+  {
+   "text_en": "Take 2 puffs when you need it for wheeze or breathlessness. Use a spacer if you have one.",
+   "kind": "how",
+   "picture_prompt": "A person sitting calmly holding an inhaler fitted to a spacer, two small puff clouds drawn beside it"
+  },
+  {
+   "text_en": "Take the cap off your inhaler. Shake it well. Fit your inhaler into the spacer.",
+   "kind": "how",
+   "picture_prompt": "Two hands shaking an inhaler with the cap removed, then pushing it into the end of a spacer"
+  },
+  {
+   "text_en": "Breathe out gently. Put the spacer mouthpiece in your mouth. Close your lips round it.",
+   "kind": "how",
+   "picture_prompt": "A side view of a person with lips closed around a spacer mouthpiece, holding the inhaler upright"
+  },
+  {
+   "text_en": "Press your inhaler once. Breathe in slowly and deeply.",
+   "kind": "how",
+   "picture_prompt": "A person pressing the top of the inhaler with one finger while breathing in, a gentle mist inside the spacer"
+  },
+  {
+   "text_en": "Hold your breath for about 10 seconds. Wait about 30 seconds before your next puff.",
+   "kind": "how",
+   "picture_prompt": "A person with puffed cheeks holding their breath, a plain round clock with a quarter of the face shaded beside them"
+  },
+  {
+   "text_en": "Call 999 if you have severe difficulty breathing. Call 999 if your face or lips swell.",
+   "kind": "get_help",
+   "picture_prompt": "A person holding a mobile phone to their ear, looking worried, with an ambulance drawn in the background"
+  }
+ ]
+}
