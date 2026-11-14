@@ -154,6 +154,22 @@ async def check_understanding(gid: str, req: CheckReq):
     return {"say": say, "correct": ok}
 
 
+@app.post("/api/tools/{name}")
+async def tool(name: str, body: dict):
+    """Server-side Anam tools. Body: {guide_id, ...args}. Returns {say, ...}."""
+    gid = body.get("guide_id", "")
+    lang = body.get("language", _guide(gid).get("language", "en"))
+    if name == "answer_from_document":
+        r = await ask(gid, AskReq(question=body.get("question", ""), language=lang))
+        return {"say": r["answer"], **r}
+    if name == "check_understanding":
+        return await check_understanding(gid, CheckReq(answer=body.get("answer"), language=lang))
+    if name == "set_language":
+        g = await set_language(gid, LangReq(language=body.get("language", "en")))
+        return {"say": "Okay, I changed the language.", "language": g["language"], "guide": g}
+    raise HTTPException(404, "unknown tool")
+
+
 @app.post("/api/anam/session")
 async def anam_session(req: SessionReq):
     g = _guide(req.guide_id)
