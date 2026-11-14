@@ -1,0 +1,202 @@
+{
+  "clips": [
+    {
+      "id": "inhaler_mdi_1",
+      "device_type": "inhaler_mdi",
+      "order": 1,
+      "caption_en": "Take the cap off the inhaler.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_2",
+      "device_type": "inhaler_mdi",
+      "order": 2,
+      "caption_en": "Shake the inhaler 4 times.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_3",
+      "device_type": "inhaler_mdi",
+      "order": 3,
+      "caption_en": "Breathe out slowly.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_4",
+      "device_type": "inhaler_mdi",
+      "order": 4,
+      "caption_en": "Press once and breathe in slowly.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_5",
+      "device_type": "inhaler_mdi",
+      "order": 5,
+      "caption_en": "Hold your breath for 10 seconds.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_spacer_1",
+      "device_type": "inhaler_mdi_spacer",
+      "order": 1,
+      "caption_en": "Take the cap off. Shake the inhaler.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_spacer_2",
+      "device_type": "inhaler_mdi_spacer",
+      "order": 2,
+      "caption_en": "Put the inhaler in the spacer.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_spacer_3",
+      "device_type": "inhaler_mdi_spacer",
+      "order": 3,
+      "caption_en": "Breathe out. Put the spacer in your mouth.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_spacer_4",
+      "device_type": "inhaler_mdi_spacer",
+      "order": 4,
+      "caption_en": "Press once. Breathe in slowly.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_mdi_spacer_5",
+      "device_type": "inhaler_mdi_spacer",
+      "order": 5,
+      "caption_en": "Hold your breath for 10 seconds.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_dry_powder_1",
+      "device_type": "inhaler_dry_powder",
+      "order": 1,
+      "caption_en": "Open the cap. Do not shake.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_dry_powder_2",
+      "device_type": "inhaler_dry_powder",
+      "order": 2,
+      "caption_en": "Breathe out away from the inhaler.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_dry_powder_3",
+      "device_type": "inhaler_dry_powder",
+      "order": 3,
+      "caption_en": "Seal your lips. Breathe in fast and deep.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "inhaler_dry_powder_4",
+      "device_type": "inhaler_dry_powder",
+      "order": 4,
+      "caption_en": "Hold your breath for 10 seconds.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "cream_ointment_1",
+      "device_type": "cream_ointment",
+      "order": 1,
+      "caption_en": "Wash your hands.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "cream_ointment_2",
+      "device_type": "cream_ointment",
+      "order": 2,
+      "caption_en": "Squeeze out a small amount.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "cream_ointment_3",
+      "device_type": "cream_ointment",
+      "order": 3,
+      "caption_en": "Spread a thin layer on the skin.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    },
+    {
+      "id": "cream_ointment_4",
+      "device_type": "cream_ointment",
+      "order": 4,
+      "caption_en": "Wash your hands again.",
+      "video_url": null,
+      "poster_url": null,
+      "checked_by": null,
+      "checked_against": null,
+      "checked_at": null
+    }
+  ]
+}
