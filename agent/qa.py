@@ -58,8 +58,9 @@ Answer in language '{lang}' in 1-2 short simple sentences. Return JSON only: {{"
 
 
 async def lmsg(kind: str, lang: str) -> str:
-    """Safety line in the user's language. Languages without a table: the model translates it and the English line
-    follows, so the number to call is always readable. No key or a failed call: English alone."""
+    """Safety line in the user's language. Languages without a table: the model translates it. The English line is
+    added only if the translation lost the number to call (999 / 111), so a good translation stays all in one language.
+    No key or a failed call: English alone."""
     if lang in MSG:
         return MSG[lang][kind]
     en = MSG["en"][kind]
@@ -68,7 +69,8 @@ async def lmsg(kind: str, lang: str) -> str:
     try:
         out = await llm.complete(f"Translate into {langs.name_of(lang)}. Keep numbers as digits. Reply with the translation only.", en, 200)
         out = out.strip()
-        return f"{out} {en}" if out else en
+        number = re.search(r"\d+", en).group()
+        return out if out and number in out else (f"{out} {en}" if out else en)
     except Exception:
         return en
 
