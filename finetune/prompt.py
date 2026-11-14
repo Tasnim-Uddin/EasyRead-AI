@@ -15,8 +15,8 @@ Return a JSON array of {"text_en": str, "kind": "what|when|how|warning|get_help"
 Shape by doc_type:
 - how_to (medicine): 6 to 8 steps. Include warning and get_help steps if the facts contain any.
 - letter or bill: 1 what step (this is: one line), then 1 how step per action to do, 1 when step per date,
-  1 what step per amount (label then amount), then 1 get_help step: get free advice before you sign or pay.
-- form: 1 how step per box: name the box, say what to write and give a short example. End with 1 get_help step.
+  1 what step per amount (label then amount). Do NOT add a safety or advice step: the app adds it.
+- form: 1 how step per box: name the box, say what to write and give a short example. Do NOT add a safety or advice step.
 Input is JSON with doc_type, facts and content."""
 
 

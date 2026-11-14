@@ -10,7 +10,6 @@ GOOD = [
     {"text_en": "Call the council if you cannot pay.", "kind": "how", "picture_prompt": "a person on the phone"},
     {"text_en": "Pay by Friday 12 December.", "kind": "when", "picture_prompt": "a calendar page with a ring round a day"},
     {"text_en": "You owe £212.", "kind": "what", "picture_prompt": "coins and notes in a hand"},
-    {"text_en": "Get free advice before you sign or pay.", "kind": "get_help", "picture_prompt": "two people talking at a desk"},
 ]
 
 
@@ -26,9 +25,10 @@ def test_wrong_amount_and_ai_voice_fail():
     assert not r["checks"]["dates_amounts_faithful"] and not r["checks"]["plain_voice"]
 
 
-def test_missing_safety_step_fails():
-    r = score_doc("letter", LETTER["content"], GOOD[:-1])
-    assert not r["checks"]["safety_step"]
+def test_own_safety_step_fails():
+    extra = GOOD + [{"text_en": "Get free advice before you sign or pay.", "kind": "get_help", "picture_prompt": "two people talking at a desk"}]
+    r = score_doc("letter", LETTER["content"], extra)
+    assert not r["checks"]["no_own_safety_step"]
 
 
 def test_doc_prompt_carries_content():
