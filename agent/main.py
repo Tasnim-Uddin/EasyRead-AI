@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import llm, persona, pipeline, qa, tts
+from . import docs, llm, persona, pipeline, qa, tts
 from .store import Store
 
 if not os.environ.get("EASYREAD_NO_DOTENV"):  # tests set this so a real .env never leaks in
@@ -57,12 +57,10 @@ def _guide(gid: str) -> dict:
     return g
 
 
-async def _save(f: UploadFile, gid: str):
-    data = await f.read()
-    mt = f.content_type or "application/octet-stream"
+def _store_file(f: UploadFile, data: bytes, gid: str) -> str:
     name = f"{gid}_{uuid.uuid4().hex[:6]}_{pathlib.Path(f.filename or 'file').name}"
     (UPLOADS / name).write_bytes(data)
-    return (data, mt), f"/api/uploads/{name}"
+    return f"/api/uploads/{name}"
 
 
 @app.get("/api/health")
@@ -73,18 +71,34 @@ def health():
 
 @app.post("/api/guides")
 async def create_guide(document: list[UploadFile] = File(default=[]), device_photo: UploadFile | None = File(None),
-                       language: str = Form("en")):
+                       language: str = Form("en"), roles: str | None = Form(None)):
+    """One or several files (images and/or PDFs). `roles`: optional JSON array or comma list aligned with `document`."""
     gid = "g_" + uuid.uuid4().hex[:10]
-    files, urls = [], []
-    for d in document:
-        blob, url = await _save(d, gid)
-        files.append(blob)
-        urls.append(url)
-    dev = None
-    if device_photo is not None and device_photo.filename:
-        dev, _ = await _save(device_photo, gid)
+    try:
+        role_list = docs.parse_roles(roles, len(document))
+        files, raw_files = [], []
+        for d, role in zip(document, role_list):
+            data = await d.read()
+            mt = docs.sniff(data, d.content_type)
+            if mt is None:
+                raise docs.UploadError(400, "unsupported_file_type", f"{d.filename or 'file'}: use JPEG, PNG, WebP, GIF or PDF")
+            files.append((data, mt, role))
+            raw_files.append((d, data))
+        dev = None
+        if device_photo is not None and device_photo.filename:
+            data = await device_photo.read()
+            mt = docs.sniff(data, device_photo.content_type)
+            if mt is None or mt == "application/pdf":
+                raise docs.UploadError(400, "unsupported_file_type", "device_photo must be a JPEG, PNG, WebP or GIF image")
+            dev = (data, mt)
+        docs.check_limits([(f[0], f[1]) for f in files] + ([dev] if dev else []))
+    except docs.UploadError as e:
+        return JSONResponse({"error": e.error, "detail": e.detail}, status_code=e.status)
     if not files and llm.available():
-        raise HTTPException(400, "document required")
+        return JSONResponse({"error": "document_required", "detail": "upload at least one file"}, status_code=400)
+    urls = [_store_file(d, data, gid) for d, data in raw_files]
+    if dev:
+        urls.append(_store_file(device_photo, dev[0], gid))
     g = pipeline.new_guide(gid, language)
     store.put(g)
     t = asyncio.create_task(pipeline.run(store, gid, files, dev, language, urls))

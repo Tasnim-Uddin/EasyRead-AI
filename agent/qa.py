@@ -63,7 +63,7 @@ async def ask(guide: dict, question: str, language: str) -> dict:
     ans = None
     if llm.available():
         try:
-            ctx = json.dumps({"facts": guide.get("facts"), "steps": [s["text_en"] for s in guide.get("steps", [])],
+            ctx = json.dumps({"facts": guide.get("facts"), "content": guide.get("content"), "doc_type": guide.get("doc_type"), "steps": [s["text_en"] for s in guide.get("steps", [])],
                               "library": [{"device_type": c["device_type"], "caption": c["caption_en"]} for c in load_library()]},
                              ensure_ascii=False)
             r = await llm.complete_json(QA_SYSTEM.format(lang=language), f"DOCUMENT:\n{ctx}\n\nQUESTION: {question}", 500)

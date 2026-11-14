@@ -1,7 +1,9 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, copy, json, os, pathlib, datetime as dt, logging
 from . import llm
+from .docs import ROLES
 from .rewriter import write_easy_read
+from .doctypes import STYLE_RULES, content_to_steps, finish_steps, normalise, safety_lines
 
 log = logging.getLogger("agent.pipeline")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -10,12 +12,31 @@ LIBRARY = ROOT / "library" / "index.json"
 DEVICE_TYPES = ["inhaler_mdi", "inhaler_mdi_spacer", "inhaler_dry_powder", "cream_ointment", "tablets",
                 "eye_drops", "nasal_spray", "unknown"]
 
-EXTRACT_SYSTEM = f"""You read a photo or PDF of a medicine label, leaflet or letter and extract facts.
-Copy only what is in the document; never invent. Use null for anything absent. Put anything you cannot read in "unreadable".
-If a photo of the user's actual device is included, use it to set device_type (a metered-dose inhaler is shaken; a dry-powder inhaler is not).
-device_type is one of {DEVICE_TYPES}. Return JSON only:
-{{"kind": "prescription|leaflet|letter|other", "medicine": str|null, "dose": str|null, "frequency": str|null,
-"route": str|null, "device_type": str, "device_confidence": number 0-1, "warnings": [str], "get_help": [str], "unreadable": [str]}}"""
+EXTRACT_SYSTEM = f"""You read photos and PDFs the user uploaded (one or several: a medicine label, a leaflet, a letter, a bill, a form,
+a photo of their own device) and extract facts in ONE pass. Each file is introduced by a line "Document N (role: ...)".
+If the role says "detect", decide it: one of label, leaflet, device_photo, letter, form, other.
+Copy only what is in the documents; never invent. Use null for anything absent. Put anything you cannot read in "unreadable".
+
+First classify the whole set. doc_type is one of:
+- how_to: something to use or take, such as a medicine (set domain "medicine")
+- letter: a letter or notice that asks the reader to do something
+- bill: a bill, invoice or fine
+- form: a form the reader must fill in
+- other: anything else
+domain is one of medicine, money, legal, school, council, other.
+
+{STYLE_RULES}
+
+Return JSON only. Always include: "doc_type", "domain", "kind" (prescription|leaflet|letter|other),
+"documents": [{{"index": N, "role": str}}] for every file, "unreadable": [str].
+Then, by doc_type:
+- how_to (medicine): "medicine", "dose", "frequency", "route", "device_type", "device_confidence" (0-1), "warnings": [str], "get_help": [str]
+  (copy warnings and get_help faithfully). device_type is one of {DEVICE_TYPES}; if a device_photo is included, use it
+  (a metered-dose inhaler is shaken; a dry-powder inhaler is not). If both a label and a leaflet are present, also give
+  "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
+- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [short action sentences, action first];
+  "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}]
+- form: "fields": [{{"label": str, "what_to_write": str}}] in Easy Read words, one per box on the form"""
 
 
 def now() -> str:
@@ -44,19 +65,34 @@ def attach_clips(guide: dict):
 def new_guide(gid: str, language: str) -> dict:
     return {"id": gid, "status": "extracting", "language": language,
             "source": {"kind": "other", "image_urls": [], "is_sample": False},
+            "doc_type": "how_to", "domain": "other", "content": None, "safety_lines": [],
             "facts": None, "steps": [], "created_at": now()}
 
 
-async def extract(files: list[tuple[bytes, str]], device_photo: tuple[bytes, str] | None) -> dict:
-    content = [llm.file_block(d, m) for d, m in files]
-    if device_photo:
-        content.append({"type": "text", "text": "The next image is the user's own device photo."})
-        content.append(llm.file_block(*device_photo))
+def build_blocks(docs: list[tuple[bytes, str, str | None]]) -> list[dict]:
+    """One content list for ONE extraction call: a label line plus a file block per upload, then the instruction."""
+    content = []
+    for i, (data, mime, role) in enumerate(docs, 1):
+        content.append({"type": "text", "text": f"Document {i} (role: {role or 'detect'}):"})
+        content.append(llm.file_block(data, mime))
     content.append({"type": "text", "text": "Extract the facts."})
-    f = await llm.complete_json(EXTRACT_SYSTEM, content)
-    if f.get("device_type") not in DEVICE_TYPES:
-        f["device_type"] = "unknown"
-    return f
+    return content
+
+
+async def extract(files, device_photo=None) -> dict:
+    """files: [(bytes, mime)] or [(bytes, mime, role|None)]. Returns normalise()'d output; one model call."""
+    docs = [(f[0], f[1], f[2] if len(f) > 2 else None) for f in files]
+    if device_photo:
+        docs.append((device_photo[0], device_photo[1], "device_photo"))
+    raw = await llm.complete_json(EXTRACT_SYSTEM, build_blocks(docs), 2500)
+    out = normalise(raw)
+    if out["facts"]["device_type"] not in DEVICE_TYPES:
+        out["facts"]["device_type"] = "unknown"
+    given = {i: r for i, (_, _, r) in enumerate(docs, 1) if r}
+    found = {d["index"]: d["role"] for d in out["documents"]}
+    out["documents"] = [{"index": i, "role": given.get(i) or (found.get(i) if found.get(i) in ROLES else "other"),
+                         "role_source": "client" if i in given else "detected"} for i in range(1, len(docs) + 1)]
+    return out
 
 
 async def translate_steps(steps: list[dict], language: str):
@@ -111,12 +147,20 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
     try:
         status("extracting")
         if llm.available():
-            facts = await extract(files, device_photo)
-            guide["source"]["kind"] = facts.pop("kind", "other")
+            ex = await extract(files, device_photo)
+            facts, dt, domain = ex["facts"], ex["doc_type"], ex["domain"]
+            guide["source"]["kind"] = ex["source_kind"]
             guide["source"]["image_urls"] = image_urls
-            guide["facts"] = facts
+            guide["source"]["documents"] = [{**d, "image_url": image_urls[d["index"] - 1] if d["index"] <= len(image_urls) else None}
+                                            for d in ex["documents"]]
+            guide.update(doc_type=dt, domain=domain, content=ex["content"], facts=facts,
+                         safety_lines=safety_lines(dt, domain))
             status("writing")
-            raw = await write_easy_read(facts, language)
+            if ex["content"] is not None:
+                raw = content_to_steps(dt, ex["content"])
+            else:
+                raw = await write_easy_read(facts, language)
+            raw = finish_steps(raw, dt, domain, facts["conflicts"])
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,
                                "technique_clip_id": None, "status": "pending"} for i, r in enumerate(raw)]
@@ -125,6 +169,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             fx = load_fixture()
             guide["source"] = {**fx["source"], "image_urls": image_urls}
             guide["facts"], guide["steps"] = fx["facts"], fx["steps"]
+            guide["doc_type"], guide["domain"] = fx.get("doc_type", "how_to"), fx.get("domain", "medicine")
+            guide["content"], guide["safety_lines"] = fx.get("content"), fx.get("safety_lines") or safety_lines("how_to", "medicine")
             await asyncio.sleep(0.3)
             status("writing")
             await asyncio.sleep(0.3)
