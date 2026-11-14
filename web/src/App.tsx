@@ -323,7 +323,7 @@ export default function App() {
       setIndex(0);
       setAnswer(null);
     } catch (e) {
-      setError({ title: t(lang, "couldNotRead"), detail: e instanceof Error ? e.message : String(e) });
+      setError({ title: t(lang, "couldNotRead"), detail: api.errorText(lang, e) });
       go("error");
     } finally {
       setBusy(false);

@@ -14,7 +14,7 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 
 - The frontend dev server proxies `/api/*` to `http://localhost:8000`.
 - Python deps go in `requirements.txt` at the repo root.
-- Env var names are in `.env.example`.
+- Env var names are in `.env.example`. `PICTURE_CONCURRENCY` (default 6, at least 1) sets how many step pictures are made at once.
 - Languages use BCP-47 codes (`en`, `es`, `bn`, `ar`, …). `ar`, `ur` and `he` are right-to-left.
 
 ## 1. Guide JSON (the central object)

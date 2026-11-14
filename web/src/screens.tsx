@@ -870,11 +870,11 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
 }
 
 /* ---------- 7. ask / finish ---------- */
-const CHIPS: Record<Kind, string[]> = {
-  medicine: ["How much do I take?", "What if I miss one?", "Can I eat first?"],
-  letter: ["What do I need to do?", "When is the deadline?", "Who do I call?"],
-  form: ["What do I write first?", "Which boxes can stay empty?"],
-  howto: ["What do I do first?", "What if a part is missing?"],
+const CHIP_KEYS: Record<Kind, string[]> = {
+  medicine: ["cMed1", "cMed2", "cMed3"],
+  letter: ["cLet1", "cLet2", "cLet3"],
+  form: ["cForm1", "cForm2"],
+  howto: ["cHow1", "cHow2"],
 };
 
 interface AskProps {
@@ -968,7 +968,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           <span>{listening ? t(lang, "listening") + "…" : <>{t(lang, "tapSpeak")}<br />{t(lang, "orType")}</>}</span>
         </div>
         <div className="chips">
-          {CHIPS[k].map((c) => (
+          {CHIP_KEYS[k].map((ck) => t(lang, ck)).map((c) => (
             <button
               key={c}
               className="chip"
@@ -1092,7 +1092,8 @@ export interface Question {
   correct: number;
   icons: string[];
 }
-export function buildQuestions(g: Guide): Question[] {
+export function buildQuestions(g: Guide, lang = "en"): Question[] {
+  const T = (key: string) => t(lang, key);
   const k = kindOf(g);
   const out: Question[] = [];
   const mk = (q: string, correct: string, wrong: string[], pos: number): Question => {
@@ -1103,21 +1104,21 @@ export function buildQuestions(g: Guide): Question[] {
   };
   const f = g.facts;
   const c = g.content;
-  if (k === "medicine" && f?.frequency) out.push(mk("When do you use it?", f.frequency, ["Every morning", "Only at night"].filter((x) => x !== f.frequency), 1));
+  if (k === "medicine" && f?.frequency) out.push(mk(T("qWhen"), f.frequency, [T("dMorning"), T("dNight")].filter((x) => x !== f.frequency), 1));
   if (k === "medicine" && (f?.conflicts?.length ?? 0) > 0)
-    out.push(mk("Your label and leaflet say different things. What do you do?", "Ask your pharmacist before you use it", ["Use the bigger dose", "Pick the one you like"], 1));
-  else if (k === "medicine" && f?.dose) out.push(mk("How much do you take?", f.dose, ["As much as you like", "Half of it"], 0));
-  if (k === "letter" && c?.what_to_do?.[0]) out.push(mk("What do you need to do first?", c.what_to_do[0], ["Nothing. Ignore the letter.", "Throw the letter away."], 1));
-  if (k === "letter" && c?.by_when?.[0]) out.push(mk(`By when do you need to ${c.by_when[0].what}?`, c.by_when[0].date, ["There is no date", "Next year"], 2));
-  if (k === "form" && c?.fields?.[0]) out.push(mk(`What goes in the box "${c.fields[0].label}"?`, c.fields[0].what_to_write, ["Leave it empty", "Anything you like"], 0));
-  if (k === "howto" && g.steps[0]) out.push(mk("What do you do first?", g.steps[0].text, ["Skip the first steps", "Ask someone else to do it"], 1));
+    out.push(mk(T("qConflict"), T("aPharm"), [T("dBigger"), T("dPick")], 1));
+  else if (k === "medicine" && f?.dose) out.push(mk(T("qHowMuch"), f.dose, [T("dAsMuch"), T("dHalf")], 0));
+  if (k === "letter" && c?.what_to_do?.[0]) out.push(mk(T("qLetterFirst"), c.what_to_do[0], [T("dIgnoreLetter"), T("dThrow")], 1));
+  if (k === "letter" && c?.by_when?.[0]) out.push(mk(tf(lang, "qByWhen", { what: c.by_when[0].what }), c.by_when[0].date, [T("dNoDate"), T("dNextYear")], 2));
+  if (k === "form" && c?.fields?.[0]) out.push(mk(tf(lang, "qBox", { label: c.fields[0].label }), c.fields[0].what_to_write, [T("dEmpty"), T("dAnything")], 0));
+  if (k === "howto" && g.steps[0]) out.push(mk(T("qHowFirst"), g.steps[0].text, [T("dSkip"), T("dAskElse")], 1));
   const warn = g.steps.find((s) => s.kind === "warning");
-  if (warn) out.push(mk("Which of these is a warning from your paper?", warn.text, ["Nothing to watch for", "You can ignore it"], 2));
+  if (warn) out.push(mk(T("qWarn"), warn.text, [T("dNothing"), T("dIgnore")], 2));
   return out.slice(0, 3);
 }
 
 export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang: string; onCheck: (answer: string) => void; onClose: () => void }) {
-  const qs = useMemo(() => buildQuestions(guide), [guide]);
+  const qs = useMemo(() => buildQuestions(guide, lang), [guide, lang]);
   const [qi, setQi] = useState(0);
   const [pick, setPick] = useState<number | null>(null);
   const [checked, setChecked] = useState(false);

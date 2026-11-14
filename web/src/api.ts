@@ -2,6 +2,7 @@ import fixture from "../../demo/fixtures/guide_inhaler.json";
 import council from "../../demo/fixtures/guide_council_letter.json";
 import flatpack from "../../demo/fixtures/guide_flatpack.json";
 import cachedInhaler from "../../demo/fixtures/cached/guide_cached_inhaler.json";
+import { isFallback, t } from "./i18n";
 import type { AskResult, Clip, Guide, ServerEvent } from "./types";
 
 export const sampleGuide = fixture as unknown as Guide;
@@ -12,17 +13,39 @@ export const SAMPLES: Record<string, Guide> = {
   "cached-inhaler": cachedInhaler as unknown as Guide, // saved real run (demo/cache_run.py)
 };
 
+/** An error from the server: `code` is its `error` field (or "server" / "client"), `message` the English detail. */
+export class ApiError extends Error {
+  constructor(message: string, public code: string) {
+    super(message);
+  }
+}
+
+const ERROR_KEYS: Record<string, string> = {
+  unsupported_file_type: "errUnsupported",
+  too_many_files: "errTooMany",
+  file_too_large: "errTooBig",
+  too_many_pages: "errTooPages",
+  document_required: "errNoDoc",
+  server: "errServer",
+  client: "errGeneric",
+};
+
+/** The error text in the user's language when we have it; otherwise the server's English detail. */
+export function errorText(lang: string, e: unknown): string {
+  if (!(e instanceof ApiError)) return e instanceof Error ? e.message : String(e);
+  const key = ERROR_KEYS[e.code];
+  if (!key || isFallback(lang, key)) return e.message;
+  return t(lang, key).replace("{max}", e.message.match(/\d+/)?.[0] ?? "");
+}
+
 async function json<T>(res: Response): Promise<T> {
   if (!res.ok) {
     // The server sends { error, detail } for upload problems (too many pages, bad file type, ...).
     // FastAPI's own validation errors have a list as detail, so only a string is shown.
     const body = await res.json().catch(() => null);
-    if (typeof body?.detail === "string") throw new Error(body.detail);
-    throw new Error(
-      res.status >= 500
-        ? "The server is not answering. Wait a moment and try again."
-        : "We could not use these files. Check them and try again.",
-    );
+    if (typeof body?.detail === "string") throw new ApiError(body.detail, typeof body.error === "string" ? body.error : "other");
+    if (res.status >= 500) throw new ApiError("The server is not answering. Wait a moment and try again.", "server");
+    throw new ApiError("We could not use these files. Check them and try again.", "client");
   }
   return res.json() as Promise<T>;
 }
