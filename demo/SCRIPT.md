@@ -1,6 +1,6 @@
-# 3-minute live demo script
+# Live final demo script
 
-Judging: Sun 13:00 to 16:30, Huxley 308. Set up with `demo/CHECKLIST.md` first. All papers and names are fictional (no real patient data).
+**Round 1 is a video, not a live demo: see `demo/VIDEO.md`.** This script is for the live final (top 2 per panel). Set up with `demo/CHECKLIST.md` first. All papers and names are fictional (no real patient data).
 
 Phone-sized app in a desktop browser. Dev panel = the "Tool calls (n)" button at the bottom of the app. Keep it open from the avatar part on.
 
