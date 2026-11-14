@@ -125,6 +125,37 @@ def drop_restated(steps: list[dict], doc_type: str) -> list[dict]:
     return out
 
 
+LIMIT = re.compile(r"\b(more than|more often|more times|maximum|at most|no more)\b", re.I)
+
+
+def is_dose_limit(s: dict) -> bool:
+    return s["kind"] == "what" and bool(LIMIT.search(s["text_en"])) and not is_conflict(s["text_en"])
+
+
+def merge_dose_limits(steps: list[dict]) -> list[dict]:
+    """Consecutive 'what' dose-limit steps become one step of at most 2 short sentences. Vague ones ('Do not use it
+    more often than advised') are dropped when a concrete limit (one with a number) exists. Numbers are never dropped:
+    a third concrete limit stays as its own step."""
+    out, i = [], 0
+    while i < len(steps):
+        if not is_dose_limit(steps[i]):
+            out.append(steps[i])
+            i += 1
+            continue
+        j = i
+        while j < len(steps) and is_dose_limit(steps[j]):
+            j += 1
+        run = steps[i:j]
+        concrete = [s for s in run if re.search(r"\d", s["text_en"])]
+        if not concrete:
+            out += run[:1]
+        else:
+            out.append({**concrete[0], "text_en": " ".join(s["text_en"].strip() for s in concrete[:2])})
+            out += concrete[2:]
+        i = j
+    return out
+
+
 def ensure_technique(steps: list[dict], device_type: str | None) -> list[dict]:
     """Insert any outline line that no how step covers, at its place in the outline."""
     items = technique.outline(device_type)
@@ -191,6 +222,7 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
 
 def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None) -> list[dict]:
     steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
+    steps = merge_dose_limits(steps)
     if doc_type == "how_to" and domain == "medicine":
         steps = dedupe(split_technique(steps, device_type))
         steps = ensure_technique(steps, device_type)

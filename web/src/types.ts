@@ -53,6 +53,8 @@ export interface Guide {
   facts: Facts | null;
   content?: GuideContent | null;
   safety_lines?: string[];
+  summary_line?: string;
+  summary_line_en?: string;
   steps: Step[];
   created_at: string;
 }
