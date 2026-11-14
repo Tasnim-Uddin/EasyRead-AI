@@ -37,7 +37,24 @@ Three sample guides are built in and work offline: an inhaler (`demo/fixtures/gu
 
 ## Screenshots
 
-_To be added before submission._ The app screens are: home, photo check, file tray, reading, summary, step, technique clip, ask, talk to the guide, tell me back, error and settings. The approved phone-first design is in Figma: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w. The earlier Figma Make frames in `design/` were replaced by it.
+The built app, captured at phone size on the sample data.
+
+<table>
+<tr>
+<td align="center" valign="top"><img src="design/built/b01-home.jpg" width="220" alt="Home. Take a photo, upload, or open a sample."><br>Home. Take a photo, upload, or open a sample.</td>
+<td align="center" valign="top"><img src="design/built/b07-tray.jpg" width="220" alt="Your papers, all in one place."><br>Your papers, all in one place.</td>
+<td align="center" valign="top"><img src="design/built/b02-reading.jpg" width="220" alt="Making your guide. Progress shown."><br>Making your guide. Progress shown.</td>
+<td align="center" valign="top"><img src="design/built/b03-step1.jpg" width="220" alt="One step: one picture, one sentence, a Listen button."><br>One step: one picture, one sentence, a Listen button.</td>
+</tr>
+<tr>
+<td align="center" valign="top"><img src="design/built/b12-talk-live.jpg" width="220" alt="Talk to your guide. The avatar speaks, with captions."><br>Talk to your guide. The avatar speaks, with captions.</td>
+<td align="center" valign="top"><img src="design/built/b05-ask.jpg" width="220" alt="Ask a question. Answers come from the paper only."><br>Ask a question. Answers come from the paper only.</td>
+<td align="center" valign="top"><img src="design/built/b08-summary.jpg" width="220" alt="Summary of the paper in short points."><br>Summary of the paper in short points.</td>
+<td align="center" valign="top"><img src="design/built/b15-settings.jpg" width="220" alt="Settings. Text size, voice speed, language. Arabic and Urdu switch to right to left."><br>Settings. Text size, voice speed, language. Arabic and Urdu switch to right to left.</td>
+</tr>
+</table>
+
+See [design/EVIDENCE.md](design/EVIDENCE.md) for the full Figma versus built comparison.
 
 ## How it works
 
