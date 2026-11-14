@@ -256,7 +256,10 @@ export default function App() {
         if (!cleanLanguage(code)) return "I can't switch to that language yet.";
         setLang(code);
         anamLangRef.current(code);
-        if (g() && !isSample(g())) {
+        if (g() && isSample(g())) {
+          const v = api.sampleVariant(g()!, code);
+          if (v && v.id !== g()!.id) setGuide(v); // same screen and step index
+        } else if (g()) {
           setLangBusy(true);
           try {
             setGuide(await api.setLanguage(g()!.id, code));
@@ -349,7 +352,7 @@ export default function App() {
   }
 
   function openSample(name: string, to: Screen = "summary", at = 0) {
-    const g = api.SAMPLES[name];
+    const g = api.sampleFor(name, langRef.current);
     if (!g) return;
     setGuide(g);
     setIndex(at);

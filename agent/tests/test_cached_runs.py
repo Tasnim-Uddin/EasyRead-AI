@@ -28,3 +28,12 @@ def test_cache_run_script(tmp_path):
     g = json.loads(out.read_text())
     assert g["id"] == "g_sample_cached_t" and g["source"]["is_sample"] and g["source"]["image_urls"] == []
     assert g["steps"][0]["image_url"].startswith("/fixtures/img/") and g["steps"][0]["status"] == "ready"
+
+
+def test_translated_samples_are_served():
+    from fastapi.testclient import TestClient
+    from agent import main
+    ids = main.load_samples()
+    assert "g_sample_inhaler_es" in ids and "g_sample_council_letter_ar" in ids
+    r = TestClient(main.app).get("/api/guides/g_sample_inhaler_es")
+    assert r.status_code == 200 and r.json()["language"] == "es"

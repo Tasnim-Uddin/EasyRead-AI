@@ -170,6 +170,8 @@ Full table with routes: [design/EVIDENCE.md](design/EVIDENCE.md). Writing rules:
 
 **Run.** On Tasnim's Adaption account. AutoScientist run `6ab34ef1`. Base model `Qwen/Qwen3.5-4B`. Best win rate against the base model: ADAPTION_RESULT. Details: [finetune/RESULTS.md](finetune/RESULTS.md).
 
+Adaption does not yet offer inference on tuned models, so the live app writes steps with Claude and the fine-tune is shown by its win rate.
+
 **Honest note.** The live app writes the steps with Claude. The rewriter in `finetune/__init__.py` switches to the tuned model when `ADAPTION_MODEL_ID` and `ADAPTION_API_KEY` are set.
 
 **Rubric.** `finetune/rubric.py` checks step count, sentence length, jargon, digits, dose and timing kept, no invented numbers, warning and get-help steps, and a picture prompt per step. A second rubric checks that every date and amount in a letter, bill or form survives. `python -m finetune.eval` compares models on held-out seeds.
