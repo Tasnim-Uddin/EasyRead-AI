@@ -96,3 +96,24 @@ def score_doc(doc_type: str, content: dict, steps: list[dict]) -> dict:
                                and not PIC_BAD.search(s.get("picture_prompt", "")) for s in steps),
     }
     return {"checks": checks, "score": sum(checks.values()) / len(checks), "passed": all(checks.values())}
+
+
+def score_generic(steps) -> dict:
+    """Fact-free checks, for rows we did not write ourselves (Adaption-generated). Style only."""
+    if not isinstance(steps, list) or not steps or not all(isinstance(s, dict) for s in steps):
+        return {"checks": {"shape": False}, "score": 0.0, "passed": False}
+    texts = [s.get("text_en", "") for s in steps]
+    joined = " ".join(texts).lower()
+    checks = {
+        "shape": all({"text_en", "kind", "picture_prompt"} <= set(s) for s in steps),
+        "step_count": 3 <= len(steps) <= 10,
+        "valid_kinds": all(s.get("kind") in KINDS for s in steps),
+        "max_15_words": all(len(sen.split()) <= 15 for t in texts for sen in _sentences(t)),
+        "active_voice": not any(PASSIVE.search(t) for t in texts),
+        "no_jargon": not any(w in joined for w in JARGON | DOC_JARGON),
+        "digits_not_words": not any(re.search(rf"\b{w}\b", joined) for w in NUM_WORDS),
+        "plain_voice": not any(NEVER.search(t) for t in texts),
+        "picture_prompts": all(len(s.get("picture_prompt", "").split()) >= 3
+                               and not PIC_BAD.search(s.get("picture_prompt", "")) for s in steps),
+    }
+    return {"checks": checks, "score": sum(checks.values()) / len(checks), "passed": all(checks.values())}

@@ -3,19 +3,37 @@
     python -m finetune.adaption_run upload                  # raw upload of finetune/data/train.jsonl
     python -m finetune.adaption_run augment DATASET_ID N    # N style-matched rows; prints the quote only
     python -m finetune.adaption_run augment DATASET_ID N --go
-    python -m finetune.adaption_run filter DATASET_ID       # download + keep rows that pass the rubric
+    python -m finetune.adaption_run filter DATASET_ID       # status + export links
+    python -m finetune.adaption_run filter EXPORT.jsonl     # keep rows that pass the style rubric
     python -m finetune.adaption_run train DATASET_ID
 
 Needs ADAPTION_API_KEY. Spending steps need --go; everything else is a quote or read-only.
 """
 import argparse, json, sys
-from adaption import Adaption
+from finetune.rubric import score_generic
 
 DATA = "finetune/data"
 
 
 def show(x):
     print(json.dumps(x.to_dict() if hasattr(x, "to_dict") else x, indent=1, default=str)[:3000])
+
+
+def filter_file(path):
+    """Keep exported rows whose completion is a JSON step list that passes score_generic."""
+    out, kept, total = f"{DATA}/train_filtered.jsonl", 0, 0
+    with open(path) as f, open(out, "w") as o:
+        for line in f:
+            total += 1
+            try:
+                row = json.loads(line)
+                steps = json.loads(row["completion"]) if isinstance(row["completion"], str) else row["completion"]
+            except (ValueError, KeyError):
+                continue
+            if score_generic(steps)["passed"]:
+                o.write(json.dumps(row) + "\n")
+                kept += 1
+    print(f"kept {kept}/{total} -> {out}")
 
 
 def main():
@@ -25,6 +43,9 @@ def main():
     ap.add_argument("rows", nargs="?", type=int)
     ap.add_argument("--go", action="store_true")
     a = ap.parse_args()
+    if a.cmd == "filter" and a.dataset_id and a.dataset_id.endswith(".jsonl"):
+        return filter_file(a.dataset_id)
+    from adaption import Adaption
     c = Adaption()
     if a.cmd == "upload":
         show(c.datasets.upload_file(f"{DATA}/train.jsonl", name="easyread-sft", processing_mode="raw",
