@@ -124,14 +124,16 @@ cd web && npm run build               # type-check and production build
 | fal | `fal-ai/flux/dev` | Step pictures | `media/fal.py` |
 | fal | `fal-ai/flux-kontext/dev` | Photo annotation edit (not called by the server yet) | `media/fal.py` |
 | fal | `fal-ai/kling-video/v2.1/standard/image-to-video` | Technique clips, offline library building only (none generated yet) | `media/fal.py` |
-| Adaption | Tuned model id from `ADAPTION_MODEL_ID`, via the `adaption` SDK | Fine-tuned Easy Read rewriter | `finetune/__init__.py` |
-| Anam | Avatar model `cara-4`, avatar id `071b0286-4cce-4808-bee2-e642f1062de3`, voice and LLM ids from the Anam docs examples; `@anam-ai/js-sdk` | Avatar and client tool calling | `agent/persona.py`, `web/src/useAnam.ts` |
-| ElevenLabs | `eleven_multilingual_v2` | Read-aloud in several languages | `agent/tts.py` |
+| Adaption | `adaption` SDK. Tuned model id comes from `ADAPTION_MODEL_ID`; none is set in this repo yet, so the base Claude prompt runs until the fine-tune finishes (planned). Dataset upload, augmentation, rubric filter and training (AutoScientist) are in `finetune/adaption_run.py` | Fine-tuned Easy Read rewriter | `finetune/__init__.py`, `finetune/adaption_run.py` |
+| Anam | Avatar "Liv" (`cara-4`, id `071b0286-4cce-4808-bee2-e642f1062de3`); voice "Amanda - Warm Guide" (id `90313ddc-4fc0-11f1-84b0-52bacf74fa75`); LLM GPT OSS 120B, Anam's built-in model (id `a7cf662c-2ace-4de1-a21e-ef0fbf144bb7`); all overridable by env. Endpoints `POST /v1/auth/session-token` and `GET /v1/voices`; `@anam-ai/js-sdk` | Avatar, speech, client tool calling. Planned for the live demo, see the status table | `agent/persona.py`, `agent/main.py`, `tools/anam_voices.py`, `web/src/useAnam.ts` |
+| ElevenLabs | Model `eleven_multilingual_v2`; default voice "Sarah" (`EXAVITQu4vr4xnSDxMaL`); endpoint `POST /v1/text-to-speech/{voice}`; replies cached on disk | Read-aloud in several languages (browser voice if no key) | `agent/tts.py` |
 | MongoDB Atlas | `pymongo` | Optional guide storage | `agent/store.py` |
 | Figma | File `tNc9gbdjtkrXMAgsvRT30w` (earlier drafts: Figma Make, `design/`) | App design | `design/` |
 | Libraries | FastAPI, uvicorn, httpx, pypdf, React 18, Vite, TypeScript | App | `requirements.txt`, `web/package.json` |
 
 Datasets: none from outside. The Easy Read training and evaluation sets are built in this repo (`finetune/build_dataset.py`, `finetune/seeds.py`) from fictional medicine and document fact sets, drafted with Claude and filtered by the rubric. No real patient data. Held-out seeds are never used for training. Sample papers and pictures in `demo/` and `media/samples/` are fictional or generated.
+
+NHS pages: each technique clip in `library/index.json` has a `checked_against` field for the nhs.uk page a person checks it against. All are empty for now. No NHS text or images are copied into the dataset, the app or the prompts. Claude (`claude-sonnet-5-5`) is also the base model that the fine-tune is compared against.
 
 ## Easy Read rewriter and evaluation
 
