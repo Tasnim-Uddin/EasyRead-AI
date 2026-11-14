@@ -32,7 +32,7 @@ def test_inhaler_one_conflict_first_and_technique():
     assert postprocess.is_conflict(t[0])  # before any dose
     assert no_duplicates(steps) and len(steps) <= postprocess.CAPS["medicine"]
     low = " ".join(t).lower()
-    for key in ("breathe out", "hold your breath", "wait about 30 seconds"):
+    for key in ("breathe out", "hold your breath", "wait at least 30 seconds"):
         assert key in low
     ranks = [postprocess.RANK[s["kind"]] for s in steps if not postprocess.is_conflict(s["text_en"])]
     assert ranks == sorted(ranks)  # what, how, warning, get_help
@@ -91,3 +91,10 @@ def test_rewriter_gets_outline_and_result_is_finished(monkeypatch):
     steps = doctypes.finish_steps(raw, "how_to", "medicine", g["facts"]["conflicts"], g["facts"]["device_type"])
     assert "Hold your breath" in " ".join(texts(steps))
     assert seen["facts"]["technique_outline"] == technique.outline_for_prompt("inhaler_mdi_spacer")
+
+
+def test_every_technique_has_nhs_source_and_unsigned_check():
+    for dev in technique.TECHNIQUES:
+        s = technique.sources(dev)
+        assert s["urls"] and s["checked_on"] == "2026-11-14" and s["checked_by"] is None
+    assert technique.sources("unknown")["urls"] == []
