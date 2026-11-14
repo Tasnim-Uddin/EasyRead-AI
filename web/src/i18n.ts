@@ -32,6 +32,12 @@ const en: Dict = {
   noMedical: "This guide explains your own document. It is not medical advice. Ask your pharmacist or GP.",
   print: "Print",
   devPanel: "Tool calls",
+  medicine: "Medicine",
+  dose: "How much",
+  when: "When",
+  yourDevice: "Your device",
+  notSure: "We are not sure which device this is. Please ask your pharmacist.",
+  unreadable: "We could not read this part. Please ask your pharmacist:",
 };
 const es: Dict = {
   ...en,
@@ -56,6 +62,12 @@ const es: Dict = {
   noMedical: "Esta guía explica tu propio documento. No es consejo médico. Pregunta a tu farmacéutico o médico.",
   print: "Imprimir",
   devPanel: "Llamadas de herramientas",
+  medicine: "Medicina",
+  dose: "Cuánto",
+  when: "Cuándo",
+  yourDevice: "Tu dispositivo",
+  notSure: "No estamos seguros de qué dispositivo es. Pregunta a tu farmacéutico.",
+  unreadable: "No pudimos leer esta parte. Pregunta a tu farmacéutico:",
 };
 const ar: Dict = {
   ...en,

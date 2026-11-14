@@ -70,3 +70,5 @@ h1 { margin: 0 0 8px; font-size: 2rem; }
 @media print {
   .avatar, .askbox, .top, .foot .devpanel, .btn, .progress { display: none !important; }
 }
+.facts p { margin: 4px 0; }
+.tag { font-size: 0.7rem; border: 1px solid var(--line); border-radius: 6px; padding: 0 4px; }

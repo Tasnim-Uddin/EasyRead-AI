@@ -66,4 +66,5 @@ export interface ToolLogEntry {
   args: Record<string, unknown>;
   ms: number;
   say: string;
+  source: "browser" | "server";
 }

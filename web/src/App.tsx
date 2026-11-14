@@ -6,6 +6,7 @@ import { useAnam, type ToolHandler } from "./useAnam";
 import Upload from "./components/Upload";
 import StepViewer from "./components/StepViewer";
 import AvatarPanel, { AVATAR_VIDEO_ID } from "./components/AvatarPanel";
+import FactsCard from "./components/FactsCard";
 import DevPanel from "./components/DevPanel";
 
 const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
@@ -40,13 +41,17 @@ export default function App() {
 
   // Live updates while the server writes and illustrates the guide.
   useEffect(() => {
-    if (!guide || guide.status === "ready" || guide.status === "failed" || guide.id.startsWith("g_sample")) return;
+    if (!guide || guide.id.startsWith("g_sample")) return;
     return api.subscribe(guide.id, (e) => {
+      if (e.type === "tool_log") {
+        addLogRef.current(e.tool, e.args, e.ms, "", "server");
+        return;
+      }
       if (e.type === "guide_status") setGuide((g) => (g ? { ...g, status: e.status } : g));
       else if (e.type === "step_updated")
         setGuide((g) => (g ? { ...g, steps: g.steps.map((s) => (s.index === e.step.index ? e.step : s)) } : g));
     });
-  }, [guide?.id, guide?.status]);
+  }, [guide?.id]);
 
   const goto = useCallback((i: number, withClip = false) => {
     const total = guideRef.current?.steps.length ?? 0;
@@ -56,9 +61,14 @@ export default function App() {
     return clamped;
   }, []);
 
-  const addLog = useCallback((tool: string, args: Record<string, unknown>, ms: number, say: string) => {
-    setLog((l) => [{ at: Date.now(), tool, args, ms, say }, ...l].slice(0, 50));
-  }, []);
+  const addLog = useCallback(
+    (tool: string, args: Record<string, unknown>, ms: number, say: string, source: "browser" | "server" = "browser") => {
+      setLog((l) => [{ at: Date.now(), tool, args, ms, say, source }, ...l].slice(0, 50));
+    },
+    [],
+  );
+  const addLogRef = useRef(addLog);
+  addLogRef.current = addLog;
 
   // Client tools, CONTRACTS.md §3. Each returns the short `say` text for the avatar.
   const handlers = useMemo<Record<string, ToolHandler>>(() => {
@@ -181,6 +191,7 @@ export default function App() {
           <div className="right">
             {guide.status !== "ready" && <p className="banner">{t(lang, "working")}</p>}
             {guide.source.is_sample && <p className="note">{t(lang, "sampleNote")}</p>}
+            {guide.facts && <FactsCard facts={guide.facts} lang={lang} />}
             {guide.steps.length > 0 && (
               <StepViewer guide={guide} index={index} lang={lang} clips={clips} playClip={playClip} onIndex={(i) => goto(i)} />
             )}
