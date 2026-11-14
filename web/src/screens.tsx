@@ -439,7 +439,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
         ))}
       </p>
 
-      <div className="foot" style={{ paddingTop: 20 }}>
+      <div className="foot sticky">
         <button className="btn" onClick={onStart}>
           {t(lang, k === "letter" || k === "form" ? "showSteps" : "startStep")}
         </button>
@@ -500,7 +500,6 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
   if (!step) return null;
   const total = guide.steps.length;
   const last = index >= total - 1;
-  const hint = step.kind === "warning" ? "hintWarn" : step.kind === "get_help" ? "hintHelp" : step.kind === "how" ? "hintHow" : "hintWhat";
   return (
     <div className="screen">
       <div className="prog">
@@ -536,7 +535,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
         <GuideFace />
         <div className="bubble">
           <b>{t(lang, "guideSays")}</b>
-          {t(lang, hint)}
+          {step.say || step.text}
         </div>
       </div>
       <div className="nav">
