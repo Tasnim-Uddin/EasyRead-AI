@@ -28,8 +28,8 @@
       "text": "This is your blue inhaler. It helps you breathe.",
       "text_en": "This is your blue inhaler. It helps you breathe.",
       "kind": "what",
-      "picture_prompt": "a blue asthma inhaler held in an open hand",
-      "image_url": "/fixtures/img/step_0.svg",
+      "picture_prompt": "an open palm held out flat holding a blue L-shaped inhaler, close-up of just the hand and the whole inhaler, no face",
+      "image_url": "/fixtures/img/step_0.png",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -38,8 +38,8 @@
       "text": "Use it when you feel wheezy or tight in your chest.",
       "text_en": "Use it when you feel wheezy or tight in your chest.",
       "kind": "when",
-      "picture_prompt": "a person with a hand on their chest, slightly breathless",
-      "image_url": "/fixtures/img/step_1.svg",
+      "picture_prompt": "the person sitting calmly but looking worried, one hand on their chest, mouth slightly open, small curved wheeze lines near the chest, empty plain background, no objects",
+      "image_url": "/fixtures/img/step_1.png",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -48,8 +48,8 @@
       "text": "Shake the inhaler 4 times.",
       "text_en": "Shake the inhaler 4 times.",
       "kind": "how",
-      "picture_prompt": "a hand shaking a blue inhaler, motion lines",
-      "image_url": "/fixtures/img/step_2.svg",
+      "picture_prompt": "the person holding the blue inhaler upright in one hand and shaking it, simple curved motion lines either side of the inhaler",
+      "image_url": "/fixtures/img/step_2.png",
       "technique_clip_id": "inhaler_mdi_shake",
       "status": "ready"
     },
@@ -58,8 +58,8 @@
       "text": "Breathe out. Then press once and breathe in slowly.",
       "text_en": "Breathe out. Then press once and breathe in slowly.",
       "kind": "how",
-      "picture_prompt": "a person with lips around an inhaler mouthpiece, pressing the canister",
-      "image_url": "/fixtures/img/step_3.svg",
+      "picture_prompt": "side view of the person with lips sealed around the horizontal grey mouthpiece of the blue inhaler, canister upright on top, index finger pressing down on the canister, eyes calm",
+      "image_url": "/fixtures/img/step_3.png",
       "technique_clip_id": "inhaler_mdi_press",
       "status": "ready"
     },
@@ -68,8 +68,8 @@
       "text": "Hold your breath for 10 seconds. Then do it again.",
       "text_en": "Hold your breath for 10 seconds. Then do it again.",
       "kind": "how",
-      "picture_prompt": "a person holding their breath, a simple clock showing 10 seconds",
-      "image_url": "/fixtures/img/step_4.svg",
+      "picture_prompt": "portrait of a person with puffed round cheeks and tightly closed mouth, eyes closed, one hand pinching nothing, holding their breath, a small clock with a shaded sector at the top corner, no inhaler",
+      "image_url": "/fixtures/img/step_4.png",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -78,8 +78,8 @@
       "text": "Take 2 puffs. Do not take more than 4 times a day.",
       "text_en": "Take 2 puffs. Do not take more than 4 times a day.",
       "kind": "when",
-      "picture_prompt": "two puffs icon and four small sun/moon icons for a day",
-      "image_url": "/fixtures/img/step_5.svg",
+      "picture_prompt": "an open hand holding the blue inhaler with two small round puff clouds above it, and under it a bright yellow sun shape and a crescent moon shape side by side, wordless symbols only",
+      "image_url": "/fixtures/img/step_5.png",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -88,8 +88,8 @@
       "text": "Tell your GP if you need it more than 3 times a week.",
       "text_en": "Tell your GP if you need it more than 3 times a week.",
       "kind": "warning",
-      "picture_prompt": "a friendly doctor listening to a patient holding a blue inhaler",
-      "image_url": "/fixtures/img/step_6.svg",
+      "picture_prompt": "a friendly doctor in a white coat with a stethoscope on the left, facing the man in the green sweater with short dark hair on the right who holds the blue inhaler, both smiling",
+      "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -98,8 +98,8 @@
       "text": "If it does not help and you cannot breathe, call 999.",
       "text_en": "If it does not help and you cannot breathe, call 999.",
       "kind": "get_help",
-      "picture_prompt": "a phone showing an emergency call, a worried person",
-      "image_url": "/fixtures/img/step_7.svg",
+      "picture_prompt": "the person looking worried with a hand at their throat, holding a smartphone that shows a big red phone-call symbol",
+      "image_url": "/fixtures/img/step_7.png",
       "technique_clip_id": null,
       "status": "ready"
     }
