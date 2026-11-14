@@ -1,0 +1,118 @@
+{
+  "id": "g_sample_inhaler_es",
+  "status": "ready",
+  "language": "es",
+  "source": {
+    "kind": "prescription",
+    "image_urls": [],
+    "is_sample": true
+  },
+  "facts": {
+    "medicine": "Salbutamol 100 micrograms inhaler",
+    "dose": "2 inhalaciones",
+    "frequency": "cuando haga falta, hasta 4 veces al día (2 inhalaciones cada vez)",
+    "route": "inhalado",
+    "device_type": "inhaler_mdi",
+    "device_confidence": 0.9,
+    "warnings": [
+      "Si lo necesitas más de 3 veces por semana, díselo a tu médico de cabecera o a tu enfermera de asma."
+    ],
+    "get_help": [
+      "Si tu inhalador no te ayuda y te cuesta respirar, llama al 999."
+    ],
+    "unreadable": []
+  },
+  "steps": [
+    {
+      "index": 0,
+      "text": "Este es tu inhalador azul. Te ayuda a respirar.",
+      "text_en": "This is your blue inhaler. It helps you breathe.",
+      "kind": "what",
+      "picture_prompt": "an open palm held out flat holding a blue L-shaped inhaler, close-up of just the hand and the whole inhaler, no face",
+      "image_url": "/fixtures/img/step_0.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 1,
+      "text": "Úsalo cuando notes pitidos o presión en el pecho.",
+      "text_en": "Use it when you feel wheezy or tight in your chest.",
+      "kind": "when",
+      "picture_prompt": "the person sitting calmly but looking worried, one hand on their chest, mouth slightly open, small curved wheeze lines near the chest, empty plain background, no objects",
+      "image_url": "/fixtures/img/step_1.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 2,
+      "text": "Agita el inhalador 4 veces.",
+      "text_en": "Shake the inhaler 4 times.",
+      "kind": "how",
+      "picture_prompt": "the person holding the blue inhaler upright in one hand and shaking it, simple curved motion lines either side of the inhaler",
+      "image_url": "/fixtures/img/step_2.png",
+      "technique_clip_id": "inhaler_mdi_shake",
+      "status": "ready"
+    },
+    {
+      "index": 3,
+      "text": "Saca el aire. Luego presiona una vez y respira hondo despacio.",
+      "text_en": "Breathe out. Then press once and breathe in slowly.",
+      "kind": "how",
+      "picture_prompt": "side view of the person breathing out first, mouth open and turned away from the blue inhaler held in one hand, calm eyes, then lips sealing round the grey mouthpiece with a finger on the canister",
+      "image_url": "/fixtures/img/step_3.png",
+      "technique_clip_id": "inhaler_mdi_press",
+      "status": "ready"
+    },
+    {
+      "index": 4,
+      "text": "Aguanta la respiración 10 segundos.",
+      "text_en": "Hold your breath for 10 seconds.",
+      "kind": "how",
+      "picture_prompt": "portrait of a person with puffed round cheeks and tightly closed mouth, eyes closed, one hand pinching nothing, holding their breath, a small clock with a shaded sector at the top corner, no inhaler",
+      "image_url": "/fixtures/img/step_4.png",
+      "technique_clip_id": "inhaler_mdi_hold",
+      "status": "ready"
+    },
+    {
+      "index": 5,
+      "text": "Espera unos 30 segundos. Luego repite los pasos para la inhalación 2.",
+      "text_en": "Wait about 30 seconds. Then do steps again for puff 2.",
+      "kind": "how",
+      "picture_prompt": "a small clock with a shaded sector at the top corner next to the blue inhaler resting on a table, no person",
+      "image_url": "/fixtures/img/step_8.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 6,
+      "text": "Toma 2 inhalaciones cada vez. No lo uses más de 4 veces al día.",
+      "text_en": "Take 2 puffs each time. Use it no more than 4 times in 1 day.",
+      "kind": "when",
+      "picture_prompt": "an open hand holding the blue inhaler with two small round puff clouds above it, and under it a bright yellow sun shape and a crescent moon shape side by side, wordless symbols only",
+      "image_url": "/fixtures/img/step_5.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 7,
+      "text": "Díselo a tu médico de cabecera si lo necesitas más de 3 veces por semana.",
+      "text_en": "Tell your GP if you need it more than 3 times a week.",
+      "kind": "warning",
+      "picture_prompt": "a friendly doctor in a white coat with a stethoscope on the left, facing the man in the green sweater with short dark hair on the right who holds the blue inhaler, both smiling",
+      "image_url": "/fixtures/img/step_6.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 8,
+      "text": "Si no te ayuda y no puedes respirar, llama al 999.",
+      "text_en": "If it does not help and you cannot breathe, call 999.",
+      "kind": "get_help",
+      "picture_prompt": "the person looking worried with a hand at their throat, holding a smartphone that shows a big red phone-call symbol",
+      "image_url": "/fixtures/img/step_7.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    }
+  ],
+  "created_at": "2026-11-14T15:00:00Z"
+}
