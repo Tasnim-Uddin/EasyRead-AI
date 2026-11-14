@@ -97,7 +97,26 @@ async def extract(files, device_photo=None) -> dict:
     return out
 
 
+# What the guide adds after reading a step aloud, by step kind. English only: other languages get the
+# translated step text as it is, so we never show a half-translated line.
+SAY_TAIL = {"how": "Take your time.", "warning": "Take care with this one.",
+            "get_help": "Ask for help if you are not sure."}
+
+
+def make_say(step: dict, language: str) -> str:
+    """Deterministic default for `step.say`: the line the guide speaks in its bubble."""
+    text = step.get("text") or step.get("text_en") or ""
+    tail = SAY_TAIL.get(step.get("kind", ""), "") if language == "en" else ""
+    return f"{text} {tail}".strip()
+
+
 async def translate_steps(steps: list[dict], language: str):
+    await _translate(steps, language)
+    for s in steps:
+        s["say"] = make_say(s, language)
+
+
+async def _translate(steps: list[dict], language: str):
     if language == "en":
         for s in steps:
             s["text"] = s["text_en"]
@@ -191,8 +210,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             await asyncio.sleep(0.3)
             status("writing")
             await asyncio.sleep(0.3)
-            if language != "en":
-                await translate_steps(guide["steps"], language)
+            await translate_steps(guide["steps"], language)
         attach_clips(guide)
         status("illustrating")
         await illustrate(guide, emit)
