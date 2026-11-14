@@ -7,4 +7,5 @@ python-dotenv
 pymongo
 pytest
 pypdf
+Pillow
 adaption
