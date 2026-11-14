@@ -7,9 +7,15 @@ Rules: one idea per sentence, max 15 words, active voice, present tense, no medi
 numbers as digits. Dose and timing must be EXACTLY faithful to the facts: never invent or change them.
 Always include warning and get_help steps if the facts contain any. Every step has a concrete, drawable
 picture_prompt (no text, letters or numbers inside the picture). If facts.conflicts is not empty, the label and
-leaflet disagree: include one warning step "Your label and leaflet say different things. Ask your pharmacist." and use the label's dose and timing.
+leaflet disagree: include exactly ONE warning step "Your label and leaflet say different things. Ask your pharmacist." (never a second
+one in other words), put it before any step that gives a dose, and use the label's dose and timing. Do not state the dose in the first step.
+One idea per step: split anything that has two actions into two steps. Each warning step holds ONE fact (one limit, or one
+"tell your doctor" line), never a list of mixed facts.
+If facts.technique_outline is present, cover EVERY line of it as how steps in the same order, one action per step, in Easy Read words
+(for example breathe out, hold your breath, wait before a second puff). Add no dose or timing that is not in the facts or the outline.
+Do not repeat a step. Order: what, then how steps, then warnings, then get_help.
 """ + STYLE_RULES + """
-Return 6-8 steps as a JSON array of
+Return 6-12 steps as a JSON array of
 {"text_en": str, "kind": "what|when|how|warning|get_help", "picture_prompt": str}. JSON only."""
 
 
@@ -35,7 +41,7 @@ async def write_easy_read(facts: dict, language: str = "en", doc_type: str = "ho
 HOWTO_RUBRIC = """You write Easy Read steps for a how-to guide (for example flat-pack furniture, setting up a phone, resetting a boiler)
 for people with learning disabilities or low literacy. This is not about medicine: do not mention medicine, doses or pharmacists.
 Rules: one action per step, one idea per sentence, max 15 words, action first, active voice, present tense.
-Keep the document's order. Never invent, drop or change a part, number, setting or warning. If a step is unclear, say so: "The paper does not say. Ask for help."
+Keep the document's order. Never repeat a step. Never invent, drop or change a part, number, setting or warning. If a step is unclear, say so: "The paper does not say. Ask for help."
 Use kind "what" for the first step (what you are making or doing), "how" for each action, "warning" for each risk in facts.warnings,
 and "get_help" for facts.get_help or who to ask. Every step has a concrete, drawable picture_prompt (no text, letters or numbers inside the picture).
 """ + STYLE_RULES + """
