@@ -1,6 +1,6 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, copy, json, os, pathlib, datetime as dt, logging
-from . import llm
+from . import llm, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, finish_steps, normalise, safety_lines
@@ -36,9 +36,15 @@ Then, by doc_type:
   "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
 - how_to (not medicine, for example furniture, a phone, a boiler): "title", "source_steps": [the document's own steps, in order,
   one action each, copied faithfully], "warnings": [str], "get_help": [str]. Leave the medicine fields null.
-- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [short action sentences, action first];
+- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 3 short action sentences, action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts];
   "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}]
 - form: "fields": [{{"label": str, "what_to_write": str}}] in Easy Read words, one per box on the form"""
+
+
+def with_technique(facts: dict) -> dict:
+    """Copy of the facts with the checked technique outline for the device type, so the rewriter covers each step."""
+    outline = technique.outline_for_prompt(facts.get("device_type"))
+    return {**facts, "technique_outline": outline} if outline else facts
 
 
 def now() -> str:
@@ -195,8 +201,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             elif domain != "medicine":
                 raw = await write_generic_howto(facts, language)
             else:
-                raw = await write_easy_read(facts, language)
-            raw = finish_steps(raw, dt, domain, facts["conflicts"])
+                raw = await write_easy_read(with_technique(facts), language)
+            raw = finish_steps(raw, dt, domain, facts["conflicts"], facts.get("device_type"))
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,
                                "technique_clip_id": None, "status": "pending"} for i, r in enumerate(raw)]
