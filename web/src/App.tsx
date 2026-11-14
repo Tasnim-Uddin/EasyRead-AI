@@ -176,7 +176,9 @@ export default function App() {
       return () => clearTimeout(timer);
     }
     if (guide.status === "failed") {
-      setError({ title: t(langRef.current, "couldNotRead"), detail: null });
+      const code = guide.error_code;
+      setError({ title: t(langRef.current, code === "not_a_document" ? "notAPaper" : "couldNotRead"),
+                 detail: code === "unreadable" ? t(langRef.current, "clearerPhoto") : null });
       go("error");
     }
   }, [screen, guide?.status, textDone, go]);

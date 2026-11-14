@@ -212,12 +212,27 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
     limit = CAPS["medicine"] if domain == "medicine" else CAPS.get(doc_type, 12)
     steps = list(steps)
     while len(steps) > limit:
-        cands = [i for i, s in enumerate(steps) if s["kind"] == "what" and i > 0] or \
-                [i for i, s in enumerate(steps) if s["kind"] in ("how", "when") and i > 0]
+        # A step holding a date, time or amount no other step has is a fact; keep it unless the guide is far too long.
+        keep = len(steps) <= limit + EXTRA_FOR_FACTS
+        def droppable(i, s):
+            return i > 0 and not (keep and unique_numbers(s, steps))
+        cands = [i for i, s in enumerate(steps) if s["kind"] == "what" and droppable(i, s)] or \
+                [i for i, s in enumerate(steps) if s["kind"] in ("how", "when") and droppable(i, s)]
         if not cands:
             break
         steps.pop(cands[-1])
     return steps
+
+
+EXTRA_FOR_FACTS = 4
+NUM = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?|\d+(?:[:.]\d+)?")
+
+
+def unique_numbers(step: dict, steps: list[dict]) -> bool:
+    """True when the step has a number (date, time, amount, dose) that no other step mentions."""
+    mine = set(NUM.findall(step["text_en"]))
+    others = set().union(*(set(NUM.findall(s["text_en"])) for s in steps if s is not step)) if len(steps) > 1 else set()
+    return bool(mine - others)
 
 
 KNOW = re.compile(r"^(?:you\s+)?(?:need\s+to\s+)?know\s+(?:that\s+)?", re.I)
