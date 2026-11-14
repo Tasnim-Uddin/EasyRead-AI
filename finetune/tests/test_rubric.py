@@ -12,7 +12,8 @@ def test_fixture_passes_rubric():
 
 def test_invented_dose_fails():
     steps = [dict(s) for s in FIX["steps"]]
-    steps[5]["text_en"] = "Take 5 puffs. Do not take more than 4 times a day."
+    steps[5]["text_en"] = "Wait about 30 seconds."
+    steps[6]["text_en"] = "Take 5 puffs. Do not take more than 4 times a day."
     r = score(FIX["facts"], steps)
     assert not r["checks"]["dose_faithful"] and not r["checks"]["no_invented_numbers"]
 

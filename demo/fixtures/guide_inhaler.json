@@ -10,7 +10,7 @@
   "facts": {
     "medicine": "Salbutamol 100 micrograms inhaler",
     "dose": "2 puffs",
-    "frequency": "when needed, up to 4 times a day",
+    "frequency": "when needed, up to 4 times a day (2 puffs each time)",
     "route": "inhaled",
     "device_type": "inhaler_mdi",
     "device_confidence": 0.9,
@@ -58,15 +58,15 @@
       "text": "Breathe out. Then press once and breathe in slowly.",
       "text_en": "Breathe out. Then press once and breathe in slowly.",
       "kind": "how",
-      "picture_prompt": "side view of the person with lips sealed around the horizontal grey mouthpiece of the blue inhaler, canister upright on top, index finger pressing down on the canister, eyes calm",
+      "picture_prompt": "side view of the person breathing out first, mouth open and turned away from the blue inhaler held in one hand, calm eyes, then lips sealing round the grey mouthpiece with a finger on the canister",
       "image_url": "/fixtures/img/step_3.png",
       "technique_clip_id": "inhaler_mdi_press",
       "status": "ready"
     },
     {
       "index": 4,
-      "text": "Hold your breath for 10 seconds. Then do it again.",
-      "text_en": "Hold your breath for 10 seconds. Then do it again.",
+      "text": "Hold your breath for 10 seconds.",
+      "text_en": "Hold your breath for 10 seconds.",
       "kind": "how",
       "picture_prompt": "portrait of a person with puffed round cheeks and tightly closed mouth, eyes closed, one hand pinching nothing, holding their breath, a small clock with a shaded sector at the top corner, no inhaler",
       "image_url": "/fixtures/img/step_4.png",
@@ -75,8 +75,18 @@
     },
     {
       "index": 5,
-      "text": "Take 2 puffs. Do not take more than 4 times a day.",
-      "text_en": "Take 2 puffs. Do not take more than 4 times a day.",
+      "text": "Wait about 30 seconds. Then do steps again for puff 2.",
+      "text_en": "Wait about 30 seconds. Then do steps again for puff 2.",
+      "kind": "how",
+      "picture_prompt": "a small clock with a shaded sector at the top corner next to the blue inhaler resting on a table, no person",
+      "image_url": "/fixtures/img/step_4.png",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 6,
+      "text": "Take 2 puffs each time. Use it no more than 4 times in 1 day.",
+      "text_en": "Take 2 puffs each time. Use it no more than 4 times in 1 day.",
       "kind": "when",
       "picture_prompt": "an open hand holding the blue inhaler with two small round puff clouds above it, and under it a bright yellow sun shape and a crescent moon shape side by side, wordless symbols only",
       "image_url": "/fixtures/img/step_5.png",
@@ -84,7 +94,7 @@
       "status": "ready"
     },
     {
-      "index": 6,
+      "index": 7,
       "text": "Tell your GP if you need it more than 3 times a week.",
       "text_en": "Tell your GP if you need it more than 3 times a week.",
       "kind": "warning",
@@ -94,7 +104,7 @@
       "status": "ready"
     },
     {
-      "index": 7,
+      "index": 8,
       "text": "If it does not help and you cannot breathe, call 999.",
       "text_en": "If it does not help and you cannot breathe, call 999.",
       "kind": "get_help",
