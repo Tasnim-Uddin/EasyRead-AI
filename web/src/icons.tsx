@@ -38,7 +38,7 @@ export default function Icon({ name, size, style, className }: { name: string; s
       width={size}
       height={size}
       aria-hidden="true"
-      className={className}
+      className={[className, name === "arrow" || name === "back" ? "mirror" : ""].filter(Boolean).join(" ") || undefined}
       style={p.fill ? { fill: "currentColor", ...style } : style}
     >
       <path d={p.d} />
