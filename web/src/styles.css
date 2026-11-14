@@ -307,3 +307,10 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .guide:has(.livectl) { flex-wrap: wrap; }
 .guide .livectl { flex-basis: 100%; justify-content: flex-end; }
 .avslot[data-avatar-slot="stage"] { position: absolute; inset: 0; }
+
+/* Access code screen (shared test builds only) */
+.gate { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 1.25rem; padding: 2rem 1.5rem; }
+.gate h1 { font-size: 2rem; color: var(--ink); }
+.gate .sub { padding: 0; }
+.gate-input { height: 4rem; border-radius: var(--r-pill); border: 0.1875rem solid var(--ink); background: #fff; color: var(--ink); font: 600 1.75rem var(--font-display); text-align: center; letter-spacing: 0.25em; padding: 0 1rem; width: 100%; }
+.gate-input:focus { outline: 0.25rem solid var(--sun); outline-offset: 2px; }
