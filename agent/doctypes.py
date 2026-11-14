@@ -102,7 +102,37 @@ def normalise(raw: dict) -> dict:
     docs = [{"index": int(d["index"]), "role": d.get("role")} for d in raw.get("documents") or []
             if isinstance(d, dict) and str(d.get("index", "")).isdigit()]
     return {"doc_type": dt, "domain": domain, "source_kind": raw.get("kind") or "other",
-            "documents": docs, "facts": facts, "content": content}
+            "documents": docs, "facts": facts, "content": content, "is_document": raw.get("is_document") is not False}
+
+
+def nothing_read(facts: dict, content: dict | None) -> bool:
+    """True when the extraction found no usable words at all (a tiny or blurred photo): no medicine facts, no steps,
+    and an empty letter/bill/form shape."""
+    if any(facts.get(k) for k in ("medicine", "dose", "frequency", "title", "source_steps", "warnings")):
+        return False
+    if content and any(content.get(k) for k in ("what_this_is", "what_to_do", "by_when", "amounts", "fields")):
+        return False
+    return True
+
+
+def _facts_in(text: str) -> set[str]:
+    """Money and numbers in a line (£72.02, 27, 9:15), so we can tell if a step already carries them."""
+    return set(re.findall(r"£\s?\d[\d,]*(?:\.\d+)?|\d+(?:[:.]\d+)?", text.replace(" ", "")))
+
+
+def ensure_content_facts(steps: list[dict], doc_type: str, content: dict | None) -> list[dict]:
+    """letter/bill/other: the rewriter may drop a date, time or amount (a bill total, a trip date, a new dose).
+    Any content line whose numbers no step carries is added back as its deterministic step."""
+    if doc_type not in ("letter", "bill", "other") or not content:
+        return steps
+    have = set().union(*(_facts_in(s.get("text_en") or "") for s in steps)) if steps else set()
+    out = list(steps)
+    for s in content_to_steps(doc_type, content):
+        need = _facts_in(s["text_en"])
+        if need and not need <= have:
+            out.append(s)
+            have |= need
+    return out
 
 
 def _step(kind: str, text: str, prompt: str) -> dict:
@@ -120,7 +150,7 @@ def content_to_steps(doc_type: str, content: dict) -> list[dict]:
         return out
     if content["what_this_is"]:
         out.append(_step("what", content["what_this_is"], "a person reading a letter at a table"))
-    for t in content["what_to_do"][:5]:
+    for t in content["what_to_do"][:10]:
         out.append(_step("how", t, "a person calmly doing one simple task at a desk"))
     for b in content["by_when"][:3]:
         out.append(_step("when", f"By {b['date']}: {b['what']}".replace("By : ", ""), "a calendar page with one day circled"))

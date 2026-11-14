@@ -23,6 +23,7 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 {
   "id": "g_…",
   "status": "extracting|writing|illustrating|ready|failed",
+  "error_code": "not_a_document",              // only when failed: not_a_document | unreadable (no words could be read); "error" holds the English message
   "language": "en",
   "doc_type": "how_to",                        // how_to | letter | bill | form | other. Missing = how_to (older guides, fixtures)
   "domain": "medicine",                        // medicine | money | legal | school | council | other
