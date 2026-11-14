@@ -29,7 +29,7 @@
       "text_en": "This is your blue inhaler. It helps you breathe.",
       "kind": "what",
       "picture_prompt": "a blue asthma inhaler held in an open hand",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_0.svg",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -39,7 +39,7 @@
       "text_en": "Use it when you feel wheezy or tight in your chest.",
       "kind": "when",
       "picture_prompt": "a person with a hand on their chest, slightly breathless",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_1.svg",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -49,7 +49,7 @@
       "text_en": "Shake the inhaler 4 times.",
       "kind": "how",
       "picture_prompt": "a hand shaking a blue inhaler, motion lines",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_2.svg",
       "technique_clip_id": "inhaler_mdi_shake",
       "status": "ready"
     },
@@ -59,7 +59,7 @@
       "text_en": "Breathe out. Then press once and breathe in slowly.",
       "kind": "how",
       "picture_prompt": "a person with lips around an inhaler mouthpiece, pressing the canister",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_3.svg",
       "technique_clip_id": "inhaler_mdi_press",
       "status": "ready"
     },
@@ -69,7 +69,7 @@
       "text_en": "Hold your breath for 10 seconds. Then do it again.",
       "kind": "how",
       "picture_prompt": "a person holding their breath, a simple clock showing 10 seconds",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_4.svg",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -79,7 +79,7 @@
       "text_en": "Take 2 puffs. Do not take more than 4 times a day.",
       "kind": "when",
       "picture_prompt": "two puffs icon and four small sun/moon icons for a day",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_5.svg",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -89,7 +89,7 @@
       "text_en": "Tell your GP if you need it more than 3 times a week.",
       "kind": "warning",
       "picture_prompt": "a friendly doctor listening to a patient holding a blue inhaler",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_6.svg",
       "technique_clip_id": null,
       "status": "ready"
     },
@@ -99,7 +99,7 @@
       "text_en": "If it does not help and you cannot breathe, call 999.",
       "kind": "get_help",
       "picture_prompt": "a phone showing an emergency call, a worried person",
-      "image_url": null,
+      "image_url": "/fixtures/img/step_7.svg",
       "technique_clip_id": null,
       "status": "ready"
     }
