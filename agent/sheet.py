@@ -21,6 +21,11 @@ footer p{margin:0 0 2mm;font-weight:bold;font-size:18pt}
 """
 
 
+# "Label" / "Leaflet" in the guide language (same words as the web app); other languages use English.
+_SOURCE_WORDS = {"en": ("Label", "Leaflet"), "es": ("Etiqueta", "Prospecto"), "pl": ("Etykieta", "Ulotka"),
+                 "ar": ("الملصق", "النشرة"), "ur": ("لیبل", "لیفلیٹ"), "bn": ("লেবেল", "লিফলেট")}
+
+
 def render(g: dict) -> str:
     lang = langs.clean(g.get("language") or "en")
     code = langs.code_of(lang) or lang
@@ -30,8 +35,9 @@ def render(g: dict) -> str:
     conflict_step = next((s for s in steps if postprocess.is_conflict(s.get("text_en") or "")), None)
     warn = ""
     if conflict_step or f.get("conflicts"):
-        quotes = "".join(f"<p class=q><b>{escape(str(c.get('field') or ''))}:</b> {escape(str(c.get('label') or ''))} / "
-                         f"{escape(str(c.get('leaflet') or ''))}</p>" for c in f.get("conflicts") or [])
+        lab, leaf = _SOURCE_WORDS.get(code, _SOURCE_WORDS["en"])
+        quotes = "".join(f"<p class=q><b>{lab}:</b> {escape(str(c.get('label') or ''))}<br>"
+                         f"<b>{leaf}:</b> {escape(str(c.get('leaflet') or ''))}</p>" for c in f.get("conflicts") or [])
         text = (conflict_step or {}).get("text") or postprocess.CONFLICT_TEXT
         warn = f"<div class=warn role=alert><p>{escape(text)}</p>{quotes}</div>"
     rows = ""
