@@ -20,6 +20,7 @@
 html { font-size: calc(16px * var(--scale, 1)); }
 body { background: #E7E2DA; font-family: var(--font-body); color: var(--ink); -webkit-text-size-adjust: 100%; }
 h1, h2, h3, button, .btn, .chip { font-family: var(--font-display); }
+[dir=rtl] svg.mirror { transform: scaleX(-1); }
 svg { stroke: currentColor; fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 button { cursor: pointer; color: inherit; border: 0; background: none; font-size: inherit; }
 button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 0.25rem solid var(--sage-ink); outline-offset: 0.1875rem; }
