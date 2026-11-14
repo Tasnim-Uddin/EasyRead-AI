@@ -64,6 +64,8 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 - `POST /api/guides/{id}/language` `{ language }` → re-translates the step texts (pictures are reused) → Guide.
 - `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none"|"pharmacist"|"111"|"999" }`. Answers come only from `facts` + the library.
 - `POST /api/anam/session` `{ guide_id, language }` → `{ sessionToken }`. Creates an Anam session token server-side; the persona's system prompt includes the guide's facts and steps plus the ground rules.
+- `POST /api/tools/{name}` `{ guide_id, ...args }` → `{ say, ... }` for the server-handled tools `answer_from_document`, `check_understanding`, `set_language` (`set_language` also returns the updated `guide`). `POST /api/guides/{id}/check_understanding` `{ answer? }` → `{ say, correct }` is the same logic.
+- `POST /api/anam/session` without `ANAM_API_KEY` returns `{ sessionToken: "dev-mock-token", mock: true, personaConfig }` so the UI can integrate.
 - `GET /api/library` → the library index (§5).
 - `GET /api/guides/{id}/sheet` → a printable HTML Easy Read sheet (stretch).
 

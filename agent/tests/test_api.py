@@ -65,3 +65,11 @@ def test_language_and_library_and_404(client):
     assert client.post(f"/api/guides/{g['id']}/language", json={"language": "es"}).json()["language"] == "es"
     assert "clips" in client.get("/api/library").json()
     assert client.get("/api/guides/nope").status_code == 404
+
+
+def test_tools_endpoint(client):
+    g = make_guide(client)
+    r = client.post("/api/tools/answer_from_document", json={"guide_id": g["id"], "question": "chest pain"}).json()
+    assert r["escalate"] == "999" and "999" in r["say"]
+    assert client.post("/api/tools/check_understanding", json={"guide_id": g["id"]}).json()["say"]
+    assert client.post("/api/tools/set_language", json={"guide_id": g["id"], "language": "es"}).json()["language"] == "es"
