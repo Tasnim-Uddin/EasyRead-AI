@@ -98,3 +98,13 @@ def test_run_reaches_ready_with_concurrent_pictures(monkeypatch):
     assert all(s["status"] == "ready" and s["image_url"] for s in g["steps"])
     statuses = [e["status"] for e in store.history["g_run"] if e["type"] == "guide_status"]
     assert statuses == ["extracting", "writing", "illustrating", "ready"]
+
+
+def test_sheet_while_pictures_are_still_coming():
+    from agent import sheet
+    g = {"id": "g_s", "language": "en", "facts": {"medicine": "Salbutamol"}, "safety_lines": ["Call 999."],
+         "steps": [{"index": 0, "text": "Shake it.", "image_url": "/a.png", "status": "ready"},
+                   {"index": 1, "text": "Breathe in.", "image_url": None, "status": "generating"},
+                   {"index": 2, "text": "Hold it.", "status": "failed"}]}
+    html = sheet.render(g)
+    assert html.count("<img") == 1 and "Breathe in." in html and "Hold it." in html
