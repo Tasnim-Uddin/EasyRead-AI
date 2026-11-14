@@ -95,3 +95,23 @@ def test_summary_line_uses_digits():
 
 def test_spacer_only_when_paper_says_always():
     assert "if you have one" in pipeline.EXTRACT_SYSTEM
+
+
+def test_add_back_treats_date_and_time_spellings_as_the_same():
+    from agent import doctypes
+    steps = [{"kind": "when", "text_en": "Take your last dose of amoxicillin on 15 November 2026.", "picture_prompt": "x"},
+             {"kind": "when", "text_en": "Arrive at 9:15 on Friday 4 December.", "picture_prompt": "x"}]
+    content = {"what_this_is": "", "what_to_do": [], "amounts": [],
+               "by_when": [{"date": "15/11/2026", "what": "Take your last dose of amoxicillin."},
+                           {"date": "4 December", "what": "Arrive at 9.15am."}]}
+    out = doctypes.ensure_content_facts(steps, "letter", content)
+    assert len(out) == 2
+
+
+def test_dateless_follow_up_is_kept_without_a_fake_date():
+    from agent import doctypes
+    steps = [{"kind": "how", "text_en": "Book a kidney blood test with your GP surgery.", "picture_prompt": "x"}]
+    content = {"what_this_is": "", "what_to_do": [], "amounts": [],
+               "by_when": [{"date": "Date to come by letter", "what": "Go to the cardiology clinic. The hospital will send you the date."}]}
+    out = doctypes.ensure_content_facts(steps, "letter", content)
+    assert [s["text_en"] for s in out[1:]] == ["Go to the cardiology clinic. The hospital will send you the date."]
