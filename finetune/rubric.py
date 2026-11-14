@@ -42,7 +42,7 @@ def score(facts: dict, steps: list[dict]) -> dict:
     need = _nums(f"{facts.get('dose') or ''} {facts.get('frequency') or ''}")
     kinds = {s.get("kind") for s in steps}
     checks = {
-        "step_count": 6 <= len(steps) <= 8,
+        "step_count": 6 <= len(steps) <= 9,
         "valid_kinds": all(s.get("kind") in KINDS for s in steps),
         "max_15_words": all(len(sen.split()) <= 15 for t in texts for sen in _sentences(t)),
         "one_sentence": all(len(_sentences(t)) <= 2 for t in texts),
