@@ -25,6 +25,26 @@ UPLOADS.mkdir(parents=True, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=UPLOADS), name="uploads")
 _tasks: set = set()
 
+FIXTURES = pathlib.Path(__file__).resolve().parents[1] / "demo" / "fixtures"
+
+
+def load_samples(directory: pathlib.Path = FIXTURES) -> list[str]:
+    """Load the built-in sample guides (demo/fixtures/guide_*.json, read-only) under their own stable ids
+    (g_sample_inhaler, g_sample_council_letter, g_sample_flatpack), so the avatar and Q&A work on them."""
+    ids = []
+    for f in sorted(directory.glob("guide_*.json")):
+        try:
+            g = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if isinstance(g, dict) and str(g.get("id", "")).startswith("g_sample"):
+            store.guides[g["id"]] = g  # memory only: never mirrored to MongoDB
+            ids.append(g["id"])
+    return ids
+
+
+load_samples()
+
 
 class LangReq(BaseModel):
     language: str = "en"

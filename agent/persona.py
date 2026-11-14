@@ -56,12 +56,20 @@ def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
             f"EASY READ STEPS:\n{steps}\n\nStart by greeting the user, then use show_step with index {step_index} and read it.")
 
 
+def voice_id(language: str) -> str:
+    """Anam voices are single-language: ANAM_VOICE_ID_<LANG> (e.g. ANAM_VOICE_ID_ES) wins for that language,
+    then ANAM_VOICE_ID, then the English default."""
+    env = os.environ.get
+    per_lang = env(f"ANAM_VOICE_ID_{language.upper()}") if language and language.isalpha() else None
+    return per_lang or env("ANAM_VOICE_ID", DEFAULTS["voiceId"])
+
+
 def persona_config(guide: dict, language: str, step_index: int = 0) -> dict:
     env = os.environ.get
     cfg = {"name": "Easy Read guide",
            "avatarId": env("ANAM_AVATAR_ID", DEFAULTS["avatarId"]),
            "avatarModel": env("ANAM_AVATAR_MODEL", DEFAULTS["avatarModel"]),
-           "voiceId": env("ANAM_VOICE_ID", DEFAULTS["voiceId"]),
+           "voiceId": voice_id(language),
            "llmId": env("ANAM_LLM_ID", DEFAULTS["llmId"]),
            "systemPrompt": system_prompt(guide, language, step_index),
            "tools": TOOLS}
