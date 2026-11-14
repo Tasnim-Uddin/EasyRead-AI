@@ -1,0 +1,72 @@
+/* Accessibility-first: large type, high contrast, one step per screen. */
+:root {
+  --bg: #ffffff;
+  --fg: #111111;
+  --muted: #4a4a4a;
+  --brand: #0b4fd6;
+  --brand-fg: #ffffff;
+  --card: #f4f6fb;
+  --line: #111111;
+  --warn: #8a1c00;
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d0f14;
+    --fg: #f5f5f5;
+    --muted: #c4c8d0;
+    --brand: #7fb0ff;
+    --brand-fg: #0d0f14;
+    --card: #1a1e27;
+    --line: #f5f5f5;
+    --warn: #ff9b80;
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: 20px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; line-height: 1.5; }
+.app { max-width: 1200px; margin: 0 auto; padding: 0 16px 32px; }
+.top { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; font-size: 1.2rem; }
+.sr { position: absolute; left: -9999px; }
+select, input[type="text"], input:not([type]), input[type="file"] { font: inherit; padding: 10px; border: 2px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); width: 100%; }
+.top select { width: auto; }
+.card { background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+h1 { margin: 0 0 8px; font-size: 2rem; }
+.lead { font-size: 1.2rem; }
+.field { display: block; margin: 16px 0; }
+.field > span { display: block; font-weight: 700; margin-bottom: 6px; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+.btn { font: inherit; font-weight: 700; min-height: 52px; padding: 10px 20px; border-radius: 12px; border: 2px solid var(--line); background: var(--bg); color: var(--fg); cursor: pointer; }
+.btn.primary { background: var(--brand); color: var(--brand-fg); border-color: var(--brand); }
+.btn.big { font-size: 1.3rem; padding: 16px 28px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+:focus-visible { outline: 4px solid #ffb000; outline-offset: 2px; }
+.note { color: var(--muted); font-size: 0.85rem; }
+.banner { background: var(--warn); color: #fff; padding: 12px 16px; border-radius: 12px; }
+.split { display: grid; grid-template-columns: 1fr 1.3fr; gap: 20px; align-items: start; }
+@media (max-width: 800px) { .split { grid-template-columns: 1fr; } }
+.avatar { position: relative; padding: 0; overflow: hidden; aspect-ratio: 1; display: grid; place-items: center; background: #000; }
+.avatar video { width: 100%; height: 100%; object-fit: cover; }
+.avatar-cover { position: absolute; inset: 0; display: grid; place-content: center; gap: 12px; text-align: center; padding: 20px; background: var(--card); }
+.stop { position: absolute; bottom: 12px; inset-inline-end: 12px; }
+.viewer { text-align: center; }
+.progress { display: flex; gap: 8px; justify-content: center; margin-bottom: 8px; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: transparent; padding: 0; }
+.dot.on { background: var(--brand); border-color: var(--brand); }
+.stepno { font-weight: 700; color: var(--muted); margin: 0; }
+.picture { width: min(100%, 360px); aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); background: #fff; margin: 12px auto; display: grid; place-items: center; border: 2px solid var(--line); }
+.steptext { font-size: 1.9rem; font-weight: 700; line-height: 1.25; margin: 12px 0; }
+.kind-warning, .kind-get_help { color: var(--warn); }
+.clipbox video { width: 100%; max-height: 260px; border-radius: 12px; }
+.spinner { width: 36px; height: 36px; border: 4px solid var(--muted); border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+.answer { font-size: 1.1rem; font-weight: 600; }
+.foot { margin-top: 24px; }
+.sos { display: inline-block; background: #b00020; color: #fff; font-weight: 800; padding: 12px 20px; border-radius: 12px; text-decoration: none; }
+.devpanel { margin-top: 16px; font-size: 0.8rem; }
+.devpanel ol { padding-inline-start: 20px; }
+.devpanel .say { color: var(--muted); }
+@media print {
+  .avatar, .askbox, .top, .foot .devpanel, .btn, .progress { display: none !important; }
+}
