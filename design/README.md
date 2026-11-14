@@ -1,5 +1,9 @@
 # EasyRead AI design (Figma bounty evidence)
 
+Start here: [EVIDENCE.md](EVIDENCE.md) has the approved Figma file, all 15 frames next to the built screens, and the low-literacy design decisions. Exports are in `figma/` and `built/`.
+
+The notes below are about the earlier Figma Make prototype.
+
 Figma Make file (HCA team, "Voice, Vision & Generative Media" folder):
 https://www.figma.com/make/6AFCFOtVejTAj3WXZtCfP6/EasyRead-Medicine-Guide-App
 
