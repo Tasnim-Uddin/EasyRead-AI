@@ -1,0 +1,84 @@
+{
+ "doc_type": "how_to",
+ "domain": "other",
+ "facts": {
+  "medicine": null,
+  "dose": null,
+  "frequency": null,
+  "route": null,
+  "device_type": "unknown",
+  "device_confidence": 0,
+  "title": "KALLA Bookcase - assembly",
+  "source_steps": [
+   "Lay the two sides (A) flat on the floor.",
+   "Fix the 4 shelves (B) between the sides with 12 screws (D).",
+   "Tighten by hand.",
+   "Stand the bookcase up.",
+   "Two people are needed.",
+   "Slide the back panel (C) into the grooves.",
+   "Fix the back with the 4 remaining screws (D).",
+   "Fix the bookcase to the wall with the safety strap."
+  ],
+  "warnings": [
+   "Tall furniture can tip over and hurt children."
+  ],
+  "get_help": [
+   "Missing a part? Call KALLA Helpline 0800 000 111."
+  ],
+  "unreadable": [],
+  "conflicts": []
+ },
+ "content": null,
+ "steps": [
+  {
+   "text_en": "This guide shows how to build the KALLA bookcase.",
+   "kind": "what",
+   "picture_prompt": "A finished wooden bookcase with 4 shelves standing against a plain wall in a living room"
+  },
+  {
+   "text_en": "Lay the 2 sides (A) flat on the floor.",
+   "kind": "how",
+   "picture_prompt": "Two tall wooden side panels lying flat and parallel on a floor"
+  },
+  {
+   "text_en": "Fix the 4 shelves (B) between the sides with 12 screws (D). Tighten by hand.",
+   "kind": "how",
+   "picture_prompt": "A hand turning a screw to fix a wooden shelf between two side panels lying on the floor"
+  },
+  {
+   "text_en": "Two people stand the bookcase up.",
+   "kind": "how",
+   "picture_prompt": "Two adults lifting a bookcase frame upright together"
+  },
+  {
+   "text_en": "Slide the back panel (C) into the grooves.",
+   "kind": "how",
+   "picture_prompt": "A thin flat back panel being slid into grooves on the back of a bookcase"
+  },
+  {
+   "text_en": "Fix the back with the 4 remaining screws (D).",
+   "kind": "how",
+   "picture_prompt": "A hand screwing a screw into the back panel of a bookcase, 4 screws nearby"
+  },
+  {
+   "text_en": "Fix the bookcase to the wall with the safety strap.",
+   "kind": "how",
+   "picture_prompt": "A safety strap joining the top of a bookcase to a wall"
+  },
+  {
+   "text_en": "Tall furniture can tip over and hurt children.",
+   "kind": "warning",
+   "picture_prompt": "A tall bookcase tipping forward towards a small child, with a red warning triangle"
+  },
+  {
+   "text_en": "Missing a part? Call KALLA Helpline 0800 000 111.",
+   "kind": "get_help",
+   "picture_prompt": "A person holding a telephone to their ear next to an open flat-pack box"
+  },
+  {
+   "text_en": "If something breaks or feels unsafe, stop and ask for help.",
+   "kind": "get_help",
+   "picture_prompt": "a person on the phone talking to a helper"
+  }
+ ]
+}

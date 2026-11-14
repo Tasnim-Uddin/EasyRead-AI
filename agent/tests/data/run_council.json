@@ -1,0 +1,96 @@
+{
+ "doc_type": "letter",
+ "domain": "council",
+ "facts": {
+  "medicine": null,
+  "dose": null,
+  "frequency": null,
+  "route": null,
+  "device_type": "unknown",
+  "device_confidence": 0,
+  "title": null,
+  "source_steps": [],
+  "warnings": [],
+  "get_help": [],
+  "unreadable": [],
+  "conflicts": []
+ },
+ "content": {
+  "what_this_is": "This is a reminder from Fenwick Borough Council that you have not paid a council tax instalment of £212.50.",
+  "what_to_do": [
+   "Pay £212.50 to the council by 17 November 2026.",
+   "Pay the full amount to avoid enforcement action and extra costs of £70.",
+   "Call the council on 0300 000 0000 if you cannot pay.",
+   "Or visit fenwick.example/ctax to arrange a payment plan.",
+   "Ask about a council tax reduction if you are on a low income."
+  ],
+  "by_when": [
+   {
+    "date": "17 November 2026",
+    "what": "Pay the £212.50 instalment in full (within 7 days of the notice dated 10 November 2026)"
+   }
+  ],
+  "amounts": [
+   {
+    "what": "Unpaid council tax instalment, due 1 October 2026",
+    "amount": "£212.50"
+   },
+   {
+    "what": "Additional costs if you do not pay in time",
+    "amount": "£70"
+   }
+  ]
+ },
+ "steps": [
+  {
+   "text_en": "This is a reminder from Fenwick Borough Council. You have not paid a council tax instalment.",
+   "kind": "what",
+   "picture_prompt": "A person at a kitchen table looking at a letter, with a small town hall building in a speech bubble above the letter"
+  },
+  {
+   "text_en": "Pay £212.50 to the council by 17 November 2026.",
+   "kind": "how",
+   "picture_prompt": "A hand giving coins and notes to a smiling council worker at a desk"
+  },
+  {
+   "text_en": "Pay the full amount to avoid enforcement action. This is when the council takes steps to make you pay. You also avoid extra costs of £70.",
+   "kind": "how",
+   "picture_prompt": "A full purse next to a closed gate with a stop hand sign, and a small pile of extra coins crossed out"
+  },
+  {
+   "text_en": "Call the council on 0300 000 0000 if you cannot pay.",
+   "kind": "get_help",
+   "picture_prompt": "A person holding a telephone to their ear while sitting on a sofa"
+  },
+  {
+   "text_en": "Visit fenwick.example/ctax to arrange a payment plan.",
+   "kind": "how",
+   "picture_prompt": "A person using a laptop at a table, with a calendar and small coin stacks beside it"
+  },
+  {
+   "text_en": "Ask about a council tax reduction if you are on a low income.",
+   "kind": "get_help",
+   "picture_prompt": "A person talking with a council worker, with a small coin stack shrinking beside them"
+  },
+  {
+   "text_en": "Pay the £212.50 instalment in full by 17 November 2026. This is 7 days after the notice dated 10 November 2026.",
+   "kind": "when",
+   "picture_prompt": "A wall calendar with one day circled in red and a letter lying beside it"
+  },
+  {
+   "text_en": "Unpaid council tax instalment, due 1 October 2026. The amount is £212.50.",
+   "kind": "what",
+   "picture_prompt": "A house with a coin stack in front of it and a calendar page beside it"
+  },
+  {
+   "text_en": "Extra costs if you do not pay in time. The amount is £70.",
+   "kind": "what",
+   "picture_prompt": "A small extra pile of coins added on top of a larger pile, next to a clock"
+  },
+  {
+   "text_en": "Get free advice before you sign or pay. For example, Citizens Advice.",
+   "kind": "get_help",
+   "picture_prompt": "a person on the phone talking to a helper"
+  }
+ ]
+}
