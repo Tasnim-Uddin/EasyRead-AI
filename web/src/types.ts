@@ -48,6 +48,9 @@ export interface Guide {
     kind: string;
     image_urls: string[];
     is_sample: boolean;
+    device_photo_url?: string | null;
+    device_photo_labelled_url?: string;
+    device_photo_labels?: string[];
     documents?: { index: number; role: string; role_source: string; image_url: string | null }[];
   };
   facts: Facts | null;

@@ -47,6 +47,18 @@ def test_annotate(monkeypatch):
     assert asyncio.run(fal.annotate_photo("https://x/p.png", ["cap"])) == "https://x/a.png"
 
 
+def test_annotate_numbered_prompt(monkeypatch):
+    seen = {}
+
+    def handler(req):
+        seen["body"] = json.loads(req.content)
+        return httpx.Response(200, json={"images": [{"url": "https://x/a.png"}]})
+
+    _mock(monkeypatch, handler)
+    asyncio.run(fal.annotate_photo("data:image/png;base64,AA", ["cap", "mouthpiece"], numbered=True))
+    assert "1: cap; 2: mouthpiece" in seen["body"]["prompt"] and seen["body"]["image_url"].startswith("data:")
+
+
 @pytest.mark.skipif(not os.environ.get("FAL_KEY"), reason="live test needs FAL_KEY in the environment")
 def test_live_step_picture():
     url = asyncio.run(fal.make_step_picture("a blue asthma inhaler held in an open hand", seed=1))
