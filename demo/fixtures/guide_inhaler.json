@@ -79,7 +79,7 @@
       "text_en": "Wait about 30 seconds. Then do steps again for puff 2.",
       "kind": "how",
       "picture_prompt": "a small clock with a shaded sector at the top corner next to the blue inhaler resting on a table, no person",
-      "image_url": "/fixtures/img/step_4.png",
+      "image_url": "/fixtures/img/step_8.png",
       "technique_clip_id": null,
       "status": "ready"
     },
