@@ -48,7 +48,7 @@ async def draft(facts: dict, hint: str, doc_type: str = "how_to", content: dict 
     return steps if isinstance(steps, list) else None
 
 
-async def main(per_seed: int, out: str, workers: int = 8):
+async def main(per_seed: int, out: str, workers: int = 8, max_calls: int = 0):
     rng = random.Random(0)
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
     jobs = []  # (prompt facts args, hint, scorer)
@@ -61,7 +61,11 @@ async def main(per_seed: int, out: str, workers: int = 8):
             for k in range(per_seed):
                 d = perturb_doc(seed, rng)
                 jobs.append((d["doc_type"], d["facts"], d["content"], VARIANTS[k % len(VARIANTS)]))
+    rng.shuffle(jobs)
+    if max_calls:
+        jobs = jobs[:max_calls]  # hard spend cap
     sem = asyncio.Semaphore(workers)
+    fh = open(out, "w")
 
     async def run(job):
         dt, facts, content, hint = job
@@ -70,19 +74,22 @@ async def main(per_seed: int, out: str, workers: int = 8):
         ok = steps and (score(facts, steps)["passed"] if dt == "how_to" else score_doc(dt, content, steps)["passed"])
         if not ok:
             return None
-        return {"prompt": SYSTEM + "\n\n" + user_message(facts, dt, content),
-                "completion": json.dumps(steps, ensure_ascii=False)}
+        row = {"prompt": SYSTEM + "\n\n" + user_message(facts, dt, content),
+               "completion": json.dumps(steps, ensure_ascii=False)}
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+        fh.flush()  # keep rows even if the run is stopped
+        return row
 
     rows = [r for r in await asyncio.gather(*(run(j) for j in jobs)) if r]
     tried = len(jobs)
-    with open(out, "w") as fh:
-        fh.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
+    fh.close()
     print(f"kept {len(rows)}/{tried} rubric-passing examples -> {out}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--per-seed", type=int, default=45)
+    ap.add_argument("--max-calls", type=int, default=0, help="stop after this many model calls")
     ap.add_argument("--out", default="finetune/data/train.jsonl")
     a = ap.parse_args()
-    asyncio.run(main(a.per_seed, a.out))
+    asyncio.run(main(a.per_seed, a.out, max_calls=a.max_calls))
