@@ -19,6 +19,8 @@ All papers in the video are fictional (`demo/inputs/`). No real patient data.
 
 ## Shot list
 
+**Open the app with `?demo=1` first** (for example `http://localhost:5173/?demo=1`). The app starts in customer mode, which hides the sample papers and the **Tool calls** panel; `?demo=1` turns demo mode on and the browser remembers it (Settings > Demo mode switches it off). `#/sample/...` links always work and turn demo mode on for that visit.
+
 Base URL is what Vite prints (usually `http://localhost:5173/`). "Upload" means the real flow on `#/`. Backup routes in brackets are for B-roll or if a live call fails.
 
 | # | Time | On screen (exact route or action) | Narration (exact words) | Evidences |
@@ -43,7 +45,7 @@ If you run long, cut in this order: the Listen clip in shot 4 (keep the sentence
 
 **Spend.** One live inhaler run costs about $0.45 (Claude extraction and rewrite plus fal pictures). Do not record live runs over and over:
 1. Do one live run of the three inhaler files and one of the council letter. Record the screen while they run (that is the real-flow footage for shots 2 to 4 and 8).
-2. Re-record retakes on the finished guides (they stay in memory until the server restarts), or on `#/sample/cached-inhaler` and `#/sample/council` for B-roll. Do not restart uvicorn between takes.
+2. Re-record retakes on the finished guides (they are saved and listed under My papers), or on `#/sample/cached-inhaler` and `#/sample/council` for B-roll. Do not restart uvicorn between takes.
 3. Ask, Listen and translation cost a few cents each. The avatar uses Anam minutes, so keep the talk takes short.
 
 **Server for recording.** Full `.env` on the demo laptop, plus `SHOW_UNCHECKED_CLIPS=1` so the clips show with their badge. Leave `DEVICE_PHOTO_LABELS` unset. Check `curl localhost:8000/api/health` shows the keys as true.
@@ -87,7 +89,7 @@ Short, honest answers. One person answers each, the others stay quiet.
    About $0.45 for our three-file inhaler run: one Claude vision call over all files, the rewrite, and one fal picture per step (about $0.025 each). Listen audio is cached, so repeats are free.
 
 7. **What about privacy?**
-   No accounts and no patient data in the repo; every sample is fictional. Keys stay on the server; the browser only gets a short-lived Anam session token. Guides live in memory unless MongoDB is set. A real deployment would need a data-processing agreement for the model providers.
+   No accounts and no patient data in the repo; every sample is fictional. Keys stay on the server; the browser only gets a short-lived Anam session token. Guides are saved on the server (MongoDB if set, otherwise JSON files in `data/guides`); each phone lists only the papers it made, and can delete them. A real deployment would need a data-processing agreement for the model providers.
 
 8. **Which languages?**
    Any. The "Other language" picker has about 80 languages plus free text; the guide, safety lines and avatar switch. Right-to-left (Arabic, Urdu, Pashto) flips the layout, with numbers kept in order. We tested Somali and Pashto. The interface itself is hand-translated in English, Spanish, Arabic, Urdu and Polish.

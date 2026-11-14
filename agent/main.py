@@ -1,5 +1,5 @@
 """EasyRead AI server. Run from repo root: uvicorn agent.main:app --reload --port 8000"""
-import asyncio, hmac, json, os, pathlib, time, uuid, tempfile
+import asyncio, hmac, json, os, pathlib, re, time, uuid, tempfile
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,7 +8,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
 from . import docs, langs, llm, persona, pipeline, qa, tellback, tts
-from . import sheet as sheet_mod
 from . import sheet as sheet_mod
 from .store import Store
 
@@ -164,9 +163,33 @@ async def create_guide(document: list[UploadFile] = File(default=[]), device_pho
     return {"guide_id": gid}
 
 
+MAX_LIST_IDS = 200
+
+
+@app.get("/api/guides")
+def list_guides(ids: str = ""):
+    """"My papers": summaries of the guides whose ids this device kept (comma list), newest first. Never a global
+    list: no ids means an empty list, so one phone never sees another person's papers."""
+    wanted = [i.strip() for i in ids.split(",") if i.strip()][:MAX_LIST_IDS]
+    return {"guides": store.summaries(wanted)}
+
+
 @app.get("/api/guides/{gid}")
 def get_guide(gid: str):
     return _guide(gid)
+
+
+@app.delete("/api/guides/{gid}")
+def delete_guide(gid: str):
+    """Removes a guide, its saved JSON and its uploaded files. Samples cannot be deleted."""
+    if not store.delete(gid):
+        raise HTTPException(404, "guide not found")
+    for f in (UPLOADS.glob(f"{gid}_*") if re.fullmatch(r"g_[A-Za-z0-9-]+", gid) else []):
+        try:
+            f.unlink()
+        except OSError:
+            pass
+    return {"deleted": gid}
 
 
 @app.get("/api/guides/{gid}/events")
