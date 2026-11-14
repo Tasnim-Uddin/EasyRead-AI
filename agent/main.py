@@ -81,7 +81,7 @@ async def create_guide(document: list[UploadFile] = File(default=[]), device_pho
             data = await d.read()
             mt = docs.sniff(data, d.content_type)
             if mt is None:
-                raise docs.UploadError(400, "unsupported_file_type", f"{d.filename or 'file'}: use JPEG, PNG, WebP, GIF or PDF")
+                raise docs.UploadError(400, "unsupported_file_type", f"We could not use {d.filename or 'this file'}. Add a photo (JPEG, PNG, WebP, GIF) or a PDF.")
             files.append((data, mt, role))
             raw_files.append((d, data))
         dev = None
@@ -89,13 +89,13 @@ async def create_guide(document: list[UploadFile] = File(default=[]), device_pho
             data = await device_photo.read()
             mt = docs.sniff(data, device_photo.content_type)
             if mt is None or mt == "application/pdf":
-                raise docs.UploadError(400, "unsupported_file_type", "device_photo must be a JPEG, PNG, WebP or GIF image")
+                raise docs.UploadError(400, "unsupported_file_type", "We could not use this device photo. Add a JPEG, PNG, WebP or GIF photo.")
             dev = (data, mt)
         docs.check_limits([(f[0], f[1]) for f in files] + ([dev] if dev else []))
     except docs.UploadError as e:
         return JSONResponse({"error": e.error, "detail": e.detail}, status_code=e.status)
     if not files and llm.available():
-        return JSONResponse({"error": "document_required", "detail": "upload at least one file"}, status_code=400)
+        return JSONResponse({"error": "document_required", "detail": "We did not get a paper. Add a photo or PDF and try again."}, status_code=400)
     urls = [_store_file(d, data, gid) for d, data in raw_files]
     if dev:
         urls.append(_store_file(device_photo, dev[0], gid))
@@ -209,16 +209,16 @@ async def anam_session(req: SessionReq):
 async def tts_endpoint(req: TTSReq):
     text = req.text.strip()
     if not text:
-        return JSONResponse({"error": "text required"}, status_code=400)
+        return JSONResponse({"error": "text_required", "detail": "There is nothing to read aloud. Add some text and try again."}, status_code=400)
     if len(text) > tts.MAX_CHARS:
-        return JSONResponse({"error": f"text too long (max {tts.MAX_CHARS} characters)"}, status_code=413)
+        return JSONResponse({"error": "text_too_long", "detail": f"This text is too long to read aloud. Use {tts.MAX_CHARS} characters or fewer."}, status_code=413)
     if not tts.api_key():
-        return JSONResponse({"error": "tts_unavailable", "detail": "ELEVENLABS_API_KEY is not set; use the browser voice"},
+        return JSONResponse({"error": "tts_unavailable", "detail": "The voice is not available now. Use the voice in your browser."},
                             status_code=503)
     try:
         audio = await tts.synthesize(text, req.language)
     except Exception as e:
-        return JSONResponse({"error": "tts_failed", "detail": str(e)}, status_code=502)
+        return JSONResponse({"error": "tts_failed", "detail": "We could not make the voice. Try again."}, status_code=502)
     return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 

@@ -2,7 +2,7 @@
 import asyncio, copy, json, os, pathlib, datetime as dt, logging
 from . import llm
 from .docs import ROLES
-from .rewriter import write_easy_read
+from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, finish_steps, normalise, safety_lines
 
 log = logging.getLogger("agent.pipeline")
@@ -34,6 +34,8 @@ Then, by doc_type:
   (copy warnings and get_help faithfully). device_type is one of {DEVICE_TYPES}; if a device_photo is included, use it
   (a metered-dose inhaler is shaken; a dry-powder inhaler is not). If both a label and a leaflet are present, also give
   "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
+- how_to (not medicine, for example furniture, a phone, a boiler): "title", "source_steps": [the document's own steps, in order,
+  one action each, copied faithfully], "warnings": [str], "get_help": [str]. Leave the medicine fields null.
 - letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [short action sentences, action first];
   "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}]
 - form: "fields": [{{"label": str, "what_to_write": str}}] in Easy Read words, one per box on the form"""
@@ -158,6 +160,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             status("writing")
             if ex["content"] is not None:
                 raw = content_to_steps(dt, ex["content"])
+            elif domain != "medicine":
+                raw = await write_generic_howto(facts, language)
             else:
                 raw = await write_easy_read(facts, language)
             raw = finish_steps(raw, dt, domain, facts["conflicts"])

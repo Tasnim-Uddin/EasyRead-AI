@@ -26,3 +26,24 @@ async def write_easy_read(facts: dict, language: str = "en") -> list[dict]:
     import json
     steps = await llm.complete_json(RUBRIC, "Facts:\n" + json.dumps(facts, ensure_ascii=False))
     return steps
+
+
+HOWTO_RUBRIC = """You write Easy Read steps for a how-to guide (for example flat-pack furniture, setting up a phone, resetting a boiler)
+for people with learning disabilities or low literacy. This is not about medicine: do not mention medicine, doses or pharmacists.
+Rules: one action per step, one idea per sentence, max 15 words, action first, active voice, present tense.
+Keep the document's order. Never invent, drop or change a part, number, setting or warning. If a step is unclear, say so: "The paper does not say. Ask for help."
+Use kind "what" for the first step (what you are making or doing), "how" for each action, "warning" for each risk in facts.warnings,
+and "get_help" for facts.get_help or who to ask. Every step has a concrete, drawable picture_prompt (no text, letters or numbers inside the picture).
+""" + STYLE_RULES + """
+Return 5-9 steps as a JSON array of
+{"text_en": str, "kind": "what|how|warning|get_help", "picture_prompt": str}. JSON only."""
+
+KINDS = ("what", "how", "warning", "get_help")
+
+
+async def write_generic_howto(facts: dict, language: str = "en") -> list[dict]:
+    """Non-medicine how-to guides. Never uses the medicine rubric or the medicine finetune."""
+    import json
+    steps = await llm.complete_json(HOWTO_RUBRIC, "Facts:\n" + json.dumps(facts, ensure_ascii=False))
+    return [{"text_en": s["text_en"], "kind": s.get("kind") if s.get("kind") in KINDS else "how",
+             "picture_prompt": s.get("picture_prompt") or "a person doing one simple task"} for s in steps if s.get("text_en")]
