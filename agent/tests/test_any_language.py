@@ -51,14 +51,23 @@ def test_safety_stays_english_when_translation_fails(monkeypatch):
     assert g["safety_lines"] == ["Call 999."]
 
 
-def test_999_answer_has_translation_and_english(monkeypatch):
+def test_999_answer_is_translation_only_when_number_kept(monkeypatch):
     async def fake(system, content, max_tokens=4000):
         assert "Somali" in system
         return "Wac 999 hadda."
     monkeypatch.setattr(llm, "available", lambda: True)
     monkeypatch.setattr(llm, "complete", fake)
     r = asyncio.run(qa.ask({"steps": []}, "I have chest pain", "so"))
-    assert r["escalate"] == "999" and "Wac 999 hadda." in r["answer"] and "Call 999 now" in r["answer"]
+    assert r["escalate"] == "999" and r["answer"] == "Wac 999 hadda."
+
+
+def test_999_answer_adds_english_when_translation_loses_number(monkeypatch):
+    async def fake(system, content, max_tokens=4000):
+        return "Wac hadda."
+    monkeypatch.setattr(llm, "available", lambda: True)
+    monkeypatch.setattr(llm, "complete", fake)
+    r = asyncio.run(qa.ask({"steps": []}, "I have chest pain", "so"))
+    assert r["answer"].startswith("Wac hadda.") and "Call 999 now" in r["answer"]
 
 
 def test_api_accepts_any_language_and_sanitises(client, monkeypatch):
