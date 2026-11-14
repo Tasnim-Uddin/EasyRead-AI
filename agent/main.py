@@ -3,18 +3,19 @@ import asyncio, json, os, pathlib, time, uuid, tempfile
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import llm, persona, pipeline, qa
+from . import llm, persona, pipeline, qa, tts
 from .store import Store
 
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
+if not os.environ.get("EASYREAD_NO_DOTENV"):  # tests set this so a real .env never leaks in
+    try:
+        from dotenv import load_dotenv
+        load_dotenv()
+    except ImportError:
+        pass
 
 app = FastAPI(title="EasyRead AI")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -31,6 +32,11 @@ class LangReq(BaseModel):
 
 class AskReq(BaseModel):
     question: str
+    language: str = "en"
+
+
+class TTSReq(BaseModel):
+    text: str
     language: str = "en"
 
 
@@ -183,6 +189,23 @@ async def anam_session(req: SessionReq):
     if r.status_code >= 400:
         raise HTTPException(502, f"Anam token request failed ({r.status_code}): {r.text[:300]}")
     return {"sessionToken": r.json()["sessionToken"]}
+
+
+@app.post("/api/tts")
+async def tts_endpoint(req: TTSReq):
+    text = req.text.strip()
+    if not text:
+        return JSONResponse({"error": "text required"}, status_code=400)
+    if len(text) > tts.MAX_CHARS:
+        return JSONResponse({"error": f"text too long (max {tts.MAX_CHARS} characters)"}, status_code=413)
+    if not tts.api_key():
+        return JSONResponse({"error": "tts_unavailable", "detail": "ELEVENLABS_API_KEY is not set; use the browser voice"},
+                            status_code=503)
+    try:
+        audio = await tts.synthesize(text, req.language)
+    except Exception as e:
+        return JSONResponse({"error": "tts_failed", "detail": str(e)}, status_code=502)
+    return Response(audio, media_type="audio/mpeg", headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/api/library")

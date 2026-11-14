@@ -66,6 +66,7 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 - `POST /api/anam/session` `{ guide_id, language }` → `{ sessionToken }`. Creates an Anam session token server-side; the persona's system prompt includes the guide's facts and steps plus the ground rules.
 - `POST /api/tools/{name}` `{ guide_id, ...args }` → `{ say, ... }` for the server-handled tools `answer_from_document`, `check_understanding`, `set_language` (`set_language` also returns the updated `guide`). `POST /api/guides/{id}/check_understanding` `{ answer? }` → `{ say, correct }` is the same logic.
 - `POST /api/anam/session` without `ANAM_API_KEY` returns `{ sessionToken: "dev-mock-token", mock: true, personaConfig }` so the UI can integrate.
+- `POST /api/tts` `{ text, language }` → `audio/mpeg` (ElevenLabs multilingual model; voice from `ELEVENLABS_VOICE_ID`). Audio is cached on disk by hash of text+language+voice, so repeats cost nothing. Errors are JSON `{ error, detail }`: `503 tts_unavailable` when `ELEVENLABS_API_KEY` is unset (web/ should fall back to the browser voice), `400` empty text, `413` text over 600 characters, `502 tts_failed` if ElevenLabs errors.
 - `GET /api/library` → the library index (§5).
 - `GET /api/guides/{id}/sheet` → a printable HTML Easy Read sheet (stretch).
 
