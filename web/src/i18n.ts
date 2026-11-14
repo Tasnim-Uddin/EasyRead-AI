@@ -190,6 +190,11 @@ Object.assign(en, {
   loadingSample: "Opening the sample",
   uploadingFailed: "We could not make your guide.",
   talkError: "The guide could not start. You can still use the steps.",
+  muteMic: "Mute my voice",
+  unmuteMic: "Unmute my voice",
+  soundOff: "Sound off",
+  soundOn: "Sound on",
+  talkStandin: "The talking guide is not switched on here. Use the steps and the buttons.",
   yes: "Yes",
 });
 const es: Dict = {
@@ -393,6 +398,11 @@ Object.assign(es, {
   loadingSample: "Abriendo el ejemplo",
   uploadingFailed: "No pudimos crear tu guía.",
   talkError: "La guía no pudo empezar. Aún puedes usar los pasos.",
+  muteMic: "Silenciar mi voz",
+  unmuteMic: "Activar mi voz",
+  soundOff: "Quitar el sonido",
+  soundOn: "Poner el sonido",
+  talkStandin: "La guía hablada no está activada aquí. Usa los pasos y los botones.",
   yes: "Sí",
 });
 Object.assign(ar, {
@@ -547,6 +557,11 @@ Object.assign(ar, {
   loadingSample: "نفتح المثال",
   uploadingFailed: "لم نتمكن من إنشاء دليلك.",
   talkError: "تعذّر بدء الدليل. لا يزال بإمكانك استخدام الخطوات.",
+  muteMic: "كتم صوتي",
+  unmuteMic: "إلغاء كتم صوتي",
+  soundOff: "إيقاف الصوت",
+  soundOn: "تشغيل الصوت",
+  talkStandin: "الدليل المتحدث غير مفعّل هنا. استخدم الخطوات والأزرار.",
   yes: "نعم",
 });
 const ur: Dict = {
@@ -721,6 +736,11 @@ const ur: Dict = {
   loadingSample: "نمونہ کھل رہا ہے",
   uploadingFailed: "ہم آپ کی گائیڈ نہیں بنا سکے۔",
   talkError: "گائیڈ شروع نہیں ہو سکی۔ آپ پھر بھی مراحل استعمال کر سکتے ہیں۔",
+  muteMic: "میری آواز بند کریں",
+  unmuteMic: "میری آواز کھولیں",
+  soundOff: "آواز بند",
+  soundOn: "آواز چالو",
+  talkStandin: "بولنے والی گائیڈ یہاں چالو نہیں ہے۔ مراحل اور بٹن استعمال کریں۔",
   yes: "جی ہاں",
 };
 const pl: Dict = {
@@ -895,6 +915,11 @@ const pl: Dict = {
   loadingSample: "Otwieramy przykład",
   uploadingFailed: "Nie udało się zrobić Twojego przewodnika.",
   talkError: "Przewodnik nie mógł wystartować. Nadal możesz używać kroków.",
+  muteMic: "Wycisz mój głos",
+  unmuteMic: "Włącz mój głos",
+  soundOff: "Wyłącz dźwięk",
+  soundOn: "Włącz dźwięk",
+  talkStandin: "Mówiący przewodnik nie jest tu włączony. Użyj kroków i przycisków.",
   yes: "Tak",
 };
 const bn: Dict = {
@@ -1068,6 +1093,11 @@ const bn: Dict = {
   loadingSample: "নমুনা খোলা হচ্ছে",
   uploadingFailed: "আমরা আপনার গাইড বানাতে পারিনি।",
   talkError: "গাইড শুরু করা যায়নি। আপনি তবুও ধাপগুলো ব্যবহার করতে পারেন।",
+  muteMic: "আমার কণ্ঠ বন্ধ করুন",
+  unmuteMic: "আমার কণ্ঠ চালু করুন",
+  soundOff: "শব্দ বন্ধ",
+  soundOn: "শব্দ চালু",
+  talkStandin: "কথা বলা গাইড এখানে চালু নেই। ধাপ ও বোতাম ব্যবহার করুন।",
   askGo: "জিজ্ঞাসা করুন",
   yes: "হ্যাঁ",
 };

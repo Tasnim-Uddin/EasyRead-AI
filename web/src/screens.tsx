@@ -778,8 +778,12 @@ interface TalkProps {
   onStart: () => void;
   onStop: () => void;
   onType: () => void;
+  micMuted?: boolean;
+  soundOff?: boolean;
+  onToggleMic?: () => void;
+  onToggleSound?: () => void;
 }
-export function TalkScreen({ lang, state, error, caption, onLanguage, onBack, onStart, onStop, onType }: TalkProps) {
+export function TalkScreen({ lang, state, error, caption, onLanguage, onBack, onStart, onStop, onType, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
   const live = state === "live";
   return (
     <div className="screen">
@@ -800,6 +804,21 @@ export function TalkScreen({ lang, state, error, caption, onLanguage, onBack, on
           {t(lang, "talkError")}
           {error ? ` ${error}` : ""}
         </p>
+      )}
+      {state === "standin" && (
+        <p className="banner" role="status">
+          {t(lang, "talkStandin")}
+        </p>
+      )}
+      {live && (
+        <div className="foot" style={{ flexDirection: "row", gap: "0.75rem", padding: "0.875rem 1.5rem 0" }}>
+          <button className="btn soft" onClick={onToggleMic} aria-pressed={!!micMuted}>
+            {t(lang, micMuted ? "unmuteMic" : "muteMic")}
+          </button>
+          <button className="btn soft" onClick={onToggleSound} aria-pressed={!!soundOff}>
+            {t(lang, soundOff ? "soundOn" : "soundOff")}
+          </button>
+        </div>
       )}
       <div className="micbig">
         <button className="m" onClick={live ? onStop : onStart} disabled={state === "connecting"} aria-label={t(lang, live ? "endTalk" : "startTalk")}>
