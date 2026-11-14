@@ -9,9 +9,16 @@ async def _base(facts: dict) -> list[dict]:
 
 
 async def _adaption(facts: dict) -> list[dict]:
-    # TODO(Ryan): call the Adaption fine-tuned model (ADAPTION_API_KEY / ADAPTION_MODEL_ID) once the
-    # inference endpoint is confirmed from their docs. Until then this raises and we fall back to the base LLM.
-    raise NotImplementedError("Adaption inference not wired up yet")
+    """Adaption SDK (pip install adaption); reads ADAPTION_API_KEY. ADAPTION_MODEL_ID is the tuned model id
+    (or `stack:<slug>`). Sync SDK, so run it in a thread."""
+    import asyncio
+    from adaption import Adaption
+
+    def call():
+        r = Adaption().responses.create(model=os.environ["ADAPTION_MODEL_ID"], instructions=SYSTEM,
+                                        input=user_message(facts), tools=[])
+        return r.output_text
+    return llm.parse_json(await asyncio.to_thread(call))
 
 
 async def _tuned(facts: dict) -> list[dict]:
