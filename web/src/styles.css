@@ -164,6 +164,14 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .pic img { width: 100%; height: 100%; object-fit: contain; mix-blend-mode: multiply; }
 .pic.warn img { height: 86%; margin-top: 2.5rem; }
 .pic .spin { width: 3.5rem; height: 3.5rem; border-radius: 50%; border: 0.375rem solid var(--cream); border-top-color: var(--sun); animation: spin 1s linear infinite; }
+/* A step picture that is still being drawn: same box as the picture, a soft shimmer, then the picture fades in. */
+.pic.loading, .clip .loading { background-image: linear-gradient(100deg, transparent 30%, rgba(255,253,249,.7) 50%, transparent 70%); background-size: 220% 100%; animation: shimmer 1.8s ease-in-out infinite; }
+.pic.loading svg, .clip .loading svg { opacity: .45; }
+.clip .loading.fill { position: absolute; inset: 0; display: grid; place-items: center; background-color: var(--cream-deep); color: var(--sun-deep); }
+@keyframes shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.pic img, .clip img { animation: fade-in .4s ease-out; }
+@keyframes fade-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pic.loading, .clip .loading, .pic img, .clip img, .pic .spin { animation: none; } }
 .badge { position: absolute; left: 1rem; top: 1rem; background: var(--cream); border-radius: var(--r-pill); padding: 0.5rem 1.125rem; font: 600 1.125rem var(--font-display); display: flex; gap: 0.5rem; align-items: center; z-index: 1; }
 .badge svg { width: 1.375rem; height: 1.375rem; }
 .step { padding: 1.25rem 1.75rem 0; font: 600 var(--fs-step)/1.15 var(--font-display); letter-spacing: -.005em; overflow-wrap: anywhere; }
@@ -327,3 +335,8 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .card.device img { display: block; width: 100%; max-height: 22rem; object-fit: contain; border-radius: var(--r-md); margin-top: 0.75rem; background: var(--cream-deep); }
 .card.device .legend { margin-top: 0.5rem; }
 .card.device .btn.small { min-height: 3rem; font-size: 1.125rem; margin-top: 0.875rem; }
+.lang-busy { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); width: min(24rem, calc(100vw - 2rem)); margin: 0; z-index: 30; text-align: center; box-shadow: 0 6px 18px rgba(40,30,20,.18); }
+/* Demo polish: long medicine names and answers never push past the card; disabled chips look disabled. */
+.card, .card .big, .card p, .qtitle, .ttl, .cap, .choice, .bubble, .answer, .chip, .conflict { overflow-wrap: anywhere; min-width: 0; }
+.chip:disabled { opacity: .5; cursor: not-allowed; }
+.chip:focus-visible, .choice:focus-visible, .round:focus-visible { outline: 0.25rem solid var(--sage-ink); outline-offset: 0.1875rem; }

@@ -646,6 +646,11 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
         </div>
       )}
 
+      {guide.status === "illustrating" && guide.steps.some(pictureComing) && (
+        <p className="safe" role="status">
+          {t(lang, "rowPictures")}…
+        </p>
+      )}
       {guide.source.is_sample && <p className="safe">{t(lang, "sampleNote")}</p>}
       <p className="safe" dir="auto">
         {safetyLines(guide).map((l, i) => (
@@ -673,6 +678,8 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
 /* ---------- 5. step ---------- */
 const KIND_ICON: Record<string, string> = { what: "doc", when: "sun", how: "hand", warning: "alert", get_help: "alert" };
 
+export const pictureComing = (s: Step) => !s.image_url && (s.status === "pending" || s.status === "generating");
+
 function StepPicture({ step, lang }: { step: Step; lang: string }) {
   const butter = step.kind === "warning" || step.kind === "get_help";
   const badge = butter ? (
@@ -690,11 +697,21 @@ function StepPicture({ step, lang }: { step: Step; lang: string }) {
       </div>
     );
   }
-  const working = step.status === "pending" || step.status === "generating";
+  const icon = <Icon name={KIND_ICON[step.kind] ?? "doc"} style={butter ? { width: 72, height: 72, strokeWidth: 2.6 } : undefined} />;
+  if (pictureComing(step)) {
+    // Same box as the finished picture, so nothing jumps when it arrives.
+    return (
+      <div className={"pic loading" + (butter ? " warn" : " ph")} role="img" aria-label={t(lang, "rowPictures")}>
+        {badge}
+        {icon}
+      </div>
+    );
+  }
+  // No picture (failed or offline): the step text is enough. A calm icon, no error text.
   return (
-    <div className={"pic small" + (butter ? " warn" : " ph")}>
+    <div className={"pic" + (step.status === "failed" ? "" : " small") + (butter ? " warn" : " ph")}>
       {badge}
-      {working ? <div className="spin" /> : <Icon name={KIND_ICON[step.kind] ?? "doc"} style={butter ? { width: 72, height: 72, strokeWidth: 2.6 } : undefined} />}
+      {icon}
     </div>
   );
 }
@@ -805,6 +822,10 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
           <video ref={vid} src={clip.video_url} poster={clip.poster_url} loop muted playsInline controls={playing} aria-label={clip.caption_en} />
         ) : step.image_url ? (
           <img src={step.image_url} alt="" />
+        ) : pictureComing(step) ? (
+          <div className="loading fill" role="img" aria-label={t(lang, "rowPictures")}>
+            <Icon name="hand" size={72} />
+          </div>
         ) : (
           <Icon name="hand" size={72} />
         )}
@@ -872,7 +893,7 @@ interface AskProps {
 export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onAsk, onTalk, onTellBack, onPrint, onBack }: AskProps) {
   const live = useLive();
   const k = kindOf(guide);
-  const noun = k === "medicine" ? "medicine" : "paper";
+  const heading = t(lang, k === "medicine" ? "askAboutMedicine" : "askAboutPaper");
   const [listening, setListening] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const SR = (window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -917,7 +938,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       )}
       <div className="ask">
         <h2>
-          {t(lang, "askAbout")} {noun}
+          {heading}
         </h2>
         <label>
           <span className="sr">{t(lang, "askExample")}</span>
@@ -951,6 +972,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
             <button
               key={c}
               className="chip"
+              disabled={busy}
               onClick={() => {
                 onQuestion(c);
                 onAsk(c);

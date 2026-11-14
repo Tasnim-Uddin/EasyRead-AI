@@ -51,6 +51,18 @@ function save(key: string, value: unknown) {
 }
 
 let nextId = 1;
+// A fetched guide can be older than a step_updated event already applied: keep any picture that has arrived.
+function keepNewer(cur: Guide, next: Guide): Guide {
+  const byIndex = new Map(cur.steps.map((s) => [s.index, s]));
+  return {
+    ...next,
+    status: cur.status === "ready" ? "ready" : next.status,
+    steps: next.steps.map((s) => {
+      const old = byIndex.get(s.index);
+      return old?.image_url && !s.image_url ? { ...s, image_url: old.image_url, status: old.status } : s;
+    }),
+  };
+}
 const fileUrl = (f: File) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
 
 export default function App() {
@@ -61,6 +73,7 @@ export default function App() {
   const [index, setIndex] = useState(0);
   const [clips, setClips] = useState<Clip[]>([]);
   const [busy, setBusy] = useState(false);
+  const [langBusy, setLangBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<{ title: string; detail: string | null } | null>(null);
   const [log, setLog] = useState<ToolLogEntry[]>([]);
@@ -119,35 +132,54 @@ export default function App() {
 
   useEffect(() => {
     if (!guide || isSample(guide)) return;
-    return api.subscribe(guide.id, (e) => {
+    const id = guide.id;
+    // The whole guide, merged so a picture that already arrived is never lost to an older copy.
+    const refresh = () =>
+      void api
+        .getGuide(id)
+        .then((g) => setGuide((cur) => (cur && cur.id === id ? keepNewer(cur, g) : cur)))
+        .catch(() => undefined);
+    return api.subscribe(id, (e) => {
       if (e.type === "tool_log") {
         addLogRef.current(e.tool, e.args, e.ms, "", "server");
         return;
       }
-      if (e.type === "guide_status") setGuide((g) => (g ? { ...g, status: e.status } : g));
-      else if (e.type === "step_updated")
+      if (e.type === "guide_status") {
+        setGuide((g) => (g ? { ...g, status: e.status } : g));
+        // The steps' text is written once pictures start: fetch it so the summary can open early.
+        if (e.status === "illustrating" || e.status === "ready") refresh();
+      } else if (e.type === "step_updated") {
+        if (!guideRef.current?.steps.some((s) => s.index === e.step.index)) refresh();
         setGuide((g) => (g ? { ...g, steps: g.steps.map((s) => (s.index === e.step.index ? e.step : s)) } : g));
+      }
     });
   }, [guide?.id]);
 
-  // Fallback if an event is missed: ask for the guide again until it is ready.
+  // Fallback if an event is missed: ask for the guide again until it is ready
+  // (pictures keep arriving after the summary has opened).
   useEffect(() => {
-    if (screen !== "reading" || !guide || isSample(guide) || guide.status === "ready" || guide.status === "failed") return;
+    if (!guide || isSample(guide) || guide.status === "ready" || guide.status === "failed") return;
     const id = guide.id;
     const timer = setInterval(() => {
-      api.getGuide(id).then((g) => setGuide((cur) => (cur && cur.id === id && cur.status !== "ready" ? g : cur))).catch(() => undefined);
+      api.getGuide(id).then((g) => setGuide((cur) => (cur && cur.id === id && cur.status !== "ready" ? keepNewer(cur, g) : cur))).catch(() => undefined);
     }, 3000);
     return () => clearInterval(timer);
-  }, [screen, guide?.id, guide?.status]);
+  }, [guide?.id, guide?.status]);
 
+  // Open the guide as soon as its steps are written; step pictures fill in live.
+  const textDone = !!guide && guide.steps.length > 0 && (guide.status === "illustrating" || guide.status === "ready");
   useEffect(() => {
     if (screen !== "reading" || !guide) return;
-    if (guide.status === "ready") go("summary");
-    else if (guide.status === "failed") {
+    if (textDone) {
+      // Let "Drawing the pictures" show as in progress for a moment, then open the summary.
+      const timer = setTimeout(() => go("summary"), guide.status === "ready" ? 0 : 900);
+      return () => clearTimeout(timer);
+    }
+    if (guide.status === "failed") {
       setError({ title: t(langRef.current, "couldNotRead"), detail: null });
       go("error");
     }
-  }, [screen, guide?.status, go]);
+  }, [screen, guide?.status, textDone, go]);
 
   /* ---- client tools, CONTRACTS.md section 3. Each returns the short `say` text for the avatar ---- */
   const goto = useCallback((i: number) => {
@@ -207,7 +239,14 @@ export default function App() {
         if (!cleanLanguage(code)) return "I can't switch to that language yet.";
         setLang(code);
         anamLangRef.current(code);
-        if (g() && !isSample(g())) setGuide(await api.setLanguage(g()!.id, code));
+        if (g() && !isSample(g())) {
+          setLangBusy(true);
+          try {
+            setGuide(await api.setLanguage(g()!.id, code));
+          } finally {
+            setLangBusy(false);
+          }
+        }
         return `Switched to ${languageLabel(code)}.`;
       },
     };
@@ -332,7 +371,7 @@ export default function App() {
 
   async function onAsk(q?: string) {
     const text = (q ?? question).trim();
-    if (!guide || !text) return;
+    if (!guide || !text || busy) return;
     setBusy(true);
     try {
       setAnswer(await runTool("answer_from_document", { question: text }));
@@ -515,6 +554,11 @@ export default function App() {
           />
         )}
 
+        {langBusy && (
+          <p className="banner lang-busy" role="status">
+            {t(lang, "changingLanguage")}
+          </p>
+        )}
         <DevPanel log={log} lang={lang} />
       </div>
       {guide && <PrintSheet guide={guide} lang={lang} />}

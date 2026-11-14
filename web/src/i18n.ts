@@ -1169,6 +1169,74 @@ const bn: Dict = {
   askGo: "জিজ্ঞাসা করুন",
   yes: "হ্যাঁ",
 };
+
+// The language dialog and talk notes were English in every language; the ask heading now comes whole, not as
+// a translated start plus an English noun.
+Object.assign(en, {
+  changingLanguage: "Changing the language…",
+  askAboutMedicine: "Ask a question about your medicine",
+  askAboutPaper: "Ask a question about your paper",
+});
+Object.assign(es, {
+  changingLanguage: "Cambiando el idioma…",
+  otherLanguage: "Otro idioma…",
+  searchLanguage: "Escriba un idioma, por ejemplo somalí",
+  useTyped: "Usar",
+  noMatch: "No hay resultados. Puede usar lo que escribió.",
+  closeX: "Cerrar",
+  voiceNA: "No hay voz para este idioma. Puede leer las palabras en la pantalla.",
+  sttTypeNote: "Todavía no puedo oír este idioma. Escriba sus preguntas, por favor.",
+  askAboutMedicine: "Haga una pregunta sobre su medicina",
+  askAboutPaper: "Haga una pregunta sobre su papel",
+});
+Object.assign(ar, {
+  changingLanguage: "جارٍ تغيير اللغة…",
+  otherLanguage: "لغة أخرى…",
+  searchLanguage: "اكتب اسم لغة، مثل الصومالية",
+  useTyped: "استخدم",
+  noMatch: "لا توجد نتيجة. يمكنك استخدام ما كتبته.",
+  closeX: "إغلاق",
+  voiceNA: "لا يوجد صوت لهذه اللغة. يمكنك قراءة الكلمات على الشاشة.",
+  sttTypeNote: "لا أستطيع سماع هذه اللغة بعد. اكتب أسئلتك من فضلك.",
+  askAboutMedicine: "اسأل سؤالًا عن دوائك",
+  askAboutPaper: "اسأل سؤالًا عن ورقتك",
+});
+Object.assign(ur, {
+  changingLanguage: "زبان بدل رہی ہے…",
+  otherLanguage: "دوسری زبان…",
+  searchLanguage: "زبان لکھیں، مثلاً صومالی",
+  useTyped: "استعمال کریں",
+  noMatch: "کوئی میل نہیں ملا۔ آپ اپنا لکھا ہوا استعمال کر سکتے ہیں۔",
+  closeX: "بند کریں",
+  voiceNA: "اس زبان کے لیے آواز دستیاب نہیں۔ آپ اسکرین پر الفاظ پڑھ سکتے ہیں۔",
+  sttTypeNote: "میں ابھی یہ زبان نہیں سن سکتا۔ براہ کرم اپنے سوال لکھیں۔",
+  askAboutMedicine: "اپنی دوا کے بارے میں سوال پوچھیں",
+  askAboutPaper: "اپنے کاغذ کے بارے میں سوال پوچھیں",
+});
+Object.assign(pl, {
+  changingLanguage: "Zmieniam język…",
+  otherLanguage: "Inny język…",
+  searchLanguage: "Wpisz język, na przykład somalijski",
+  useTyped: "Użyj",
+  noMatch: "Brak wyników. Możesz użyć tego, co wpisano.",
+  closeX: "Zamknij",
+  voiceNA: "Nie ma głosu dla tego języka. Możesz czytać słowa na ekranie.",
+  sttTypeNote: "Jeszcze nie słyszę tego języka. Wpisz swoje pytania.",
+  askAboutMedicine: "Zadaj pytanie o swój lek",
+  askAboutPaper: "Zadaj pytanie o swój papier",
+});
+Object.assign(bn, {
+  changingLanguage: "ভাষা বদলানো হচ্ছে…",
+  otherLanguage: "অন্য ভাষা…",
+  searchLanguage: "একটি ভাষা লিখুন, যেমন সোমালি",
+  useTyped: "ব্যবহার করুন",
+  noMatch: "কিছু মেলেনি। আপনি যা লিখেছেন তা ব্যবহার করতে পারেন।",
+  closeX: "বন্ধ করুন",
+  voiceNA: "এই ভাষার জন্য কোনো কণ্ঠ নেই। আপনি স্ক্রিনের লেখা পড়তে পারেন।",
+  sttTypeNote: "আমি এখনও এই ভাষা শুনতে পারি না। দয়া করে আপনার প্রশ্ন লিখুন।",
+  askAboutMedicine: "আপনার ওষুধ নিয়ে একটি প্রশ্ন করুন",
+  askAboutPaper: "আপনার কাগজ নিয়ে একটি প্রশ্ন করুন",
+});
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
 
 export function t(lang: string, key: string): string {
