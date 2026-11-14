@@ -318,7 +318,7 @@ export function LangPill({ lang, onLanguage }: { lang: string; onLanguage: (c: s
   );
 }
 
-export function TopBar({ lang, onLanguage, onSettings, onBrand }: { lang: string; onLanguage: (c: string) => void; onSettings: () => void; onBrand?: () => void }) {
+export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { lang: string; onLanguage: (c: string) => void; onSettings: () => void; onBrand?: () => void; onPapers?: () => void }) {
   return (
     <div className="top">
       <button className="brand" onClick={onBrand} disabled={!onBrand}>
@@ -327,6 +327,11 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand }: { lang: string
       </button>
       <div className="top-right">
         <LangPill lang={lang} onLanguage={onLanguage} />
+        {onPapers && (
+          <button className="round" onClick={onPapers} aria-label={t(lang, "myPapers")}>
+            <Icon name="list" />
+          </button>
+        )}
         <button className="round" onClick={onSettings} aria-label={t(lang, "settings")}>
           <Icon name="sliders" />
         </button>
@@ -364,12 +369,15 @@ interface HomeProps {
   onSettings: () => void;
   onCamera: () => void;
   onUpload: () => void;
-  onSample: (name: string) => void;
+  /** Demo mode only: customers never see the sample chips. */
+  onSample?: (name: string) => void;
+  onPapers: () => void;
+  hasPapers: boolean;
 }
-export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample }: HomeProps) {
+export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers, hasPapers }: HomeProps) {
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} />
+      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
       <div className="hero">
         <h1>
           {t(lang, "homeTitleA")}
@@ -390,12 +398,20 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           {t(lang, "upload")}
         </button>
         <p className="help">{t(lang, "private")}</p>
-        <div className="samples">
-          <span style={{ flexBasis: "100%", textAlign: "center" }}>{t(lang, "trySample")}</span>
-          <button onClick={() => onSample("inhaler")}>{t(lang, "sampleInhaler")}</button>
-          <button onClick={() => onSample("council")}>{t(lang, "sampleLetter")}</button>
-          <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
-        </div>
+        {hasPapers && (
+          <button className="btn soft papers-link" onClick={onPapers}>
+            <Icon name="list" />
+            {t(lang, "myPapers")}
+          </button>
+        )}
+        {onSample && (
+          <div className="samples">
+            <span style={{ flexBasis: "100%", textAlign: "center" }}>{t(lang, "trySample")}</span>
+            <button onClick={() => onSample("inhaler")}>{t(lang, "sampleInhaler")}</button>
+            <button onClick={() => onSample("council")}>{t(lang, "sampleLetter")}</button>
+            <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
+          </div>
+        )}
         <p className="help">
           <a href="tel:999">
             <T lang={lang} k="emergencyLink" />
@@ -441,17 +457,18 @@ interface TrayProps {
   tooMany: boolean;
   onLanguage: (c: string) => void;
   onSettings: () => void;
+  onPapers?: () => void;
   onAdd: () => void;
   onRole: (id: number, r: Role) => void;
   onRemove: (id: number) => void;
   onMove: (id: number, d: -1 | 1) => void;
   onMake: () => void;
 }
-export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onAdd, onRole, onRemove, onMove, onMake }: TrayProps) {
+export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onPapers, onAdd, onRole, onRemove, onMove, onMake }: TrayProps) {
   const n = items.length;
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} />
+      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
       <h1 className="ttl">{t(lang, "yourPapers")}</h1>
       <p className="sub">
         {n} {t(lang, n === 1 ? "item" : "items")} {t(lang, "itemsReady")}.
@@ -609,11 +626,12 @@ interface SummaryProps {
   lang: string;
   onLanguage: (c: string) => void;
   onSettings: () => void;
+  onPapers?: () => void;
   onBack: () => void;
   onStart: () => void;
   onListen: () => void;
 }
-export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, onListen }: SummaryProps) {
+export function Summary({ guide, lang, onLanguage, onSettings, onPapers, onBack, onStart, onListen }: SummaryProps) {
   const k = kindOf(guide);
   const f = guide.facts;
   const c = guide.content;
@@ -626,7 +644,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
   const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} />
+      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} onPapers={onPapers} />
       <div className="card sage" style={{ marginTop: 14 }}>
         <div className="k">{t(lang, "thisIs")}</div>
         <div className="big">{title}</div>
@@ -1397,8 +1415,10 @@ interface SettingsProps {
   onTheme?: (t: Theme) => void;
   onLanguage: (c: string) => void;
   onBack: () => void;
+  demo?: boolean;
+  onDemo?: (on: boolean) => void;
 }
-export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onVoice, onTheme, onLanguage, onBack }: SettingsProps) {
+export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onVoice, onTheme, onLanguage, onBack, demo, onDemo }: SettingsProps) {
   const [other, setOther] = useState(false);
   return (
     <div className="screen">
@@ -1467,10 +1487,132 @@ export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onV
           <h3>{t(lang, "readAuto")}</h3>
           <span className={"tg" + (voice ? " on" : "")} />
         </button>
+        {onDemo && (
+          <button className="sec toggle demo-switch" role="switch" aria-checked={!!demo} onClick={() => onDemo(!demo)}>
+            <span>
+              <b>{t(lang, "demoMode")}</b>
+              <small>{t(lang, "demoModeNote")}</small>
+            </span>
+            <span className={"tg" + (demo ? " on" : "")} />
+          </button>
+        )}
       </div>
     </div>
   );
 }
+
+/* ---------- 12. my papers (this device's guides only) ---------- */
+function paperStatus(st: GuideStatus): { key: string; cls: string } {
+  if (st === "ready") return { key: "paperReady", cls: "ok" };
+  if (st === "failed") return { key: "paperFailed", cls: "bad" };
+  return { key: "paperDrawing", cls: "wait" };
+}
+
+function paperDate(lang: string, iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  try {
+    return new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(d);
+  } catch {
+    return d.toLocaleString();
+  }
+}
+
+export interface PaperRow {
+  id: string;
+  title: string;
+  language: string;
+  created_at: string | null;
+  status: GuideStatus;
+  thumbnail: string | null;
+}
+
+interface PapersProps {
+  lang: string;
+  rows: PaperRow[] | null; // null while loading
+  failed: boolean;
+  onBack: () => void;
+  onOpen: (id: string) => void;
+  onDelete: (id: string) => void;
+  onRetry: () => void;
+  onNew: () => void;
+}
+export function MyPapers({ lang, rows, failed, onBack, onOpen, onDelete, onRetry, onNew }: PapersProps) {
+  const [confirm, setConfirm] = useState<string | null>(null);
+  return (
+    <div className="screen">
+      <TitleBar title={t(lang, "myPapers")} lang={lang} onBack={onBack} />
+      <p className="sub">{t(lang, "papersPrivate")}</p>
+      {failed && (
+        <div className="banner" role="alert">
+          <p>{t(lang, "papersLoadFailed")}</p>
+          <button className="btn soft" onClick={onRetry}>
+            {t(lang, "papersRetry")}
+          </button>
+        </div>
+      )}
+      {rows === null && !failed && (
+        <p className="sub" role="status">
+          {t(lang, "papersLoading")}
+        </p>
+      )}
+      {rows && rows.length === 0 && (
+        <div className="papers-empty">
+          <p>{t(lang, "papersEmpty")}</p>
+          <button className="btn" onClick={onNew}>
+            <Icon name="camera" />
+            {t(lang, "scanLabel")}
+          </button>
+        </div>
+      )}
+      {rows && rows.length > 0 && (
+        <ul className="tray papers">
+          {rows.map((r) => {
+            const st = paperStatus(r.status);
+            const title = r.title || t(lang, "yourPaper");
+            return (
+              <li className="item" key={r.id}>
+                {confirm === r.id ? (
+                  <div className="confirm" role="group" aria-label={t(lang, "deleteAsk")}>
+                    <b>{t(lang, "deleteAsk")}</b>
+                    <small dir="auto">{title}</small>
+                    <div className="row2">
+                      <button className="btn soft" onClick={() => setConfirm(null)}>
+                        {t(lang, "deleteKeep")}
+                      </button>
+                      <button className="btn danger" onClick={() => { setConfirm(null); onDelete(r.id); }}>
+                        <Icon name="trash" />
+                        {t(lang, "deleteYes")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <button className="open" onClick={() => onOpen(r.id)}>
+                      <div className="th">{r.thumbnail ? <img src={r.thumbnail} alt="" /> : <Icon name="doc" />}</div>
+                      <div className="meta">
+                        <b dir="auto">{title}</b>
+                        <small>
+                          <bdi>{paperDate(lang, r.created_at)}</bdi> · <bdi>{languageLabel(r.language)}</bdi>
+                        </small>
+                        <span className={"pstat " + st.cls}>{t(lang, st.key)}</span>
+                      </div>
+                    </button>
+                    <button className="round" onClick={() => setConfirm(r.id)} aria-label={`${t(lang, "deletePaper")}: ${title}`}>
+                      <Icon name="trash" />
+                    </button>
+                  </>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 
 /* ---------- dev panel + print ---------- */
 export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {

@@ -179,3 +179,26 @@ export async function getLibrary(): Promise<Clip[]> {
     return [];
   }
 }
+
+/** One row of "My papers" (GET /api/guides?ids=..., CONTRACTS.md section 2). */
+export interface GuideSummary {
+  id: string;
+  title: string;
+  language: string;
+  doc_type: string;
+  created_at: string | null;
+  status: Guide["status"];
+  thumbnail: string | null;
+}
+
+/** Only the given ids come back (the ones this device made), newest first. */
+export async function listGuides(ids: string[]): Promise<GuideSummary[]> {
+  if (ids.length === 0) return [];
+  const r = await json<{ guides: GuideSummary[] }>(await fetch(`/api/guides?ids=${encodeURIComponent(ids.join(","))}`));
+  return r.guides;
+}
+
+export async function deleteGuide(id: string): Promise<void> {
+  const res = await fetch(`/api/guides/${encodeURIComponent(id)}`, { method: "DELETE" });
+  if (!res.ok && res.status !== 404) await json(res);
+}

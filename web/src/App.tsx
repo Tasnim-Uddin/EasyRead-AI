@@ -6,6 +6,7 @@ import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages"
 import { useAnam, type ToolHandler } from "./useAnam";
 import { speak, stopSpeaking, voiceSettings } from "./speech";
 import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
+import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
@@ -18,6 +19,8 @@ import {
   ErrorScreen,
   Home,
   MAX_FILES,
+  MyPapers,
+  type PaperRow,
   PrintSheet,
   Reading,
   Settings,
@@ -32,7 +35,7 @@ import {
 } from "./screens";
 
 const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
-type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings";
+type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 
 function load<T>(key: string, fallback: T): T {
@@ -86,6 +89,11 @@ export default function App() {
   const [scale, setScale] = useState(() => load("er.scale", 1));
   const [rate, setRate] = useState(() => load("er.rate", 1));
   const [voice, setVoice] = useState(() => load("er.voice", true));
+  // Customer mode by default; demo mode (?demo=1, the Settings switch, or a #/sample link) shows samples and dev tools.
+  const [demo, setDemo] = useState(initialDemo);
+  const [mine, setMine] = useState<string[]>(myGuideIds);
+  const [papers, setPapers] = useState<PaperRow[] | null>(null);
+  const [papersFailed, setPapersFailed] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => {
     const th = initialTheme();
     applyTheme(th); // before the first paint, so the page never flashes the old look
@@ -338,6 +346,8 @@ export default function App() {
     try {
       const f = api.buildGuideForm(items, lang);
       const { guide_id } = await api.createGuide(f);
+      rememberGuide(guide_id); // "My papers" on this device only
+      setMine(myGuideIds());
       const g = await api.getGuide(guide_id);
       setGuide(g);
       setIndex(0);
@@ -349,6 +359,65 @@ export default function App() {
       setBusy(false);
       setUploading(false);
     }
+  }
+
+  /* ---- My papers: the guides made on this device (ids kept in localStorage, CONTRACTS.md section 2) ---- */
+  const loadPapers = useCallback(() => {
+    const ids = myGuideIds();
+    setMine(ids);
+    setPapersFailed(false);
+    setPapers(null);
+    if (ids.length === 0) {
+      setPapers([]);
+      return;
+    }
+    api
+      .listGuides(ids)
+      .then((rows) => setPapers(rows))
+      .catch(() => setPapersFailed(true));
+  }, []);
+
+  function openPapers() {
+    loadPapers();
+    go("papers");
+  }
+
+  async function openPaper(id: string) {
+    try {
+      const g = await api.getGuide(id);
+      setGuide(g);
+      setIndex(0);
+      setAnswer(null);
+      setLog([]);
+      // No steps yet (still being read, or it failed): the progress screen opens the summary or the error when it can.
+      go(g.steps.length ? "summary" : "reading");
+    } catch (e) {
+      if (e instanceof api.ApiError && e.code !== "server") {
+        forgetGuide(id);
+        setMine(myGuideIds());
+        setPapers((rows) => rows?.filter((r) => r.id !== id) ?? rows);
+        setError({ title: t(langRef.current, "paperGone"), detail: null });
+        go("error");
+      } else setPapersFailed(true);
+    }
+  }
+
+  async function deletePaper(id: string) {
+    try {
+      await api.deleteGuide(id);
+    } catch {
+      setPapersFailed(true);
+      return;
+    }
+    forgetGuide(id);
+    setMine(myGuideIds());
+    setPapers((rows) => rows?.filter((r) => r.id !== id) ?? rows);
+    if (guideRef.current?.id === id) setGuide(null);
+  }
+
+  function changeDemo(on: boolean) {
+    saveDemo(on);
+    setDemo(on);
   }
 
   function openSample(name: string, to: Screen = "summary", at = 0) {
@@ -421,8 +490,8 @@ export default function App() {
     void runTool(i === index + 1 ? "next_step" : i === index - 1 ? "previous_step" : "show_step", { index: i });
   }
 
-  // `?fakelive` (dev builds only) shows the live layout without a real Anam session, for screenshots.
-  const fakeLive = import.meta.env.DEV && location.search.includes("fakelive");
+  // `?fakelive` (dev builds, demo mode only) shows the live layout without a real Anam session, for screenshots.
+  const fakeLive = import.meta.env.DEV && demo && location.search.includes("fakelive");
   const status = uploading ? "uploading" : guide?.status ?? "uploading";
   const lastSay = log.find((l) => l.say)?.say ?? "";
   const liveState = fakeLive ? "live" : anam.state;
@@ -454,7 +523,9 @@ export default function App() {
             onSettings={openSettings}
             onCamera={() => cameraRef.current?.click()}
             onUpload={() => uploadRef.current?.click()}
-            onSample={(n) => openSample(n)}
+            onSample={demo ? (n) => openSample(n) : undefined}
+            onPapers={openPapers}
+            hasPapers={mine.length > 0}
           />
         )}
         {screen === "check" && checking && (
@@ -468,6 +539,7 @@ export default function App() {
             tooMany={tooMany}
             onLanguage={changeLanguage}
             onSettings={openSettings}
+            onPapers={openPapers}
             onAdd={() => uploadRef.current?.click()}
             onRole={(id, r) => setItems((c) => c.map((i) => (i.id === id ? { ...i, role: r } : i)))}
             onRemove={(id) => {
@@ -498,6 +570,7 @@ export default function App() {
             lang={lang}
             onLanguage={changeLanguage}
             onSettings={openSettings}
+            onPapers={openPapers}
             onBack={startOver}
             onStart={() => { setIndex(0); go("step"); }}
             onListen={() => void speak(summaryText(guide), lang)}
@@ -578,6 +651,20 @@ export default function App() {
             onVoice={setVoice}
             onLanguage={changeLanguage}
             onBack={() => go(prevScreen === "settings" ? "home" : prevScreen)}
+            demo={demo}
+            onDemo={changeDemo}
+          />
+        )}
+        {screen === "papers" && (
+          <MyPapers
+            lang={lang}
+            rows={papers}
+            failed={papersFailed}
+            onBack={() => go(items.length ? "tray" : "home")}
+            onOpen={(id) => void openPaper(id)}
+            onDelete={(id) => void deletePaper(id)}
+            onRetry={loadPapers}
+            onNew={() => cameraRef.current?.click()}
           />
         )}
 
@@ -586,7 +673,7 @@ export default function App() {
             {t(lang, "changingLanguage")}
           </p>
         )}
-        <DevPanel log={log} lang={lang} />
+        {demo && <DevPanel log={log} lang={lang} />}
       </div>
       {guide && <PrintSheet guide={guide} lang={lang} />}
       <AvatarHost live={liveInfo.live} screen={screen} />

@@ -505,3 +505,29 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .avhost[data-live="1"][data-mode="dock"] { border-radius: var(--r-md); }
 .row2.more { padding-top: 0.875rem; }
 .row2.more .btn { flex: 0 0 auto; width: auto; min-height: 2.75rem; }
+
+/* ---------- my papers (history) ---------- */
+.papers-link { margin-top: 0.75rem; }
+.papers .item { padding: 0.5rem; }
+.papers .open { flex: 1; min-width: 0; display: flex; gap: 0.75rem; align-items: center; text-align: start; color: var(--ink); background: transparent; border-radius: var(--r-sm); padding: 0.125rem; }
+.papers .meta small { display: block; font-size: 1rem; color: var(--ink-soft); margin-bottom: 0.25rem; }
+.pstat { display: inline-block; font: 600 0.9375rem var(--font-display); border-radius: var(--r-pill); padding: 0.125rem 0.625rem; }
+.pstat.ok { background: var(--sage); color: var(--sage-ink); }
+.pstat.wait { background: var(--butter); color: var(--butter-ink); }
+.pstat.bad { background: var(--cream-deep); color: var(--ink); }
+.papers .confirm { flex: 1; display: flex; flex-direction: column; gap: 0.5rem; padding: 0.375rem; }
+.papers .confirm b { font: 600 1.25rem var(--font-display); }
+.papers .confirm small { color: var(--ink-soft); font-size: 1rem; }
+.btn.danger { background: var(--butter); color: var(--butter-ink); }
+.papers-empty { padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; font-size: var(--fs-body); line-height: 1.4; color: var(--ink-soft); }
+.banner .btn { margin-top: 0.5rem; min-height: 3rem; font-size: 1.125rem; }
+.demo-switch span:first-child { flex: 1; text-align: start; }
+.demo-switch b { display: block; font: 600 1.125rem var(--font-display); }
+.demo-switch small { display: block; font-size: 0.9375rem; color: var(--ink-soft); margin-top: 0.125rem; }
+@media (max-width: 24rem) {
+  .top { gap: 0.375rem; }
+  .top-right { gap: 0.375rem; }
+  .top-right .round { width: 2.75rem; height: 2.75rem; }
+  .top .brand { font-size: 1.25rem; min-width: 0; }
+  .top .lang { padding: 0 0.75rem; }
+}
