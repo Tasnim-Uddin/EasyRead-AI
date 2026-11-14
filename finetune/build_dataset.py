@@ -2,8 +2,8 @@
 
     python -m finetune.build_dataset --per-seed 4 --out finetune/data/train.jsonl
 
-Rows are chat-format: {"messages": [system, user(facts), assistant(steps JSON)]}. Check Adaption's upload
-format and convert if it differs. Needs ANTHROPIC_API_KEY. Eval seeds (EVAL_IDS) are excluded.
+Rows are {"prompt", "completion"} (Adaption SFT column mapping). Adaption SFT needs >= 1,000 effective rows, so
+raise --per-seed and add seeds; upload with the Adaption SDK (datasets/upload) then autoscientist.create(). Needs ANTHROPIC_API_KEY. Eval seeds (EVAL_IDS) are excluded.
 """
 import argparse, asyncio, json, os, random
 from agent import llm
@@ -42,9 +42,8 @@ async def main(per_seed: int, out: str):
             tried += 1
             steps = await draft(facts, VARIANTS[k % len(VARIANTS)])
             if steps and score(facts, steps)["passed"]:
-                rows.append({"messages": [{"role": "system", "content": SYSTEM},
-                                          {"role": "user", "content": user_message(facts)},
-                                          {"role": "assistant", "content": json.dumps(steps, ensure_ascii=False)}]})
+                rows.append({"prompt": SYSTEM + "\n\n" + user_message(facts),
+                         "completion": json.dumps(steps, ensure_ascii=False)})
     with open(out, "w") as fh:
         fh.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
     print(f"kept {len(rows)}/{tried} rubric-passing examples -> {out}")

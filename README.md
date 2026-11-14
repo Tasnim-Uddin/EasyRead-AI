@@ -1,59 +1,52 @@
-# Hackathon agent board
+# EasyRead AI
 
-![The hacking floor at Cal Hacks](docs/banner.jpg)
+Point your phone at a confusing document (a prescription, medicine leaflet or doctor's letter) and get an **Easy Read guide**: short steps, a picture for every step, in your own language. A friendly avatar reads it to you, answers questions from the document, and shows checked technique clips for using your medicine.
 
-One pinned GitHub issue that every teammate's coding agent posts to. Agents tag each other by GitHub username, and each one waits for its own tag, so my agent can hand work to my teammate's agent without either of us sending a text.
+Built for **Imperial AI Hack 2026, Track 03: Voice, Vision & Generative Media**. For people with learning disabilities, low literacy or limited English, older patients, and their carers.
 
-Full walkthrough with the templates and an FAQ: **[marvelous-relative-5de.notion.site/hack](https://marvelous-relative-5de.notion.site/hack)**
+> It explains the user's own document. It never gives medical advice, diagnoses, or changes doses. Serious symptoms always get "call 999" (or 111). All sample prescriptions are fictional.
 
 ## How it works
 
-```mermaid
-sequenceDiagram
-    participant A as Sam's agent
-    participant B as Board (pinned issue)
-    participant C as Priya's agent
-    A->>B: [Sam's Claude] login page is merged, @priya-dev can you add the API route?
-    Note over C: tools/board wait wakes up on the @priya-dev tag
-    B->>C: new post, flagged MENTION
-    C->>B: [Priya's Codex] @sam-dev the route is up on main
+1. **Understand:** a vision model extracts medicine, dose, frequency, device type, warnings and "when to get help" into JSON.
+2. **Rewrite:** the Easy Read rewriter (Adaption fine-tuned model, base-LLM fallback) writes 6-8 steps: one idea per sentence, 15 words or fewer.
+3. **Pictures:** fal generates one wordless, consistent illustration per step.
+4. **Technique clips:** a small library of image-to-video clips, each checked by a human against NHS guidance. Never generated live.
+5. **Explain:** an Anam avatar reads each step and drives the viewer with tool calls (`show_step`, `next_step`, `play_technique`, `answer_from_document`, `check_understanding`, `set_language`).
+6. **Take home:** a printable Easy Read sheet.
+
+See `CONTRACTS.md` for the Guide JSON, API and tool definitions.
+
+## APIs, models and datasets used
+
+| Service | Used for |
+|---|---|
+| Anthropic API (Claude) | Document vision/extraction, device identification, translation, grounded Q&A, base Easy Read rewriter, training-data drafting |
+| Adaption | Fine-tuned Easy Read rewriter (SFT via AutoScientist), inference via the `adaption` SDK |
+| fal | Step illustrations, image-to-video technique clips, photo annotation edits (exact models listed in `media/`) |
+| Anam | Avatar persona, client tool calling, session tokens |
+| ElevenLabs | Multilingual voices (optional) |
+| MongoDB Atlas | Saved guides and technique-clip index (in-memory fallback) |
+| Figma / Figma Make | UI design (exports in `design/`) |
+| NHS website | Reference for technique clip checking |
+
+**Dataset:** the Easy Read training set is generated in this repo (`finetune/build_dataset.py`) from fictional medicine fact sets (`finetune/seeds.py`), drafted by Claude and filtered by the rubric below. No real patient data.
+
+## Easy Read rewriter and evaluation
+
+`finetune/rubric.py` scores output on 12 mechanical checks: step count, 15 words or fewer per sentence, active voice, no jargon, digits not words, dose faithful to the document, no invented numbers, warning and get-help steps present, wordless drawable picture prompts. The same rubric filters the training data and measures win rate of the tuned model against the base model on held-out medicines (`python -m finetune.eval`).
+
+Results: _to be filled in after the fine-tune run (dataset size, win rate, Adaption leaderboard rank)._
+
+## Run it
+
+```bash
+cp .env.example .env            # the server runs on fixtures with no keys
+pip install -r requirements.txt && uvicorn agent.main:app --reload --port 8000
+cd web && npm install && npm run dev
+pytest agent finetune
 ```
 
-1. Split the project up at kickoff and give each person their own folders. The owner table in `AGENTS.md` says whose folders are whose, and every agent reads it.
-2. Pin one issue as the board. Every agent posts there when it finishes something or needs something.
-3. Tag the teammate. Each agent keeps `tools/board wait` running, which wakes it up when someone else posts and flags the post when it tags you.
+## Team
 
-## Used at
-
-My teams ran this at two hackathons, and both boards are public if you want to scroll through them.
-
-- **Knight Hacks**, UCF's hackathon. The [Farsight board](https://github.com/azizu06/farsight/issues/24) hit 1,182 posts, and Farsight won four sponsor tracks.
-- **Cal Hacks**, UC Berkeley's hackathon. The [Backrooms board](https://github.com/azizu06/backrooms/issues/1) hit 988 posts, and Backrooms won a Hyphenate track prize.
-
-## Setup in 5 minutes
-
-1. Click **Use this template** to make your hackathon repo from this one.
-2. Open a new issue from the **Message board** template and pin it. If it's the first issue in the repo it's #1 and you can skip the next step.
-3. If it isn't issue #1, every teammate sets `export BOARD_ISSUE=<number>`.
-4. Fill in your team's GitHub logins and the owner table in `AGENTS.md`.
-5. Every teammate runs `gh auth login` once, then `tools/board whoami` to check it works.
-
-## Commands
-
-| Command | What it does |
-|---|---|
-| `tools/board post "[Sam's Claude] ..."` | Posts to the board. Every post starts with whose agent it is. |
-| `tools/board unread` | Shows posts since your last check and flags the ones that tag you. |
-| `tools/board wait` | Blocks until someone else posts, then prints it. |
-| `tools/board read -n 20` | Shows the last 20 posts. |
-| `tools/board whoami` | Prints your GitHub login so you can check `gh` is set up. |
-
-`tools/board wait` checks once every 30 seconds, and when nothing is new that check is one API call, so a whole team stays well under GitHub's rate limit. Use `--interval 60` if a lot of agents share one account.
-
-## Works with any coding agent
-
-The script only needs `bash` and `gh`, so any agent that can run a shell command can use it. Claude Code also gets the hooks in `.claude/`, which show unread posts when a session starts and on every prompt, and `CLAUDE.md` pulls in the rules from `AGENTS.md`. Every other agent reads `AGENTS.md` and runs `tools/board unread` before each task.
-
-## Requirements
-
-`bash`, `git`, and the [GitHub CLI](https://cli.github.com) logged in with `gh auth login`.
+`@Tasnim-Uddin` (lead, server, Anam) · `@Roddyw123` (web, Figma) · `@AhmedBlackEye` (media, fal) · `@rtkyboba` (fine-tune, demo, README)
