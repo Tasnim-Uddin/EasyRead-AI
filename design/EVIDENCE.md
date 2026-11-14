@@ -24,7 +24,7 @@ Figma frames are exported from the file with the Figma API (`design/figma/`). Bu
 | Your papers (tray) | ![](figma/f07.jpg) | ![](built/b07-tray.jpg) | `#/tray/` |
 | Summary: your inhaler | ![](figma/f08.jpg) | ![](built/b08-summary.jpg) | `#/sample/inhaler/summary` |
 | Summary: a letter (council) | ![](figma/f09.jpg) | ![](built/b09-council.jpg) | `#/sample/council` |
-| Annotated photo of your own device | ![](figma/f10.jpg) | _not built yet_ | `not built yet` |
+| Annotated photo of your own device | ![](figma/f10.jpg) | _built, off by default (`DEVICE_PHOTO_LABELS=1`); no screenshot_ | `DEVICE_PHOTO_LABELS=1` |
 | Show me how (technique clip) | ![](figma/f11.jpg) | ![](built/b18-clip.jpg) | `#/sample/inhaler/clip/3` |
 | Talk to your guide (avatar) | ![](figma/f12.jpg) | ![](built/b12-talk-live.jpg) | `?fakelive#/sample/inhaler/talk` |
 | Tell me back (picture choice) | ![](figma/f13.jpg) | ![](built/b13-tellback.jpg) | `#/sample/inhaler/tellback` |
@@ -53,7 +53,7 @@ Extra built screens (no separate Figma frame):
 
 ## Where the built app differs from the design
 
-- The annotated photo of the user's own device (frame 10) is not built yet.
+- The annotated photo of the user's own device (frame 10) is built but off by default (`DEVICE_PHOTO_LABELS=1` turns it on), because live tests put the labels beside the parts, not on them.
 - The inhaler sample in the built app has 9 steps; the design shows 7.
 - The talk screen captures show an empty green avatar area, because no live avatar session runs offline (`?fakelive` shows the layout only).
 - The built app adds a small tool-call log at the bottom of screens.
