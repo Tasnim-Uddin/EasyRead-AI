@@ -1,6 +1,6 @@
 # Demo morning checklist
 
-For the 3-minute script in `demo/SCRIPT.md`. Judging Sun 13:00 to 16:30, Huxley 308.
+For the live script in `demo/SCRIPT.md` (the video is 2 minutes, see `demo/VIDEO.md`). Judging Sun 13:00 to 16:30, Huxley 308.
 
 ## 1. Before leaving home / on arrival
 - [ ] Laptop charged and charger in the bag. Phone hotspot as a second network.

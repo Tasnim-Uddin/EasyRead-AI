@@ -81,7 +81,7 @@ Short, honest answers. One person answers each, the others stay quiet.
    Anam does not document tool calls with a custom LLM, and the tool calls are the point: the avatar drives the app (`show_step`, `next_step`, `set_language`, `answer_from_document` and more). So the avatar keeps Anam's built-in model, and our server passes it the guide's steps and facts as context, so it answers from the paper.
 
 5. **What does the Adaption model do, and how good is it?**
-   It is an Easy Read writer: facts in, short Easy Read steps out. Base Qwen3.5-4B, trained with AutoScientist on 1,161 rows (555 hand-written seeds plus 1,500 generated rows, filtered by our Easy Read rubric). Win rate against the base model: ADAPTION_RESULT. Honest status: it is evidence; the live app writes steps with Claude today, and switches to the tuned model when its id is set.
+   It is an Easy Read writer: facts in, short Easy Read steps out. Base Qwen3.5-4B, trained with AutoScientist on 1,161 rows (555 seed rows drafted in this repo plus Adaption-generated rows, rubric-filtered to 1,161). Win rate against the base model: ADAPTION_RESULT. Honest status: it is evidence; the live app writes steps with Claude today, and switches to the tuned model when its id is set.
 
 6. **How much does a guide cost?**
    About $0.45 for our three-file inhaler run: one Claude vision call over all files, the rewrite, and one fal picture per step (about $0.025 each). Listen audio is cached, so repeats are free.
