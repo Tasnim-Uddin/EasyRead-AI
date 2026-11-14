@@ -1,5 +1,5 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
-import asyncio, copy, json, pathlib, datetime as dt, logging
+import asyncio, copy, json, os, pathlib, datetime as dt, logging
 from . import llm
 from .rewriter import write_easy_read
 
@@ -80,7 +80,11 @@ async def illustrate(guide: dict, emit):
     except ImportError:
         make_step_picture = None
     for s in guide["steps"]:
-        if make_step_picture and not s.get("image_url"):
+        if s.get("image_url"):
+            s["status"] = "ready"  # already illustrated (fixture or earlier run)
+        elif not make_step_picture or not os.environ.get("FAL_KEY"):
+            s["status"] = "skipped"  # offline: no media module or no key, not an error
+        else:
             s["status"] = "generating"
             emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
             try:
@@ -89,8 +93,6 @@ async def illustrate(guide: dict, emit):
             except Exception as e:
                 log.warning("picture failed: %s", e)
                 s["status"] = "failed"
-        else:
-            s["status"] = "ready"
         emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
 
 
