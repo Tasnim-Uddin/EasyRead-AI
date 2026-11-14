@@ -22,10 +22,14 @@ export function useAnam(
   const clientRef = useRef<ReturnType<typeof createClient> | null>(null);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
+  const sessionRef = useRef(0); // bumped by every stop(), so a start() still connecting knows it was cancelled
+  const startingRef = useRef(false);
   const logRef = useRef(onLog);
   logRef.current = onLog;
 
   const stop = useCallback(async () => {
+    sessionRef.current += 1;
+    startingRef.current = false;
     const c = clientRef.current;
     clientRef.current = null;
     try {
@@ -33,19 +37,25 @@ export function useAnam(
     } catch {
       /* already stopped */
     }
+    const v = document.getElementById(videoId) as HTMLVideoElement | null;
+    if (v) v.muted = false;
     setMicMuted(false);
     setSoundOff(false);
     setState((s) => (s === "standin" || s === "error" ? s : "idle"));
-  }, []);
+  }, [videoId]);
 
   const start = useCallback(
     async (guideId: string, language: string, stepIndex = 0) => {
-      if (clientRef.current) return;
+      if (clientRef.current || startingRef.current) return;
+      const session = ++sessionRef.current;
+      startingRef.current = true;
       setState("connecting");
       setError(null);
       try {
         const { token, mock } = await getAnamToken(guideId, language, stepIndex);
+        if (session !== sessionRef.current) return; // End was pressed while connecting
         if (mock) {
+          startingRef.current = false;
           setState("standin");
           return;
         }
@@ -75,8 +85,21 @@ export function useAnam(
         });
         clientRef.current = client;
         await client.streamToVideoElement(videoId);
+        startingRef.current = false;
+        if (session !== sessionRef.current) {
+          // End was pressed while the stream was connecting: shut it down, stay idle.
+          if (clientRef.current === client) clientRef.current = null;
+          try {
+            await client.stopStreaming();
+          } catch {
+            /* already stopped */
+          }
+          return;
+        }
         setState("live");
       } catch (e) {
+        startingRef.current = false;
+        if (session !== sessionRef.current) return;
         clientRef.current = null;
         setError(e instanceof Error ? e.message : String(e));
         setState("error");
