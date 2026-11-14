@@ -1,9 +1,9 @@
 """EasyRead AI server. Run from repo root: uvicorn agent.main:app --reload --port 8000"""
-import asyncio, json, os, pathlib, time, uuid, tempfile
+import asyncio, hmac, json, os, pathlib, time, uuid, tempfile
 import httpx
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -18,7 +18,30 @@ if not os.environ.get("EASYREAD_NO_DOTENV"):  # tests set this so a real .env ne
         pass
 
 app = FastAPI(title="EasyRead AI")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+def _access_ok(request: Request, code: str) -> bool:
+    given = request.headers.get("x-access-code") or request.cookies.get("er_access") or ""
+    return hmac.compare_digest(given.encode(), code.encode())
+
+
+@app.middleware("http")
+async def access_gate(request: Request, call_next):
+    """Optional shared-code gate for sharing a test build. Off unless ACCESS_CODE is set. With it set, every /api/*
+    request needs the code (cookie er_access or header X-Access-Code). Visiting any page with ?code=... sets the cookie."""
+    code = os.environ.get("ACCESS_CODE", "")
+    if not code or request.method == "OPTIONS":
+        return await call_next(request)
+    if request.url.path.startswith("/api/") and not _access_ok(request, code):
+        return JSONResponse({"error": "access_code_required", "detail": "Enter the access code."}, status_code=401)
+    response = await call_next(request)
+    given = request.query_params.get("code")
+    if given and hmac.compare_digest(given.encode(), code.encode()):
+        response.set_cookie("er_access", code, max_age=60 * 60 * 24 * 30, httponly=True, samesite="lax",
+                            secure=request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https")
+    return response
+
+
 store = Store()
 UPLOADS = pathlib.Path(os.environ.get("UPLOAD_DIR", tempfile.gettempdir())) / "easyread_uploads"
 UPLOADS.mkdir(parents=True, exist_ok=True)
@@ -262,3 +285,24 @@ def sheet(gid: str):
                     f"<p>{s['text']}</p></li>" for s in g["steps"])
     return (f"<!doctype html><meta charset=utf-8><title>Easy Read</title><style>body{{font:24px sans-serif;max-width:800px;margin:auto}}"
             f"li{{margin:1em 0;page-break-inside:avoid}}img{{max-width:240px}}</style><h1>{(g['facts'] or {}).get('medicine') or 'Your guide'}</h1><ol>{items}</ol>")
+
+
+# Serve the built web app from this one origin (so a single tunnel port is enough). Registered last so every /api route
+# wins. WEB_DIST overrides the default web/dist; without a build nothing is served and the API behaves as before.
+_dist = pathlib.Path(os.environ.get("WEB_DIST") or pathlib.Path(__file__).resolve().parents[1] / "web" / "dist")
+if (_dist / "index.html").is_file():
+    if FIXTURES.is_dir():
+        app.mount("/fixtures", StaticFiles(directory=FIXTURES), name="fixtures")
+
+    @app.get("/{path:path}", include_in_schema=False)
+    def web_app(path: str):
+        if path == "api" or path.startswith("api/"):
+            raise HTTPException(404, "not found")
+        f = (_dist / path).resolve()
+        if path and f.is_file() and _dist.resolve() in f.parents:
+            return FileResponse(f)
+        return FileResponse(_dist / "index.html", headers={"Cache-Control": "no-cache"})
+
+
+# CORS is added last so it is the outermost layer (even a 401 from the gate carries its headers).
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
