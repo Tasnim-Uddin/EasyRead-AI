@@ -237,6 +237,9 @@ async def _translate(steps: list[dict], language: str):
         s["text"] = t
 
 
+PICTURE_TIMEOUT_S = float(os.environ.get("PICTURE_TIMEOUT_S", "150"))
+
+
 def picture_concurrency() -> int:
     """How many step pictures are made at once (PICTURE_CONCURRENCY, default 6, at least 1)."""
     try:
@@ -256,7 +259,7 @@ async def illustrate(guide: dict, emit):
     async def one(s: dict):
         async with sem:
             try:
-                s["image_url"] = await make_step_picture(s["picture_prompt"])
+                s["image_url"] = await asyncio.wait_for(make_step_picture(s["picture_prompt"]), PICTURE_TIMEOUT_S)
                 s["status"] = "ready"
             except Exception as e:
                 log.warning("picture failed: %s", e)
@@ -302,7 +305,7 @@ async def label_device_photo(guide: dict, device_photo, image_urls: list[str]):
         from media import annotate_photo  # type: ignore
         data, mime = device_photo[0], device_photo[1]
         uri = f"data:{mime};base64,{base64.b64encode(data).decode()}"
-        url = await annotate_photo(uri, labels, numbered=True)
+        url = await asyncio.wait_for(annotate_photo(uri, labels, numbered=True), PICTURE_TIMEOUT_S)
         guide["source"]["device_photo_url"] = image_urls[-1] if image_urls else None
         guide["source"]["device_photo_labelled_url"] = url
         guide["source"]["device_photo_labels"] = labels
@@ -380,6 +383,13 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             await translate_steps(guide["steps"], language)
             await translate_safety(guide, language)
             await translate_summary(guide, language)
+        elif os.environ.get("EASYREAD_ALLOW_FIXTURE") != "1":
+            # No key: never pass the inhaler sample off as the user's own paper. Samples (?demo=1, #/sample) are client-side.
+            guide.update(error_code="demo_mode_no_key",
+                         error="Demo mode: this server has no AI key, so it cannot read your photo. Open a sample instead.")
+            guide["source"]["image_urls"] = image_urls
+            status("failed")
+            return
         else:
             fx = load_fixture()
             guide["source"] = {**fx["source"], "image_urls": image_urls}
@@ -397,6 +407,10 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
         await asyncio.gather(illustrate(guide, emit), label_device_photo(guide, device_photo, image_urls))
         store.put(guide)
         status("ready")
+    except llm.LLMError as e:
+        log.warning("pipeline failed: %s", e.code)
+        guide.update(error_code=e.code, error=e.detail)
+        status("failed")
     except Exception as e:
         log.exception("pipeline failed")
         guide["error"] = str(e)
