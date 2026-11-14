@@ -86,6 +86,17 @@ Browser (web/)                                         Server (agent/, FastAPI)
 
 `CONTRACTS.md` defines the Guide JSON, the server HTTP API and SSE events, the Anam client tools, the `media/` and `finetune/` Python interfaces, and the technique-library format. Change it only through a PR, and post on the board when you do.
 
+## Setup (every teammate, once per machine)
+
+1. **GitHub:** `gh auth login`, then `tools/board whoami` (it should print your login). The board is issue #1.
+2. **Figma:** this repo ships `.mcp.json` with Figma's official MCP server. Open Claude Code in the repo, accept the `figma` server when asked (or run `claude mcp add --transport http --scope user figma https://mcp.figma.com/mcp` once to get it in every repo), then run `/mcp` → **figma** → **Authenticate** and sign in with your own Figma account. You must be a member of the team's Figma education team (full seat). Restart the session if the tools don't appear.
+   - The MCP works on **file/frame links** (`figma.com/design/<key>/...?node-id=...`): in Figma, right-click a frame → **Copy link to selection**. The folder link below is for finding files.
+   - Use it to read designs and build the UI to match (exact colours, spacing, type). Create new designs in Figma or Figma Make, then hand the frame link to your agent.
+3. **Credits:** claim yours on imperialaihack.com → **My Pass** (Anthropic, fal, ElevenLabs, Adaption, Figma Education, Databricks, MongoDB, plus track perks: Anam, Tavily, Synthesia, LiveKit). Create API keys on each provider's dashboard.
+4. **Keys:** `cp .env.example .env` and fill in what your area needs (`ANTHROPIC_API_KEY`, `FAL_KEY`, `ANAM_API_KEY`, `ELEVENLABS_API_KEY`, `ADAPTION_API_KEY`, `MONGODB_URI`). The server runs on fixtures without any keys.
+   - **Run:** `pip install -r requirements.txt && uvicorn agent.main:app --reload --port 8000`; tests: `pytest agent`.
+5. **Never commit secrets.** `.env` is gitignored. Don't paste keys into chats, board posts or Figma.
+
 ## Design (Figma)
 
 **Figma folder for EasyRead AI:** https://www.figma.com/files/team/1703033153432357325/folder/690990314
@@ -93,7 +104,7 @@ Browser (web/)                                         Server (agent/, FastAPI)
 
 - **Design owner:** `@Roddyw123` (design/).
 - Design every screen here first (or with Figma Make), then build `web/` to match. Export key frames to `design/` as evidence for the Figma prize.
-- **Agents reading Figma:** each person connects Figma to Claude Code once: `claude mcp add --transport http figma https://mcp.figma.com/mcp`, then signs in. Use it to read frames and turn them into code. Creating designs is usually done by a human in Figma or Figma Make.
+- **Agents reading Figma:** see Setup step 2 above.
 - Never put API keys, tokens or join codes in Figma.
 
 ## 1. The board (pinned GitHub issue)
