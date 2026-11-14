@@ -86,6 +86,16 @@ Browser (web/)                                         Server (agent/, FastAPI)
 
 `CONTRACTS.md` defines the Guide JSON, the server HTTP API and SSE events, the Anam client tools, the `media/` and `finetune/` Python interfaces, and the technique-library format. Change it only through a PR, and post on the board when you do.
 
+## Design (Figma)
+
+**Figma folder for EasyRead AI:** https://www.figma.com/files/team/1703033153432357325/folder/690990562
+(Team: https://www.figma.com/files/team/1703033153432357325.) Everyone on the team has access. Agents: this is where this project's designs live.
+
+- **Design owner:** `@Roddyw123` (design/).
+- Design every screen here first (or with Figma Make), then build `web/` to match. Export key frames to `design/` as evidence for the Figma prize.
+- **Agents reading Figma:** each person connects Figma to Claude Code once: `claude mcp add --transport http figma https://mcp.figma.com/mcp`, then signs in. Use it to read frames and turn them into code. Creating designs is usually done by a human in Figma or Figma Make.
+- Never put API keys, tokens or join codes in Figma.
+
 ## 1. The board (pinned GitHub issue)
 
 Every agent reads and posts on the pinned "Message Board" issue (#1) via `tools/board` (needs only `gh`, logged in).
