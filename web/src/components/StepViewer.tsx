@@ -38,22 +38,27 @@ export default function StepViewer({ guide, index, lang, clips, playClip, onInde
 
   return (
     <section className="card viewer" aria-live="polite">
-      <div className="progress" aria-hidden="true">
-        {guide.steps.map((s) => (
-          <button
-            key={s.index}
-            className={"dot" + (s.index === index ? " on" : "")}
-            onClick={() => onIndex(s.index)}
-            tabIndex={-1}
-          />
-        ))}
+      <div className="stephead">
+        <p className="stepno">
+          {t(lang, "step")} {index + 1} {t(lang, "of")} {total}
+        </p>
+        <div className="progress" aria-hidden="true">
+          {guide.steps.map((s) => (
+            <button
+              key={s.index}
+              className={"seg" + (s.index <= index ? " on" : "")}
+              onClick={() => onIndex(s.index)}
+              tabIndex={-1}
+            />
+          ))}
+        </div>
       </div>
-      <p className="stepno">
-        {t(lang, "step")} {index + 1} {t(lang, "of")} {total}
-      </p>
 
       <Picture step={step} />
       <p className={`steptext kind-${step.kind}`}>{step.text}</p>
+      <button className="btn pill" onClick={() => speak(step.text, lang)}>
+        🔊 {t(lang, "listenAgain")}
+      </button>
 
       {step.kind === "how" && (
         <div className="clipbox">
@@ -75,12 +80,9 @@ export default function StepViewer({ guide, index, lang, clips, playClip, onInde
         </div>
       )}
 
-      <div className="row">
+      <div className="row nav">
         <button className="btn" onClick={() => onIndex(Math.max(0, index - 1))} disabled={index === 0}>
           ← {t(lang, "back")}
-        </button>
-        <button className="btn" onClick={() => speak(step.text, lang)}>
-          🔊 {t(lang, "read")}
         </button>
         <button
           className="btn primary"

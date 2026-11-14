@@ -150,7 +150,14 @@ export default function App() {
   return (
     <div className="app">
       <header className="top">
-        <strong>{t(lang, "title")}</strong>
+        {guide ? (
+          <button className="btn pill" onClick={() => { setGuide(null); setLog([]); setAnswer(null); }}>
+            ‹ {t(lang, "startAgain")}
+          </button>
+        ) : (
+          <strong className="brand">{t(lang, "title")}</strong>
+        )}
+        {guide?.facts?.medicine && <span className="guidename"><small>{t(lang, "yourGuide")}</small><strong>{guide.facts.medicine}</strong></span>}
         <label>
           <span className="sr">{t(lang, "language")}</span>
           <select value={lang} onChange={(e) => changeLanguage(e.target.value)}>
@@ -185,6 +192,12 @@ export default function App() {
           <AvatarPanel
             state={anam.state}
             error={anam.error}
+            lang={lang}
+            caption={log.find((l) => l.say)?.say ?? ""}
+            question={question}
+            onQuestion={setQuestion}
+            onAsk={(e) => void onAsk(e)}
+            answer={answer}
             onStart={() => void anam.start(guide.id, lang)}
             onStop={() => void anam.stop()}
           />
@@ -195,16 +208,6 @@ export default function App() {
             {guide.steps.length > 0 && (
               <StepViewer guide={guide} index={index} lang={lang} clips={clips} playClip={playClip} onIndex={(i) => goto(i)} />
             )}
-            <form className="card askbox" onSubmit={(e) => void onAsk(e)}>
-              <label className="field">
-                <span>{t(lang, "ask")}</span>
-                <input value={question} onChange={(e) => setQuestion(e.target.value)} />
-              </label>
-              <button className="btn" type="submit">
-                {t(lang, "askGo")}
-              </button>
-              {answer && <p className="answer">{answer}</p>}
-            </form>
             <button className="btn" onClick={() =>
                 guide.id.startsWith("g_sample") ? window.print() : window.open(`/api/guides/${guide.id}/sheet`, "_blank")
               }>
