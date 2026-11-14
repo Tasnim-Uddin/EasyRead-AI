@@ -48,30 +48,33 @@ async def draft(facts: dict, hint: str, doc_type: str = "how_to", content: dict 
     return steps if isinstance(steps, list) else None
 
 
-async def main(per_seed: int, out: str):
+async def main(per_seed: int, out: str, workers: int = 8):
     rng = random.Random(0)
-    rows, tried = [], 0
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    jobs = []  # (prompt facts args, hint, scorer)
     for i, seed in enumerate(SEEDS):
-        if i in EVAL_IDS:
-            continue
-        for k in range(per_seed):
-            facts = perturb(seed, rng)
-            tried += 1
-            steps = await draft(facts, VARIANTS[k % len(VARIANTS)])
-            if steps and score(facts, steps)["passed"]:
-                rows.append({"prompt": SYSTEM + "\n\n" + user_message(facts),
-                         "completion": json.dumps(steps, ensure_ascii=False)})
+        if i not in EVAL_IDS:
+            for k in range(per_seed):
+                jobs.append(("how_to", perturb(seed, rng), None, VARIANTS[k % len(VARIANTS)]))
     for i, seed in enumerate(DOC_SEEDS):
-        if i in DOC_EVAL_IDS:
-            continue
-        for k in range(per_seed):
-            d = perturb_doc(seed, rng)
-            tried += 1
-            steps = await draft(d["facts"], VARIANTS[k % len(VARIANTS)], d["doc_type"], d["content"])
-            if steps and score_doc(d["doc_type"], d["content"], steps)["passed"]:
-                rows.append({"prompt": SYSTEM + "\n\n" + user_message(d["facts"], d["doc_type"], d["content"]),
-                             "completion": json.dumps(steps, ensure_ascii=False)})
+        if i not in DOC_EVAL_IDS:
+            for k in range(per_seed):
+                d = perturb_doc(seed, rng)
+                jobs.append((d["doc_type"], d["facts"], d["content"], VARIANTS[k % len(VARIANTS)]))
+    sem = asyncio.Semaphore(workers)
+
+    async def run(job):
+        dt, facts, content, hint = job
+        async with sem:
+            steps = await draft(facts, hint, dt, content)
+        ok = steps and (score(facts, steps)["passed"] if dt == "how_to" else score_doc(dt, content, steps)["passed"])
+        if not ok:
+            return None
+        return {"prompt": SYSTEM + "\n\n" + user_message(facts, dt, content),
+                "completion": json.dumps(steps, ensure_ascii=False)}
+
+    rows = [r for r in await asyncio.gather(*(run(j) for j in jobs)) if r]
+    tried = len(jobs)
     with open(out, "w") as fh:
         fh.writelines(json.dumps(r, ensure_ascii=False) + "\n" for r in rows)
     print(f"kept {len(rows)}/{tried} rubric-passing examples -> {out}")
