@@ -100,7 +100,7 @@ async def extract(files, device_photo=None) -> dict:
 # What the guide adds after reading a step aloud, by step kind. English only: other languages get the
 # translated step text as it is, so we never show a half-translated line.
 SAY_TAIL = {"how": "Take your time.", "warning": "Take care with this one.",
-            "get_help": "Ask for help if you are not sure."}
+            "get_help": ""}
 
 
 def make_say(step: dict, language: str) -> str:
