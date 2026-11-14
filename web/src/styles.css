@@ -335,3 +335,8 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .card.device img { display: block; width: 100%; max-height: 22rem; object-fit: contain; border-radius: var(--r-md); margin-top: 0.75rem; background: var(--cream-deep); }
 .card.device .legend { margin-top: 0.5rem; }
 .card.device .btn.small { min-height: 3rem; font-size: 1.125rem; margin-top: 0.875rem; }
+.lang-busy { position: fixed; top: 1rem; left: 50%; transform: translateX(-50%); width: min(24rem, calc(100vw - 2rem)); margin: 0; z-index: 30; text-align: center; box-shadow: 0 6px 18px rgba(40,30,20,.18); }
+/* Demo polish: long medicine names and answers never push past the card; disabled chips look disabled. */
+.card, .card .big, .card p, .qtitle, .ttl, .cap, .choice, .bubble, .answer, .chip, .conflict { overflow-wrap: anywhere; min-width: 0; }
+.chip:disabled { opacity: .5; cursor: not-allowed; }
+.chip:focus-visible, .choice:focus-visible, .round:focus-visible { outline: 0.25rem solid var(--sage-ink); outline-offset: 0.1875rem; }

@@ -73,6 +73,7 @@ export default function App() {
   const [index, setIndex] = useState(0);
   const [clips, setClips] = useState<Clip[]>([]);
   const [busy, setBusy] = useState(false);
+  const [langBusy, setLangBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<{ title: string; detail: string | null } | null>(null);
   const [log, setLog] = useState<ToolLogEntry[]>([]);
@@ -238,7 +239,14 @@ export default function App() {
         if (!cleanLanguage(code)) return "I can't switch to that language yet.";
         setLang(code);
         anamLangRef.current(code);
-        if (g() && !isSample(g())) setGuide(await api.setLanguage(g()!.id, code));
+        if (g() && !isSample(g())) {
+          setLangBusy(true);
+          try {
+            setGuide(await api.setLanguage(g()!.id, code));
+          } finally {
+            setLangBusy(false);
+          }
+        }
         return `Switched to ${languageLabel(code)}.`;
       },
     };
@@ -363,7 +371,7 @@ export default function App() {
 
   async function onAsk(q?: string) {
     const text = (q ?? question).trim();
-    if (!guide || !text) return;
+    if (!guide || !text || busy) return;
     setBusy(true);
     try {
       setAnswer(await runTool("answer_from_document", { question: text }));
@@ -546,6 +554,11 @@ export default function App() {
           />
         )}
 
+        {langBusy && (
+          <p className="banner lang-busy" role="status">
+            {t(lang, "changingLanguage")}
+          </p>
+        )}
         <DevPanel log={log} lang={lang} />
       </div>
       {guide && <PrintSheet guide={guide} lang={lang} />}

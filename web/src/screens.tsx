@@ -893,7 +893,7 @@ interface AskProps {
 export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onAsk, onTalk, onTellBack, onPrint, onBack }: AskProps) {
   const live = useLive();
   const k = kindOf(guide);
-  const noun = k === "medicine" ? "medicine" : "paper";
+  const heading = t(lang, k === "medicine" ? "askAboutMedicine" : "askAboutPaper");
   const [listening, setListening] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
   const SR = (window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -938,7 +938,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       )}
       <div className="ask">
         <h2>
-          {t(lang, "askAbout")} {noun}
+          {heading}
         </h2>
         <label>
           <span className="sr">{t(lang, "askExample")}</span>
@@ -972,6 +972,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
             <button
               key={c}
               className="chip"
+              disabled={busy}
               onClick={() => {
                 onQuestion(c);
                 onAsk(c);
