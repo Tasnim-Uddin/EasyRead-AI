@@ -28,7 +28,25 @@ const PATHS: Record<string, { vb: number; d: string; fill?: boolean }> = {
   wrench: { vb: 32, d: "M20 6a6 6 0 00-5 8L5 24l3 3 10-10a6 6 0 008-5l-4 3-3-1-1-3z" },
   hand: { vb: 32, d: "M10 16V7a2 2 0 014 0v7M14 14V5a2 2 0 014 0v9M18 14V7a2 2 0 014 0v10c0 6-3 10-8 10-4 0-7-3-9-8l-1-4a2 2 0 013-1z" },
   bulb: { vb: 32, d: "M16 3a8 8 0 00-4 15v4h8v-4A8 8 0 0016 3zM12 27h8" },
+  // Direction C line icons (24 grid, drawn at 2px in CSS)
+  globe: { vb: 24, d: "M12 3a9 9 0 100 18 9 9 0 000-18zM3 12h18M12 3c-2.5 2.6-3.6 5.6-3.6 9s1.1 6.4 3.6 9c2.5-2.6 3.6-5.6 3.6-9S14.5 5.6 12 3z" },
+  history: { vb: 24, d: "M4 12a8 8 0 102.4-5.7M4 4v4h4M12 8v4l3 2" },
+  chevDown: { vb: 24, d: "M7 10l5 5 5-5" },
+  chevRight: { vb: 24, d: "M10 6l6 6-6 6" },
+  phone: { vb: 24, d: "M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a1 1 0 01-1 1A16 16 0 014 5a1 1 0 011-1z" },
+  endCall: { vb: 24, d: "M5 4h4l2 5-2.5 1.5a11 11 0 001.6 2.3M13.9 15.1l1.1-2.1 5 2v4a1 1 0 01-1 1A16 16 0 015.5 9.5M3 21L21 3" },
+  lock: { vb: 24, d: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 017 0v3" },
+  volume: { vb: 24, d: "M4 9.5h3.5L12 6v12l-4.5-3.5H4zM15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" },
+  playCircle: { vb: 24, d: "M12 3a9 9 0 100 18 9 9 0 000-18zM10 8.5v7l5.5-3.5z" },
+  send: { vb: 24, d: "M21 3L10 14M21 3l-7 18-4-7-7-4z" },
+  chat: { vb: 24, d: "M5 5h14v10H10l-5 4z" },
+  info: { vb: 24, d: "M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v5M12 8v.5" },
+  swap: { vb: 24, d: "M4 8h14l-3-3M20 16H6l3 3" },
+  file: { vb: 24, d: "M6 3h8l4 4v14H6zM14 3v4h4M9 12h6M9 16h6" },
 };
+
+/** Icons that point along the reading direction: mirrored in RTL. */
+const MIRROR = new Set(["arrow", "back", "chevRight", "send"]);
 
 export default function Icon({ name, size, style, className }: { name: string; size?: number; style?: CSSProperties; className?: string }) {
   const p = PATHS[name] ?? PATHS.doc;
@@ -37,8 +55,10 @@ export default function Icon({ name, size, style, className }: { name: string; s
       viewBox={`0 0 ${p.vb} ${p.vb}`}
       width={size}
       height={size}
+      // About 2px at the usual 22-24px size, whatever the drawing grid. CSS rules can still override it.
+      strokeWidth={p.vb === 24 ? 2 : p.vb === 32 ? 2.6 : 3.6}
       aria-hidden="true"
-      className={[className, name === "arrow" || name === "back" ? "mirror" : ""].filter(Boolean).join(" ") || undefined}
+      className={[className, MIRROR.has(name) ? "mirror" : ""].filter(Boolean).join(" ") || undefined}
       style={p.fill ? { fill: "currentColor", ...style } : style}
     >
       <path d={p.d} />
@@ -51,9 +71,9 @@ export function GuideFace({ large }: { large?: boolean }) {
   if (!large) {
     return (
       <svg viewBox="0 0 56 56" className="av" aria-hidden="true" style={{ stroke: "none" }}>
-        <circle cx="28" cy="28" r="28" fill="var(--sage)" />
-        <circle cx="28" cy="22" r="11" fill="var(--sage-ink)" />
-        <ellipse cx="28" cy="54" rx="20" ry="15" fill="var(--sage-ink)" />
+        <rect width="56" height="56" rx="14" fill="var(--sage-deep)" />
+        <circle cx="28" cy="22" r="10" fill="var(--sage-fig)" />
+        <path d="M8 56c0-13 9-20 20-20s20 7 20 20z" fill="var(--sage-fig)" />
       </svg>
     );
   }

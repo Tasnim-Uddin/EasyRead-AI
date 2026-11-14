@@ -21,12 +21,16 @@ export interface LiveInfo {
   onToggleMic: () => void;
   onToggleSound: () => void;
   onSend?: (text: string) => boolean;
-  /** Docked guide panel (?dock=1, on by default with the new themes). */
+  /** Docked guide panel (on by default, `?dock=0` turns it off). */
   dock?: boolean;
   /** The guide's latest spoken line, for the dock caption. */
   caption?: string;
   /** Open the talk screen. */
   onTalk?: () => void;
+  /** The avatar connection state, so the dock row can say "Connecting" or that the guide is not switched on. */
+  state?: AnamState;
+  /** Start the live avatar right here (in the dock), on the step the user is looking at. Never automatic. */
+  onStartHere?: () => void;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
 const useLive = () => {
@@ -45,50 +49,48 @@ const useDock = () => {
  */
 function GuideDock({ text, lang }: { text: string; lang: string }) {
   const info = useDock();
-  const [small, setSmall] = useState(false);
   if (!info) return null;
   if (!info.live) {
-    // Not live: one slim row that opens the talk screen, no empty video space.
-    return info.onTalk ? (
-      <button className="dock dock-slim" onClick={info.onTalk}>
+    // Not live: one calm slim row. It is an offer: tapping it starts the guide right here, never on its own.
+    const start = info.onStartHere ?? info.onTalk;
+    if (!start) return null;
+    const st = info.state;
+    const sub =
+      st === "connecting" ? t(lang, "connecting") + "…" : st === "standin" ? t(lang, "talkStandin") : st === "error" ? t(lang, "talkError") : t(lang, "talkGuideSub");
+    return (
+      <button className="dock dock-slim" onClick={start} disabled={st === "connecting"} aria-busy={st === "connecting"}>
         <GuideFace />
-        <span>{t(lang, "talkGuide")}</span>
-        <Icon name="mic" />
+        <span className="dock-txt">
+          <b>{t(lang, "talkGuide")}</b>
+          <small role={st === "standin" || st === "error" ? "status" : undefined}>{sub}</small>
+        </span>
+        <span className="dock-go">
+          <Icon name="chevRight" />
+        </span>
       </button>
-    ) : null;
+    );
   }
   const caption = info.caption || text;
-  const chevron = (
-    <button className="dock-chev" onClick={() => setSmall(!small)} aria-expanded={!small} aria-label={t(lang, small ? "dockShow" : "dockHide")}>
-      <Icon name={small ? "up" : "down"} />
-    </button>
-  );
   return (
-    <section className={"dock" + (small ? " small" : "")} aria-label={t(lang, "guideSays")}>
+    <section className="dock dock-live" aria-label={t(lang, "guideSays")}>
       <div className="dock-row">
         <div className="avslot dockvid" data-avatar-slot="dock" />
-        <div className="dock-cap" aria-live="polite" dir="auto">
-          {caption}
+        <div className="dock-cap" aria-live="polite">
+          <b>{t(lang, "guideSays")}</b>
+          <span dir="auto">{caption}</span>
         </div>
-        {small && chevron}
+        <button className="icon-btn end" onClick={info.onEnd} aria-label={t(lang, "endTalk")}>
+          <Icon name="endCall" />
+        </button>
       </div>
-      {!small && (
-        <>
-          <div className="dock-ctl">
-            <button className="end" onClick={info.onEnd}>
-              {t(lang, "endTalk")}
-            </button>
-            <button onClick={info.onToggleMic} aria-pressed={info.micMuted} aria-label={t(lang, info.micMuted ? "unmuteMic" : "muteMic")}>
-              <Icon name="mic" />
-            </button>
-            <button onClick={info.onToggleSound} aria-pressed={info.soundOff} aria-label={t(lang, info.soundOff ? "soundOn" : "soundOff")}>
-              <Icon name="speaker" />
-            </button>
-            {chevron}
-          </div>
-          {info.onSend && <TypeBar lang={lang} onSend={info.onSend} />}
-        </>
-      )}
+      <TypeBar lang={lang} onSend={info.onSend}>
+        <button type="button" className="icon-btn mic" onClick={info.onToggleMic} aria-pressed={info.micMuted} aria-label={t(lang, info.micMuted ? "unmuteMic" : "muteMic")}>
+          <Icon name="mic" />
+        </button>
+        <button type="button" className="icon-btn" onClick={info.onToggleSound} aria-pressed={info.soundOff} aria-label={t(lang, info.soundOff ? "soundOn" : "soundOff")}>
+          <Icon name="volume" />
+        </button>
+      </TypeBar>
     </section>
   );
 }
@@ -164,20 +166,29 @@ function GuideOrAvatar({ live }: { live: LiveInfo | null }) {
 
 /** Small End / mic / sound buttons next to the live tile. */
 /** Typed message to the live avatar (for people who cannot or prefer not to speak). */
-function TypeBar({ lang, onSend }: { lang: string; onSend: (text: string) => boolean }) {
+function TypeBar({ lang, onSend, children }: { lang: string; onSend?: (text: string) => boolean; children?: React.ReactNode }) {
   const [typed, setTyped] = useState("");
+  const has = !!typed.trim();
   return (
     <form
       className="typebar"
       onSubmit={(e) => {
         e.preventDefault();
-        if (onSend(typed)) setTyped("");
+        if (onSend?.(typed)) setTyped("");
       }}
     >
-      <input dir="auto" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={t(lang, "typeToGuide")} aria-label={t(lang, "typeToGuide")} />
-      <button className="btn" type="submit" disabled={!typed.trim()}>
-        {t(lang, "send")}
-      </button>
+      {onSend && (
+        <span className="field">
+          <input dir="auto" enterKeyHint="send" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={t(lang, "typeToGuide")} aria-label={t(lang, "typeToGuide")} />
+          {/* The send button shows once there is something to send, so the bar stays calm. */}
+          {(has || !children) && (
+            <button className="icon-btn send" type="submit" disabled={!has} aria-label={t(lang, "send")}>
+              <Icon name="send" />
+            </button>
+          )}
+        </span>
+      )}
+      {children}
     </form>
   );
 }
@@ -286,8 +297,9 @@ export function LangPill({ lang, onLanguage }: { lang: string; onLanguage: (c: s
     <>
     <label className="lang">
       <span className="sr">{t(lang, "language")}</span>
-      {current}
-      <b />
+      <Icon name="globe" />
+      <span className="lang-name">{current}</span>
+      <Icon name="chevDown" />
       <select
         value={lang}
         onChange={(e) => {
@@ -329,7 +341,7 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
         <LangPill lang={lang} onLanguage={onLanguage} />
         {onPapers && (
           <button className="round" onClick={onPapers} aria-label={t(lang, "myPapers")}>
-            <Icon name="list" />
+            <Icon name="history" />
           </button>
         )}
         <button className="round" onClick={onSettings} aria-label={t(lang, "settings")}>
@@ -340,23 +352,24 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
   );
 }
 
-export function TitleBar({ title, lang, onBack, right }: { title: string; lang: string; onBack: () => void; right?: React.ReactNode }) {
+/** Back on the start side, the title centred, an optional control on the end side (mirrors in RTL). */
+export function TitleBar({ title, lang, onBack, right }: { title: React.ReactNode; lang: string; onBack: () => void; right?: React.ReactNode }) {
   return (
     <div className="title-top">
       <button className="round" onClick={onBack} aria-label={t(lang, "back2")}>
         <Icon name="back" />
       </button>
       <h1>{title}</h1>
-      {right}
+      <div className="title-end">{right}</div>
     </div>
   );
 }
 
-/* Persistent 999 link: shown on every guide screen (same rule as the home screen: all document kinds). */
+/* Persistent 999 link: shown at the foot of every guide screen (same rule as the home screen: all document kinds). */
 export function EmergencyLink({ lang, warn }: { lang: string; warn?: boolean }) {
   return (
     <a className={"sos" + (warn ? " warn" : "")} href="tel:999">
-      <Icon name="alert" style={{ width: 20, height: 20 }} />
+      <Icon name="phone" />
       <T lang={lang} k="emergencyLink" />
     </a>
   );
@@ -373,37 +386,51 @@ interface HomeProps {
   onSample?: (name: string) => void;
   onPapers: () => void;
   hasPapers: boolean;
+  /** The newest paper made on this phone (from My papers), shown as "Last paper". */
+  lastPaper?: PaperRow | null;
+  onOpenPaper?: (id: string) => void;
 }
-export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers, hasPapers }: HomeProps) {
+export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers, hasPapers, lastPaper, onOpenPaper }: HomeProps) {
   return (
     <div className="screen">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
       <div className="hero">
         <h1>
-          {t(lang, "homeTitleA")}
-          <br />
-          {t(lang, "homeTitleB")}
+          {t(lang, "homeTitleA")} {t(lang, "homeTitleB")}
         </h1>
         <p>{t(lang, "homeLead")}</p>
-        <button className="scan" onClick={onCamera}>
-          <div className="blob" />
-          <div className="blob2" />
-          <div className="cam">
+        <div className="scan">
+          {/* The camera circle is a big extra tap target for touch; the button below is the one for keyboards and screen readers. */}
+          <div className="cam" onClick={onCamera} aria-hidden="true">
             <Icon name="camera" />
           </div>
-          <span className="lbl">{t(lang, "scanLabel")}</span>
-        </button>
+          <span className="lbl">{t(lang, "scanHint")}</span>
+          <button className="btn" onClick={onCamera}>
+            <Icon name="camera" />
+            {t(lang, "takePhoto")}
+          </button>
+        </div>
         <button className="btn soft" onClick={onUpload}>
           <Icon name="upload" />
           {t(lang, "upload")}
         </button>
-        <p className="help">{t(lang, "private")}</p>
-        {hasPapers && (
-          <button className="btn soft papers-link" onClick={onPapers}>
-            <Icon name="list" />
-            {t(lang, "myPapers")}
-          </button>
+        {hasPapers && lastPaper && onOpenPaper ? (
+          <section className="last" aria-label={t(lang, "lastPaper")}>
+            <h2 className="group">{t(lang, "lastPaper")}</h2>
+            <PaperCard lang={lang} row={lastPaper} onOpen={onOpenPaper} />
+          </section>
+        ) : (
+          hasPapers && (
+            <button className="btn soft papers-link" onClick={onPapers}>
+              <Icon name="history" />
+              {t(lang, "myPapers")}
+            </button>
+          )
         )}
+        <p className="help">
+          <Icon name="lock" />
+          {t(lang, "privateHere")}
+        </p>
         {onSample && (
           <div className="samples">
             <span style={{ flexBasis: "100%", textAlign: "center" }}>{t(lang, "trySample")}</span>
@@ -412,11 +439,7 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
             <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
           </div>
         )}
-        <p className="help">
-          <a href="tel:999">
-            <T lang={lang} k="emergencyLink" />
-          </a>
-        </p>
+        <EmergencyLink lang={lang} />
       </div>
     </div>
   );
@@ -631,7 +654,7 @@ interface SummaryProps {
   onStart: () => void;
   onListen: () => void;
 }
-export function Summary({ guide, lang, onLanguage, onSettings, onPapers, onBack, onStart, onListen }: SummaryProps) {
+export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen }: SummaryProps) {
   const k = kindOf(guide);
   const f = guide.facts;
   const c = guide.content;
@@ -642,31 +665,46 @@ export function Summary({ guide, lang, onLanguage, onSettings, onPapers, onBack,
   const title =
     k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper");
   const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
+  const thumb = guide.steps.find((s) => s.image_url)?.image_url;
   return (
     <div className="screen">
-      <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onBrand={onBack} onPapers={onPapers} />
-      <div className="card sage" style={{ marginTop: 14 }}>
+      <TitleBar title={t(lang, "yourGuideTitle")} lang={lang} onBack={onBack} right={<LangPill lang={lang} onLanguage={onLanguage} />} />
+      <div className="card sage this-is">
         <div className="k">{t(lang, "thisIs")}</div>
-        <div className="big">{title}</div>
-        {subline && <p>{subline}</p>}
+        <div className="this-row">
+          {thumb && <img className="thumb" src={thumb} alt="" />}
+          <div className="big" dir="auto">
+            {title}
+          </div>
+        </div>
+        {subline && <p dir="auto">{subline}</p>}
       </div>
 
       <DeviceCard guide={guide} lang={lang} />
 
       {conflicts.length > 0 && (
-        <div className="card butter" role="alert">
-          <div className="k">{t(lang, "conflictTitle")}</div>
+        <div className="card warn" role="alert">
+          <div className="warn-head">
+            <span className="warn-ico">
+              <Icon name="alert" />
+            </span>
+            <div>
+              <b>{t(lang, "conflictTitle")}</b>
+              <p>{t(lang, "conflictAsk")}</p>
+            </div>
+          </div>
           {conflicts.map((x, i) => (
-            <div className="conflict" key={i}>
-              <span>
-                <b>{t(lang, "conflictLabel")}:</b> {x.label}
-              </span>
-              <span>
-                <b>{t(lang, "conflictLeaflet")}:</b> {x.leaflet}
-              </span>
+            <div className="quotes" key={i}>
+              <div className="quote">
+                <b>{t(lang, "labelSays")}</b>
+                <span dir="auto">“{x.label}”</span>
+              </div>
+              <div className="quote">
+                <b>{t(lang, "leafletSays")}</b>
+                <span dir="auto">“{x.leaflet}”</span>
+              </div>
             </div>
           ))}
-          <p>{t(lang, "conflictAsk")}</p>
         </div>
       )}
 
@@ -770,15 +808,19 @@ export function Summary({ guide, lang, onLanguage, onSettings, onPapers, onBack,
       </p>
 
       <div className="foot sticky">
-        <button className="btn" onClick={onStart}>
-          {t(lang, k === "letter" || k === "form" ? "showSteps" : "startStep")}
-        </button>
-        {canSpeak(lang) && (
-          <button className="btn soft" onClick={onListen}>
-            <Icon name="play" />
-            {t(lang, "listenThis")}
+        <div className="pair">
+          {canSpeak(lang) && (
+            <button className="btn soft" onClick={onListen}>
+              <Icon name="volume" />
+              {t(lang, "listen")}
+            </button>
+          )}
+          <button className="btn" onClick={onStart}>
+            {t(lang, k === "letter" || k === "form" ? "showSteps" : "startStep")}
+            <Icon name="chevRight" />
           </button>
-        )}
+        </div>
+        <EmergencyLink lang={lang} />
       </div>
     </div>
   );
@@ -846,40 +888,50 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
   if (!step) return null;
   const total = guide.steps.length;
   const last = index >= total - 1;
+  const listen = canSpeak(lang);
+  const how = stepHasHow(guide, step, clips);
   return (
-    <div className="screen">
-      <div className="prog">
-        <button className="round" onClick={onClose} aria-label={t(lang, "close")}>
-          <Icon name="x" />
-        </button>
-        <div className="bars">
-          {guide.steps.map((s) => (
-            <button key={s.index} className={s.index <= index ? "d" : ""} onClick={() => onIndex(s.index)} aria-label={`${t(lang, "step")} ${s.index + 1}`} />
-          ))}
-        </div>
-        <div className="of">
-          <Counter lang={lang} n={index + 1} total={total} />
-        </div>
+    <div className={"screen step-screen" + (live ? " is-live" : "")}>
+      <TitleBar
+        lang={lang}
+        onBack={onClose}
+        title={
+          <>
+            <T lang={lang} k="step" /> <Counter lang={lang} n={index + 1} total={total} />
+          </>
+        }
+      />
+      <div className="bars">
+        {guide.steps.map((s) => (
+          <button
+            key={s.index}
+            className={s.index <= index ? "d" : ""}
+            onClick={() => onIndex(s.index)}
+            aria-label={`${t(lang, "step")} ${s.index + 1}`}
+            aria-current={s.index === index ? "step" : undefined}
+          />
+        ))}
       </div>
-      <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
       <StepPicture step={step} lang={lang} />
       <div className="step" aria-live="polite" dir="auto">
         {step.text}
       </div>
-      <div className="actions">
-        {canSpeak(lang) && (
-          <button className="btn" onClick={() => void speak(step.text, lang)}>
-            <Icon name="play" />
-            {t(lang, "listen")}
-          </button>
-        )}
-        {stepHasHow(guide, step, clips) && (
-          <button className="btn soft" onClick={onShowHow}>
-            <Icon name="play" style={{ width: 24, height: 24 }} />
-            {t(lang, "showHow")}
-          </button>
-        )}
-      </div>
+      {(listen || how) && (
+        <div className={"seg" + (listen && how ? "" : " one")}>
+          {listen && (
+            <button className="on" onClick={() => void speak(step.text, lang)}>
+              <Icon name="volume" />
+              {t(lang, "listen")}
+            </button>
+          )}
+          {how && (
+            <button onClick={onShowHow}>
+              <Icon name="playCircle" />
+              {t(lang, "showHow")}
+            </button>
+          )}
+        </div>
+      )}
       {!dock && (
         <div className="guide">
           <GuideOrAvatar live={live} />
@@ -893,14 +945,16 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
       <div className={dock ? "bottombar" : undefined} style={dock ? undefined : { display: "contents" }}>
         <GuideDock text={step.say || step.text} lang={lang} />
         <div className="nav">
-          <button className="btn soft back" onClick={() => onIndex(index - 1)} disabled={index === 0}>
+          <button className="btn quiet back" onClick={() => onIndex(index - 1)} disabled={index === 0}>
+            <Icon name="back" />
             {t(lang, "back")}
           </button>
           <button className="btn next" onClick={last ? onFinish : () => onIndex(index + 1)}>
             {t(lang, last ? "finish" : "next")}
-            <Icon name="arrow" />
+            <Icon name="chevRight" />
           </button>
         </div>
+        <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
       </div>
     </div>
   );
@@ -925,14 +979,7 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
   };
   return (
     <div className="screen">
-      <div className="prog">
-        <button className="round" onClick={onBack} aria-label={t(lang, "close")}>
-          <Icon name="x" />
-        </button>
-        <div className="ttl" style={{ padding: 0, fontSize: 26 }}>
-          {t(lang, "clipTitle")}
-        </div>
-      </div>
+      <TitleBar title={t(lang, "clipTitle")} lang={lang} onBack={onBack} />
       <div className="clip">
         {clip ? (
           <video ref={vid} src={clip.video_url} poster={clip.poster_url} loop muted playsInline controls={playing} aria-label={clip.caption_en} />
@@ -983,6 +1030,7 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
             {t(lang, "close")}
           </button>
         </div>
+        <EmergencyLink lang={lang} />
       </div>
     </div>
   );
@@ -1038,18 +1086,26 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
     r.start();
   }
 
+  const asked = answer ? question.trim() : "";
+  const more = (
+    <div className="ans-actions">
+      <button className="btn surface" onClick={onTellBack}>
+        <Icon name="swap" />
+        {t(lang, "tellBack")}
+      </button>
+      <button className="btn quiet" onClick={onPrint}>
+        <Icon name="print" />
+        {t(lang, "print")}
+      </button>
+    </div>
+  );
   return (
     <div className="screen">
-      <EmergencyLink lang={lang} />
-      <div className="done-card">
-        <div className="tick">
-          <Icon name="check" />
-        </div>
-        <div>
-          <strong dir={isFallback(lang, "allDone") ? "ltr" : undefined}>{tf(lang, "allDone", { n: guide.steps.length })}</strong>
-          {t(lang, "allDoneSub")}
-        </div>
-      </div>
+      <TitleBar title={t(lang, "ask")} lang={lang} onBack={onBack} />
+      <p className="sub done-line">
+        <Icon name="check" />
+        <span dir={isFallback(lang, "allDone") ? "ltr" : undefined}>{tf(lang, "allDone", { n: guide.steps.length })}</span>
+      </p>
       {live && !dock && (
         <div className="guide">
           <GuideOrAvatar live={live} />
@@ -1057,100 +1113,107 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
         </div>
       )}
       <div className="ask">
-        <h2>
-          {heading}
-        </h2>
-        <label>
-          <span className="sr">{t(lang, "askExample")}</span>
-          <textarea
-            ref={input}
-            className="q"
-            value={question}
-            placeholder={t(lang, "askExample")}
-            onChange={(e) => onQuestion(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                onAsk();
-              }
-            }}
-          />
-        </label>
-        {question.trim() && (
-          <button className="btn ask-go" onClick={() => onAsk()} disabled={busy}>
-            {busy ? t(lang, "thinking") + "…" : t(lang, "ask")}
-          </button>
-        )}
-        <div className="mic">
-          <button className="m" onClick={mic} aria-label={t(lang, "tapSpeak")}>
-            <Icon name="mic" />
-          </button>
-          <span>{listening ? t(lang, "listening") + "…" : <>{t(lang, "tapSpeak")}<br />{t(lang, "orType")}</>}</span>
-        </div>
-        <div className="chips">
-          {CHIP_KEYS[k].map((ck) => t(lang, ck)).map((c) => (
-            <button
-              key={c}
-              className="chip"
-              disabled={busy}
-              onClick={() => {
-                onQuestion(c);
-                onAsk(c);
+        <h2>{heading}</h2>
+        <form
+          className="askbar"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onAsk();
+          }}
+        >
+          <label className="field">
+            <span className="sr">{t(lang, "askExample")}</span>
+            <textarea
+              ref={input}
+              className="q"
+              rows={1}
+              dir="auto"
+              value={question}
+              placeholder={t(lang, "askExample")}
+              onChange={(e) => onQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  onAsk();
+                }
               }}
-            >
-              {c}
+            />
+          </label>
+          {question.trim() && !answer ? (
+            <button className="icon-btn send" type="submit" disabled={busy} aria-label={t(lang, "ask")}>
+              <Icon name="send" />
             </button>
-          ))}
-        </div>
+          ) : (
+            <button type="button" className={"icon-btn mic" + (listening ? " on" : "")} onClick={mic} aria-label={t(lang, "tapSpeak")}>
+              <Icon name="mic" />
+            </button>
+          )}
+        </form>
+        {(busy || listening) && (
+          <p className="sub" role="status" style={{ padding: "0.5rem 0 0" }}>
+            {busy ? t(lang, "thinking") : t(lang, "listening")}…
+          </p>
+        )}
       </div>
-      {answer && !(dock && live) && (
-        <div className="answer" aria-live="polite">
-          <b>{t(lang, "guideSays")}</b>
-          {answer}
-        </div>
-      )}
-      <p className="safe">
-        <b>{t(lang, "notSure")}</b> {safetyLines(guide).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
-      </p>
-      {dock ? (
-        <>
-          <div className="row2 more">
-            <button className="btn quiet" onClick={onTellBack}>
-              <Icon name="check" />
-              {t(lang, "tellBack")}
-            </button>
-          </div>
-          <div className="bottombar">
-            <GuideDock text={answer ?? t(lang, "allDoneSub")} lang={lang} />
-            <div className="nav">
-              <button className="btn soft back" onClick={onBack}>
-                {t(lang, "back")}
+      <div className="chips" role="list">
+        {CHIP_KEYS[k].map((ck) => t(lang, ck)).map((c) => (
+          <button
+            key={c}
+            role="listitem"
+            className="chip"
+            disabled={busy}
+            onClick={() => {
+              onQuestion(c);
+              onAsk(c);
+            }}
+          >
+            {c}
+          </button>
+        ))}
+      </div>
+      {answer && !(dock && live) ? (
+        <section className="answer" aria-live="polite">
+          <div className="ans-head">
+            <GuideFace />
+            <b>{t(lang, "guideSays")}</b>
+            {canSpeak(lang) && (
+              <button className="icon-btn surface" onClick={() => void speak(answer, lang)} aria-label={t(lang, "readAnswer")}>
+                <Icon name="volume" />
               </button>
-              <button className="btn next" onClick={onPrint}>
-                {t(lang, "savePrint")}
-              </button>
-            </div>
+            )}
           </div>
-        </>
+          {asked && (
+            <p className="asked" dir="auto">
+              {t(lang, "youAsked")} {asked}
+            </p>
+          )}
+          <p className="ans-text" dir="auto">
+            {answer}
+          </p>
+          {more}
+        </section>
       ) : (
-        <div className="save">
-          <div className="row2" style={{ padding: 0 }}>
-            <button className="btn soft" onClick={onTellBack}>
-              {t(lang, "tellBack")}
-            </button>
-            <button className="btn soft" onClick={onTalk}>
+        more
+      )}
+      <p className="safe info">
+        <Icon name="info" />
+        <span>
+          <b>{t(lang, "notSure")}</b> {safetyLines(guide).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
+        </span>
+      </p>
+      <div className={dock ? "bottombar" : "foot"}>
+        {dock && live ? (
+          <GuideDock text={answer ?? t(lang, "allDoneSub")} lang={lang} />
+        ) : (
+          <div className="nav">
+            <button className="btn next" onClick={onTalk}>
+              <Icon name="chat" />
               {t(lang, "talkGuide")}
             </button>
           </div>
-          <button className="btn" onClick={onPrint}>
-            <Icon name="print" />
-            {t(lang, "savePrint")}
-          </button>
-          <button className="btn soft" onClick={onBack}>
-            {t(lang, "back2")}
-          </button>
-        </div>
-      )}
+        )}
+        <EmergencyLink lang={lang} />
+      </div>
     </div>
   );
 }
@@ -1176,19 +1239,31 @@ interface TalkProps {
 export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage, onBack, onStart, onStop, onType, onSend, micMuted, soundOff, onToggleMic, onToggleSound }: TalkProps) {
   const live = state === "live";
   return (
-    <div className="screen">
-      <TitleBar title={t(lang, "yourGuideTitle")} lang={lang} onBack={onBack} right={<LangPill lang={lang} onLanguage={onLanguage} />} />
+    <div className="screen talk">
+      <TitleBar title="" lang={lang} onBack={onBack} right={<LangPill lang={lang} onLanguage={onLanguage} />} />
       <div className="stage">
         {!live && <GuideFace large />}
         {live && <div className="avslot" data-avatar-slot="stage" />}
+        {live && (
+          <>
+            <span className="stage-chip live-chip">
+              <i />
+              {t(lang, "liveNow")}
+            </span>
+            <button className="stage-chip end-chip" onClick={onStop}>
+              <Icon name="endCall" />
+              {t(lang, "endTalk")}
+            </button>
+          </>
+        )}
       </div>
-      {caption ? (
-        <div className="live" aria-live="polite">
-          {caption}
-        </div>
-      ) : (
-        <div className="live empty">{t(lang, "captionEmpty")}</div>
-      )}
+      <div className={"live" + (caption ? "" : " empty")} aria-live="polite">
+        <b>
+          <i />
+          {t(lang, "guideSays")}
+        </b>
+        <span dir="auto">{caption || t(lang, "captionEmpty")}</span>
+      </div>
       {state === "error" && (
         <p className="banner" role="alert">
           {t(lang, "talkError")}
@@ -1205,29 +1280,35 @@ export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage
           {t(lang, "talkStandin")}
         </p>
       )}
-      {live && (
-        <div className="foot" style={{ flexDirection: "row", gap: "0.75rem", padding: "0.875rem 1.5rem 0" }}>
-          <button className="btn soft" onClick={onToggleMic} aria-pressed={!!micMuted}>
-            {t(lang, micMuted ? "unmuteMic" : "muteMic")}
-          </button>
-          <button className="btn soft" onClick={onToggleSound} aria-pressed={!!soundOff}>
-            {t(lang, soundOff ? "soundOn" : "soundOff")}
-          </button>
-        </div>
-      )}
       <div className="micbig">
-        <button className="m" onClick={live ? onStop : onStart} disabled={state === "connecting"} aria-label={t(lang, live ? "endTalk" : "startTalk")}>
-          <Icon name={live ? "x" : "mic"} />
-        </button>
-        <span>{state === "connecting" ? "…" : live ? t(lang, "listening") + "…" : t(lang, "startTalk")}</span>
+        {live ? (
+          <>
+            <button className="m" onClick={onToggleMic} aria-pressed={!!micMuted} aria-label={t(lang, micMuted ? "unmuteMic" : "muteMic")}>
+              <Icon name="mic" />
+            </button>
+            <button className="icon-btn surface" onClick={onToggleSound} aria-pressed={!!soundOff} aria-label={t(lang, soundOff ? "soundOn" : "soundOff")}>
+              <Icon name="volume" />
+            </button>
+          </>
+        ) : (
+          <>
+            <button className="m" onClick={onStart} disabled={state === "connecting"} aria-label={t(lang, "startTalk")}>
+              <Icon name="mic" />
+            </button>
+            <span>{state === "connecting" ? t(lang, "connecting") + "…" : t(lang, "startTalk")}</span>
+          </>
+        )}
       </div>
-      {live && onSend ? (
-        <TypeBar lang={lang} onSend={onSend} />
-      ) : (
-        <button className="txt" onClick={onType}>
-          {t(lang, "typeInstead")}
-        </button>
-      )}
+      <div className="foot">
+        {live && onSend ? (
+          <TypeBar lang={lang} onSend={onSend} />
+        ) : (
+          <button className="txt" onClick={onType}>
+            {t(lang, "typeInstead")}
+          </button>
+        )}
+        <EmergencyLink lang={lang} />
+      </div>
     </div>
   );
 }
@@ -1508,15 +1589,30 @@ function paperStatus(st: GuideStatus): { key: string; cls: string } {
   return { key: "paperDrawing", cls: "wait" };
 }
 
-function paperDate(lang: string, iso: string | null): string {
+const DAY = 24 * 60 * 60 * 1000;
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/** Today: the time. This week: the weekday. Earlier: the date. */
+function paperDate(lang: string, iso: string | null, now = new Date()): string {
   if (!iso) return "";
   const d = new Date(iso);
   if (isNaN(d.getTime())) return "";
+  const age = startOfDay(now) - startOfDay(d);
+  const opts: Intl.DateTimeFormatOptions =
+    age <= 0 ? { hour: "numeric", minute: "2-digit" } : age < 7 * DAY ? { weekday: "short", day: "numeric", month: "short" } : { day: "numeric", month: "short" };
   try {
-    return new Intl.DateTimeFormat(lang, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" }).format(d);
+    return new Intl.DateTimeFormat(lang, opts).format(d);
   } catch {
-    return d.toLocaleString();
+    return d.toLocaleDateString();
   }
+}
+
+/** "today" | "thisWeek" | "earlier" (the i18n keys of the group headings). */
+export function paperGroup(iso: string | null, now = new Date()): "today" | "thisWeek" | "earlier" {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return "earlier";
+  const age = startOfDay(now) - startOfDay(d);
+  return age <= 0 ? "today" : age < 7 * DAY ? "thisWeek" : "earlier";
 }
 
 export interface PaperRow {
@@ -1526,6 +1622,43 @@ export interface PaperRow {
   created_at: string | null;
   status: GuideStatus;
   thumbnail: string | null;
+}
+
+/** One paper: thumbnail, title, language and date. The trash button only shows on My papers. */
+function PaperCard({ lang, row, onOpen, onDelete }: { lang: string; row: PaperRow; onOpen: (id: string) => void; onDelete?: () => void }) {
+  const st = paperStatus(row.status);
+  const title = row.title || t(lang, "yourPaper");
+  return (
+    <div className="paper-card">
+      <button className="open" onClick={() => onOpen(row.id)}>
+        <span className="th">{row.thumbnail ? <img src={row.thumbnail} alt="" /> : <Icon name="file" />}</span>
+        <span className="meta">
+          <b dir="auto">{title}</b>
+          <small>
+            <Icon name="globe" />
+            <bdi>{languageLabel(row.language)}</bdi>
+            {row.created_at && (
+              <>
+                {" · "}
+                <bdi>{paperDate(lang, row.created_at)}</bdi>
+              </>
+            )}
+          </small>
+          {row.status !== "ready" && <span className={"pstat " + st.cls}>{t(lang, st.key)}</span>}
+        </span>
+        {!onDelete && (
+          <span className="chev">
+            <Icon name="chevRight" />
+          </span>
+        )}
+      </button>
+      {onDelete && (
+        <button className="icon-btn ghost" onClick={onDelete} aria-label={`${t(lang, "deletePaper")}: ${title}`}>
+          <Icon name="trash" />
+        </button>
+      )}
+    </div>
+  );
 }
 
 interface PapersProps {
@@ -1540,10 +1673,21 @@ interface PapersProps {
 }
 export function MyPapers({ lang, rows, failed, onBack, onOpen, onDelete, onRetry, onNew }: PapersProps) {
   const [confirm, setConfirm] = useState<string | null>(null);
+  const groups = useMemo(() => {
+    const out: { key: string; rows: PaperRow[] }[] = [];
+    for (const r of rows ?? []) {
+      const key = paperGroup(r.created_at);
+      const g = out.find((x) => x.key === key);
+      if (g) g.rows.push(r);
+      else out.push({ key, rows: [r] });
+    }
+    return out;
+  }, [rows]);
+  const empty = !!rows && rows.length === 0;
   return (
-    <div className="screen">
+    <div className="screen papers">
       <TitleBar title={t(lang, "myPapers")} lang={lang} onBack={onBack} />
-      <p className="sub">{t(lang, "papersPrivate")}</p>
+      {!empty && <p className="sub">{t(lang, "papersTap")}</p>}
       {failed && (
         <div className="banner" role="alert">
           <p>{t(lang, "papersLoadFailed")}</p>
@@ -1554,65 +1698,65 @@ export function MyPapers({ lang, rows, failed, onBack, onOpen, onDelete, onRetry
       )}
       {rows === null && !failed && (
         <p className="sub" role="status">
-          {t(lang, "papersLoading")}
+          {t(lang, "papersLoading")}…
         </p>
       )}
-      {rows && rows.length === 0 && (
+      {empty && (
         <div className="papers-empty">
-          <p>{t(lang, "papersEmpty")}</p>
-          <button className="btn" onClick={onNew}>
-            <Icon name="camera" />
-            {t(lang, "scanLabel")}
-          </button>
+          <span className="empty-ico">
+            <Icon name="file" />
+          </span>
+          <h2>{t(lang, "papersEmptyTitle")}</h2>
+          <p>{t(lang, "papersEmptyText")}</p>
         </div>
       )}
-      {rows && rows.length > 0 && (
-        <ul className="tray papers">
-          {rows.map((r) => {
-            const st = paperStatus(r.status);
-            const title = r.title || t(lang, "yourPaper");
-            return (
-              <li className="item" key={r.id}>
-                {confirm === r.id ? (
-                  <div className="confirm" role="group" aria-label={t(lang, "deleteAsk")}>
-                    <b>{t(lang, "deleteAsk")}</b>
-                    <small dir="auto">{title}</small>
-                    <div className="row2">
-                      <button className="btn soft" onClick={() => setConfirm(null)}>
-                        {t(lang, "deleteKeep")}
-                      </button>
-                      <button className="btn danger" onClick={() => { setConfirm(null); onDelete(r.id); }}>
-                        <Icon name="trash" />
-                        {t(lang, "deleteYes")}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <button className="open" onClick={() => onOpen(r.id)}>
-                      <div className="th">{r.thumbnail ? <img src={r.thumbnail} alt="" /> : <Icon name="doc" />}</div>
-                      <div className="meta">
-                        <b dir="auto">{title}</b>
-                        <small>
-                          <bdi>{paperDate(lang, r.created_at)}</bdi> · <bdi>{languageLabel(r.language)}</bdi>
-                        </small>
-                        <span className={"pstat " + st.cls}>{t(lang, st.key)}</span>
+      {groups.map((g) => (
+        <section key={g.key} className="pgroup" aria-label={t(lang, g.key)}>
+          <h2 className="group">{t(lang, g.key)}</h2>
+          <ul>
+            {g.rows.map((r) => {
+              const title = r.title || t(lang, "yourPaper");
+              return (
+                <li key={r.id}>
+                  {confirm === r.id ? (
+                    <div className="paper-card confirm" role="group" aria-label={t(lang, "deleteAsk")}>
+                      <b>{t(lang, "deleteAsk")}</b>
+                      <small dir="auto">{title}</small>
+                      <div className="pair">
+                        <button className="btn soft" onClick={() => setConfirm(null)}>
+                          {t(lang, "deleteKeep")}
+                        </button>
+                        <button className="btn danger" onClick={() => { setConfirm(null); onDelete(r.id); }}>
+                          <Icon name="trash" />
+                          {t(lang, "deleteYes")}
+                        </button>
                       </div>
-                    </button>
-                    <button className="round" onClick={() => setConfirm(r.id)} aria-label={`${t(lang, "deletePaper")}: ${title}`}>
-                      <Icon name="trash" />
-                    </button>
-                  </>
-                )}
-              </li>
-            );
-          })}
-        </ul>
+                    </div>
+                  ) : (
+                    <PaperCard lang={lang} row={r} onOpen={onOpen} onDelete={() => setConfirm(r.id)} />
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+      {rows && rows.length > 0 && (
+        <p className="help">
+          <Icon name="lock" />
+          {t(lang, "papersPrivate")}
+        </p>
       )}
+      <div className="foot sticky">
+        <button className="btn" onClick={onNew}>
+          <Icon name="camera" />
+          {t(lang, empty ? "takePhoto" : "newPaper")}
+        </button>
+        <EmergencyLink lang={lang} />
+      </div>
     </div>
   );
 }
-
 
 /* ---------- dev panel + print ---------- */
 export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {

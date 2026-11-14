@@ -70,7 +70,8 @@ function keepNewer(cur: Guide, next: Guide): Guide {
 const fileUrl = (f: File) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
 
 export default function App() {
-  const [lang, setLang] = useState(() => load("er.lang", "en"));
+  // `?lang=ar` opens the app in that language (demo and screenshot links); otherwise the remembered one.
+  const [lang, setLang] = useState(() => cleanLanguage(new URLSearchParams(location.search).get("lang") ?? "") || load("er.lang", "en"));
   const [screen, setScreen] = useState<Screen>("home");
   const [prevScreen, setPrevScreen] = useState<Screen>("home");
   const [guide, setGuide] = useState<Guide | null>(null);
@@ -377,6 +378,12 @@ export default function App() {
       .catch(() => setPapersFailed(true));
   }, []);
 
+  // Home shows the newest paper as "Last paper": the same list call My papers makes, only when there are papers.
+  useEffect(() => {
+    if (screen === "home" && mine.length > 0 && !papers?.some((p) => p.id === mine[0])) loadPapers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, mine.length]);
+
   function openPapers() {
     loadPapers();
     go("papers");
@@ -455,6 +462,7 @@ export default function App() {
       setError({ title: t(langRef.current, "couldNotRead"), detail: "This file is not a photo of a paper. Try another." });
       go("error");
     } else if (parts[0] === "settings") go("settings");
+    else if (parts[0] === "papers") openPapers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -504,9 +512,12 @@ export default function App() {
     onToggleMic: anam.toggleMic,
     onToggleSound: anam.toggleSound,
     onSend: anam.send,
-    dock: dockOn(theme),
+    dock: dockOn(),
     caption: lastSay,
     onTalk: () => go("talk"),
+    state: liveState,
+    // "Talk to your guide" on a step opens the live avatar in the dock, on that step. Only ever on a tap.
+    onStartHere: guide ? () => void anam.start(guide.id, lang, index) : undefined,
   };
 
 
@@ -526,6 +537,8 @@ export default function App() {
             onSample={demo ? (n) => openSample(n) : undefined}
             onPapers={openPapers}
             hasPapers={mine.length > 0}
+            lastPaper={papers?.find((p) => p.id === mine[0]) ?? null}
+            onOpenPaper={(id) => void openPaper(id)}
           />
         )}
         {screen === "check" && checking && (
