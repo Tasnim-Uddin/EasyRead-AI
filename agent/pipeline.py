@@ -247,7 +247,8 @@ DEVICE_LABELS = {
 
 async def label_device_photo(guide: dict, device_photo, image_urls: list[str]):
     """ONE fal edit of the user's own device photo: numbered circles on its parts. Never blocks or fails the guide."""
-    if not device_photo or not os.environ.get("FAL_KEY"):
+    # Off by default: a live check put the numbered circles beside the device, not on its parts. DEVICE_PHOTO_LABELS=1 turns it on.
+    if os.environ.get("DEVICE_PHOTO_LABELS") != "1" or not device_photo or not os.environ.get("FAL_KEY"):
         return
     labels = DEVICE_LABELS.get((guide.get("facts") or {}).get("device_type"))
     if not labels:

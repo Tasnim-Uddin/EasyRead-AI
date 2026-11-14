@@ -16,7 +16,7 @@ def test_stores_labelled_url(monkeypatch):
     async def fake(url, labels, numbered=False):
         seen.update(url=url, labels=labels, numbered=numbered)
         return "https://fal/x.jpg"
-    monkeypatch.setenv("FAL_KEY", "k")
+    monkeypatch.setenv("FAL_KEY", "k"); monkeypatch.setenv("DEVICE_PHOTO_LABELS", "1")
     monkeypatch.setattr(media, "annotate_photo", fake)
     g = _guide()
     asyncio.run(pipeline.label_device_photo(g, PHOTO, ["/api/uploads/a.png", "/api/uploads/dev.png"]))
@@ -29,7 +29,7 @@ def test_stores_labelled_url(monkeypatch):
 def test_error_is_skipped(monkeypatch):
     async def boom(*a, **k):
         raise media.MediaError("down")
-    monkeypatch.setenv("FAL_KEY", "k")
+    monkeypatch.setenv("FAL_KEY", "k"); monkeypatch.setenv("DEVICE_PHOTO_LABELS", "1")
     monkeypatch.setattr(media, "annotate_photo", boom)
     g = _guide()
     asyncio.run(pipeline.label_device_photo(g, PHOTO, ["/u"]))
@@ -43,9 +43,25 @@ def test_not_called_without_photo_key_or_known_device(monkeypatch):
         calls.append(1)
         return "u"
     monkeypatch.setattr(media, "annotate_photo", fake)
-    monkeypatch.setenv("FAL_KEY", "k")
+    monkeypatch.setenv("FAL_KEY", "k"); monkeypatch.setenv("DEVICE_PHOTO_LABELS", "1")
     asyncio.run(pipeline.label_device_photo(_guide(), None, []))
     asyncio.run(pipeline.label_device_photo(_guide("tablets"), PHOTO, ["/u"]))
     monkeypatch.delenv("FAL_KEY")
     asyncio.run(pipeline.label_device_photo(_guide(), PHOTO, ["/u"]))
     assert calls == []
+
+
+def test_off_by_default(monkeypatch):
+    import asyncio
+    from agent import pipeline
+    monkeypatch.setenv("FAL_KEY", "x")
+    monkeypatch.delenv("DEVICE_PHOTO_LABELS", raising=False)
+    called = []
+    import media
+    async def fake(*a, **k):
+        called.append(1)
+        return "u"
+    monkeypatch.setattr(media, "annotate_photo", fake, raising=False)
+    g = {"facts": {"device_type": "inhaler_mdi"}, "source": {}}
+    asyncio.run(pipeline.label_device_photo(g, (b"x", "image/png"), []))
+    assert called == []
