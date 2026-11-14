@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Clip, Guide, GuideStatus, Step, ToolLogEntry } from "./types";
-import { LANGUAGES, t } from "./i18n";
+import { LANGUAGES, isFallback, t, tf } from "./i18n";
+import { Counted, Counter, CountThen, T } from "./bidi";
 import { canSpeak, findWorld, isRtl, languageLabel, languageValue, searchLanguages } from "./languages";
 import Icon, { GuideFace } from "./icons";
 import { speak } from "./speech";
@@ -260,7 +261,7 @@ export function EmergencyLink({ lang, warn }: { lang: string; warn?: boolean }) 
   return (
     <a className={"sos" + (warn ? " warn" : "")} href="tel:999">
       <Icon name="alert" style={{ width: 20, height: 20 }} />
-      {t(lang, "emergencyLink")}
+      <T lang={lang} k="emergencyLink" />
     </a>
   );
 }
@@ -305,7 +306,9 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
         </div>
         <p className="help">
-          <a href="tel:999">{t(lang, "emergencyLink")}</a>
+          <a href="tel:999">
+            <T lang={lang} k="emergencyLink" />
+          </a>
         </p>
       </div>
     </div>
@@ -574,7 +577,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
           <div className="fact">
             <div className="k">{t(lang, "youWillLearn")}</div>
             <div className="v">
-              {guide.steps.length} {t(lang, "steps")}
+              <CountThen lang={lang} k="steps" count={guide.steps.length} />
             </div>
           </div>
           {k === "medicine" && f?.dose && (
@@ -613,7 +616,7 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
       )}
 
       {guide.source.is_sample && <p className="safe">{t(lang, "sampleNote")}</p>}
-      <p className="safe">
+      <p className="safe" dir="auto">
         {safetyLines(guide).map((l, i) => (
           <span key={i}>
             {l}{" "}
@@ -697,7 +700,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
           ))}
         </div>
         <div className="of">
-          {index + 1} {t(lang, "of")} {total}
+          <Counter lang={lang} n={index + 1} total={total} />
         </div>
       </div>
       <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
@@ -871,7 +874,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           <Icon name="check" />
         </div>
         <div>
-          <strong>{t(lang, "allDone").replace("{n}", String(guide.steps.length))}</strong>
+          <strong dir={isFallback(lang, "allDone") ? "ltr" : undefined}>{tf(lang, "allDone", { n: guide.steps.length })}</strong>
           {t(lang, "allDoneSub")}
         </div>
       </div>
@@ -1090,7 +1093,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
           ))}
         </div>
         <div className="of">
-          {qi + 1} {t(lang, "of")} {qs.length}
+          <Counter lang={lang} n={qi + 1} total={qs.length} />
         </div>
       </div>
       <EmergencyLink lang={lang} />
@@ -1278,7 +1281,7 @@ export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {
   return (
     <>
       <button className="devtoggle" onClick={() => setOpen(!open)} aria-expanded={open}>
-        {t(lang, "devToggle")} ({log.length})
+        <Counted lang={lang} k="devToggle" count={log.length} />
       </button>
       {open && (
         <div className="devpanel">
@@ -1286,7 +1289,7 @@ export function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: string }) {
             {log.map((e, i) => (
               <li key={i}>
                 <span className="tagd">{e.source}</span>
-                <code>{e.tool}</code>({JSON.stringify(e.args)}) {e.ms} ms
+                <code dir="ltr">{e.tool}</code>({JSON.stringify(e.args)}) <bdi>{e.ms} ms</bdi>
                 {e.say && <div className="say">{e.say}</div>}
               </li>
             ))}
@@ -1310,7 +1313,7 @@ export function PrintSheet({ guide, lang }: { guide: Guide; lang: string }) {
           </li>
         ))}
       </ol>
-      <p>{safetyLines(guide).join(" ")}</p>
+      <p dir="auto">{safetyLines(guide).join(" ")}</p>
       {guide.source.is_sample && <p>{t(lang, "printSample")}</p>}
     </div>
   );
