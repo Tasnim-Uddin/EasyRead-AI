@@ -11,8 +11,8 @@ export default function DevPanel({ log, lang }: { log: ToolLogEntry[]; lang: str
       <ol>
         {log.map((e, i) => (
           <li key={i}>
-            <code>{e.tool}</code>({JSON.stringify(e.args)}) · {e.ms} ms
-            <div className="say">→ {e.say}</div>
+            <span className="tag">{e.source}</span> <code>{e.tool}</code>({JSON.stringify(e.args)}) · {e.ms} ms
+            {e.say && <div className="say">→ {e.say}</div>}
           </li>
         ))}
       </ol>
