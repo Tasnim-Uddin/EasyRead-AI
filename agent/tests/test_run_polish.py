@@ -62,3 +62,13 @@ def test_dose_limit_steps_merge_into_one():
 def test_vague_limit_kept_when_alone():
     out = postprocess.merge_dose_limits([{"text_en": "Do not use it more often than advised.", "kind": "what", "picture_prompt": "x"}])
     assert len(out) == 1
+
+
+def test_drop_know_prefix_on_fact_steps():
+    from agent import postprocess
+    steps = [{"text_en": "Know that the council says you have not paid.", "kind": "what", "picture_prompt": "x"},
+             {"text_en": "Know the overdue instalment is £212.50.", "kind": "what", "picture_prompt": "x"},
+             {"text_en": "Know your rights.", "kind": "how", "picture_prompt": "x"}]
+    out = postprocess.drop_know(steps)
+    assert [s["text_en"] for s in out] == ["The council says you have not paid.",
+                                           "The overdue instalment is £212.50.", "Know your rights."]
