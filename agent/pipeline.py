@@ -1,5 +1,5 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
-import asyncio, copy, json, os, pathlib, datetime as dt, logging
+import asyncio, base64, copy, json, os, pathlib, datetime as dt, logging
 from . import langs, llm, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
@@ -235,6 +235,36 @@ async def illustrate(guide: dict, emit):
         emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
 
 
+DEVICE_LABELS = {
+    "inhaler_mdi": ["cap", "mouthpiece", "canister"],
+    "inhaler_mdi_spacer": ["cap", "mouthpiece", "canister"],
+    "inhaler_dry_powder": ["mouthpiece", "counter"],
+    "cream_ointment": ["cap", "nozzle"],
+    "eye_drops": ["cap", "nozzle"],
+    "nasal_spray": ["cap", "nozzle"],
+}
+
+
+async def label_device_photo(guide: dict, device_photo, image_urls: list[str]):
+    """ONE fal edit of the user's own device photo: numbered circles on its parts. Never blocks or fails the guide."""
+    # Off by default: a live check put the numbered circles beside the device, not on its parts. DEVICE_PHOTO_LABELS=1 turns it on.
+    if os.environ.get("DEVICE_PHOTO_LABELS") != "1" or not device_photo or not os.environ.get("FAL_KEY"):
+        return
+    labels = DEVICE_LABELS.get((guide.get("facts") or {}).get("device_type"))
+    if not labels:
+        return
+    try:
+        from media import annotate_photo  # type: ignore
+        data, mime = device_photo[0], device_photo[1]
+        uri = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+        url = await annotate_photo(uri, labels, numbered=True)
+        guide["source"]["device_photo_url"] = image_urls[-1] if image_urls else None
+        guide["source"]["device_photo_labelled_url"] = url
+        guide["source"]["device_photo_labels"] = labels
+    except Exception as e:
+        log.warning("device photo labels skipped: %s", e)
+
+
 async def write_typed(facts: dict, language: str, dt: str, content: dict) -> list[dict]:
     """letter/bill/form: tuned rewriter with doc_type + content; fall back to the deterministic steps."""
     if dt in ("letter", "bill", "form"):
@@ -299,7 +329,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             await translate_summary(guide, language)
         attach_clips(guide)
         status("illustrating")
-        await illustrate(guide, emit)
+        await asyncio.gather(illustrate(guide, emit), label_device_photo(guide, device_photo, image_urls))
+        store.put(guide)
         status("ready")
     except Exception as e:
         log.exception("pipeline failed")

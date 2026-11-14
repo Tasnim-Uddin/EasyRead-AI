@@ -28,6 +28,9 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
   "domain": "medicine",                        // medicine | money | legal | school | council | other
   "source": { "kind": "prescription|leaflet|letter|other", "image_urls": ["…"], "is_sample": true,
               "documents": [ { "index": 1, "role": "label", "role_source": "client|detected", "image_url": "…" } ] },  // one per uploaded file, same order as image_urls
+  // Optional, only when a device photo was uploaded, FAL_KEY is set and the device type is known (fal edit, best effort, never blocks the guide):
+  //   "device_photo_url": "/api/uploads/…", "device_photo_labelled_url": "https://…" (the photo with numbered circles on its parts, no words),
+  //   "device_photo_labels": ["cap", "mouthpiece", "canister"]  // English part keys, circle 1..n in order; the web shows the legend in the user's language
   "facts": {                                   // extracted from the document; null when not present
     "medicine": "Salbutamol 100 micrograms inhaler",
     "dose": "2 puffs", "frequency": "when needed, up to 4 times a day",

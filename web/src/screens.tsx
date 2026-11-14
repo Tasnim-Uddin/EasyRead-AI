@@ -484,6 +484,35 @@ export function summaryText(g: Guide): string {
   return [f?.medicine ?? f?.title, f?.dose, f?.frequency].filter(Boolean).join(". ") + `. ${g.steps.length} ${t(g.language, "steps")}.`;
 }
 
+function DeviceCard({ guide, lang }: { guide: Guide; lang: string }) {
+  const [original, setOriginal] = useState(false);
+  const src = guide.source;
+  if (!src.device_photo_labelled_url) return null;
+  const orig = src.device_photo_url;
+  const labels = src.device_photo_labels ?? [];
+  const title = t(lang, guide.facts?.device_type?.startsWith("inhaler") ? "yourInhaler" : "yourItem");
+  const showOrig = original && !!orig;
+  return (
+    <div className="card device">
+      <div className="k">{title}</div>
+      <img src={showOrig ? orig! : src.device_photo_labelled_url} alt={`${title}. ${t(lang, "itemCaption")}`} />
+      <p dir="auto">{t(lang, "itemCaption")}</p>
+      {!showOrig && labels.length > 0 && (
+        <ol className="legend" dir="auto">
+          {labels.map((x) => (
+            <li key={x}>{t(lang, "part_" + x)}</li>
+          ))}
+        </ol>
+      )}
+      {orig && (
+        <button className="btn soft small" onClick={() => setOriginal(!original)}>
+          {t(lang, showOrig ? "showLabelled" : "showOriginal")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface SummaryProps {
   guide: Guide;
   lang: string;
@@ -512,6 +541,8 @@ export function Summary({ guide, lang, onLanguage, onSettings, onBack, onStart, 
         <div className="big">{title}</div>
         {subline && <p>{subline}</p>}
       </div>
+
+      <DeviceCard guide={guide} lang={lang} />
 
       {conflicts.length > 0 && (
         <div className="card butter" role="alert">
