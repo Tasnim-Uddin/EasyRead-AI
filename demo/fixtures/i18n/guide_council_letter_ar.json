@@ -1,0 +1,157 @@
+{
+  "id": "g_sample_council_letter_ar",
+  "status": "ready",
+  "language": "ar",
+  "doc_type": "letter",
+  "domain": "council",
+  "source": {
+    "kind": "letter",
+    "image_urls": [],
+    "is_sample": true,
+    "documents": [
+      {
+        "index": 1,
+        "role": "letter",
+        "role_source": "client",
+        "image_url": null
+      }
+    ],
+    "note": "للتجربة فقط. رسالة خيالية من مجلس محلي خيالي. ليست شخصًا أو حالة حقيقية."
+  },
+  "facts": {
+    "medicine": null,
+    "dose": null,
+    "frequency": null,
+    "route": null,
+    "device_type": "unknown",
+    "device_confidence": 0,
+    "warnings": [],
+    "get_help": [],
+    "unreadable": [],
+    "conflicts": []
+  },
+  "content": {
+    "what_this_is": "تقول هذه الرسالة إن فاتورة ضريبة المجلس المحلي الخاصة بك قد تغيرت.",
+    "what_to_do": [
+      "تحقق من المبلغ الجديد في الرسالة.",
+      "ادفع الجزء الأول قبل 1 ديسمبر.",
+      "اتصل بالمجلس المحلي إذا لم تستطع الدفع."
+    ],
+    "by_when": [
+      {
+        "date": "1 ديسمبر 2026",
+        "what": "ادفع الجزء الأول"
+      },
+      {
+        "date": "15 ديسمبر 2026",
+        "what": "أخبر المجلس المحلي إذا كنت لا توافق"
+      }
+    ],
+    "amounts": [
+      {
+        "what": "الفاتورة الشهرية الجديدة",
+        "amount": "£112"
+      },
+      {
+        "what": "الجزء الأول المطلوب دفعه",
+        "amount": "£112"
+      }
+    ]
+  },
+  "safety_lines": [
+    "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. مثلاً من Citizens Advice."
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "text": "تقول هذه الرسالة إن فاتورة ضريبة المجلس المحلي الخاصة بك قد تغيرت.",
+      "text_en": "This letter says your council tax bill has changed.",
+      "kind": "what",
+      "picture_prompt": "a person reading a letter at a table",
+      "image_url": "/fixtures/img/council_step_0.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 1,
+      "text": "تحقق من المبلغ الجديد في الرسالة.",
+      "text_en": "Check the new amount in the letter.",
+      "kind": "how",
+      "picture_prompt": "a person calmly doing one simple task at a desk",
+      "image_url": "/fixtures/img/council_step_1.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 2,
+      "text": "ادفع الجزء الأول قبل 1 ديسمبر.",
+      "text_en": "Pay the first part by 1 December.",
+      "kind": "how",
+      "picture_prompt": "a person calmly doing one simple task at a desk",
+      "image_url": "/fixtures/img/council_step_2.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 3,
+      "text": "اتصل بالمجلس المحلي إذا لم تستطع الدفع.",
+      "text_en": "Call the council if you cannot pay.",
+      "kind": "how",
+      "picture_prompt": "a person calmly doing one simple task at a desk",
+      "image_url": "/fixtures/img/council_step_3.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 4,
+      "text": "قبل 1 ديسمبر 2026: ادفع الجزء الأول",
+      "text_en": "By 1 December 2026: pay the first part",
+      "kind": "when",
+      "picture_prompt": "a calendar page with one day circled",
+      "image_url": "/fixtures/img/council_step_4.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 5,
+      "text": "قبل 15 ديسمبر 2026: أخبر المجلس المحلي إذا كنت لا توافق",
+      "text_en": "By 15 December 2026: tell the council if you disagree",
+      "kind": "when",
+      "picture_prompt": "a calendar page with one day circled",
+      "image_url": "/fixtures/img/council_step_5.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 6,
+      "text": "الفاتورة الشهرية الجديدة: £112",
+      "text_en": "New monthly bill: £112",
+      "kind": "what",
+      "picture_prompt": "a hand holding a few coins",
+      "image_url": "/fixtures/img/council_step_6.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 7,
+      "text": "الجزء الأول المطلوب دفعه: £112",
+      "text_en": "First part to pay: £112",
+      "kind": "what",
+      "picture_prompt": "a hand holding a few coins",
+      "image_url": "/fixtures/img/council_step_7.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 8,
+      "text": "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. مثلاً من Citizens Advice.",
+      "text_en": "Get free advice before you sign or pay. For example, Citizens Advice.",
+      "kind": "get_help",
+      "picture_prompt": "a person on the phone talking to a helper",
+      "image_url": "/fixtures/img/council_step_8.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    }
+  ],
+  "created_at": "2026-11-14T00:00:00+00:00"
+}

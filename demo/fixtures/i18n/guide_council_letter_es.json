@@ -1,0 +1,157 @@
+{
+  "id": "g_sample_council_letter_es",
+  "status": "ready",
+  "language": "es",
+  "doc_type": "letter",
+  "domain": "council",
+  "source": {
+    "kind": "letter",
+    "image_urls": [],
+    "is_sample": true,
+    "documents": [
+      {
+        "index": 1,
+        "role": "letter",
+        "role_source": "client",
+        "image_url": null
+      }
+    ],
+    "note": "SOLO EJEMPLO. Carta ficticia de un ayuntamiento ficticio. No es una persona ni un caso reales."
+  },
+  "facts": {
+    "medicine": null,
+    "dose": null,
+    "frequency": null,
+    "route": null,
+    "device_type": "unknown",
+    "device_confidence": 0,
+    "warnings": [],
+    "get_help": [],
+    "unreadable": [],
+    "conflicts": []
+  },
+  "content": {
+    "what_this_is": "Esta carta dice que ha cambiado tu recibo del impuesto municipal.",
+    "what_to_do": [
+      "Mira el nuevo importe en la carta.",
+      "Paga la primera parte antes del 1 de diciembre.",
+      "Llama al ayuntamiento si no puedes pagar."
+    ],
+    "by_when": [
+      {
+        "date": "1 de diciembre de 2026",
+        "what": "paga la primera parte"
+      },
+      {
+        "date": "15 de diciembre de 2026",
+        "what": "dile al ayuntamiento si no estás de acuerdo"
+      }
+    ],
+    "amounts": [
+      {
+        "what": "Nuevo recibo mensual",
+        "amount": "£112"
+      },
+      {
+        "what": "Primera parte a pagar",
+        "amount": "£112"
+      }
+    ]
+  },
+  "safety_lines": [
+    "Pide consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice."
+  ],
+  "steps": [
+    {
+      "index": 0,
+      "text": "Esta carta dice que ha cambiado tu recibo del impuesto municipal.",
+      "text_en": "This letter says your council tax bill has changed.",
+      "kind": "what",
+      "picture_prompt": "a person reading a letter at a table",
+      "image_url": "/fixtures/img/council_step_0.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 1,
+      "text": "Mira el nuevo importe en la carta.",
+      "text_en": "Check the new amount in the letter.",
+      "kind": "how",
+      "picture_prompt": "a person calmly doing one simple task at a desk",
+      "image_url": "/fixtures/img/council_step_1.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 2,
+      "text": "Paga la primera parte antes del 1 de diciembre.",
+      "text_en": "Pay the first part by 1 December.",
+      "kind": "how",
+      "picture_prompt": "a person calmly doing one simple task at a desk",
+      "image_url": "/fixtures/img/council_step_2.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 3,
+      "text": "Llama al ayuntamiento si no puedes pagar.",
+      "text_en": "Call the council if you cannot pay.",
+      "kind": "how",
+      "picture_prompt": "a person calmly doing one simple task at a desk",
+      "image_url": "/fixtures/img/council_step_3.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 4,
+      "text": "Antes del 1 de diciembre de 2026: paga la primera parte",
+      "text_en": "By 1 December 2026: pay the first part",
+      "kind": "when",
+      "picture_prompt": "a calendar page with one day circled",
+      "image_url": "/fixtures/img/council_step_4.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 5,
+      "text": "Antes del 15 de diciembre de 2026: dile al ayuntamiento si no estás de acuerdo",
+      "text_en": "By 15 December 2026: tell the council if you disagree",
+      "kind": "when",
+      "picture_prompt": "a calendar page with one day circled",
+      "image_url": "/fixtures/img/council_step_5.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 6,
+      "text": "Nuevo recibo mensual: £112",
+      "text_en": "New monthly bill: £112",
+      "kind": "what",
+      "picture_prompt": "a hand holding a few coins",
+      "image_url": "/fixtures/img/council_step_6.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 7,
+      "text": "Primera parte a pagar: £112",
+      "text_en": "First part to pay: £112",
+      "kind": "what",
+      "picture_prompt": "a hand holding a few coins",
+      "image_url": "/fixtures/img/council_step_7.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    },
+    {
+      "index": 8,
+      "text": "Pide consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice.",
+      "text_en": "Get free advice before you sign or pay. For example, Citizens Advice.",
+      "kind": "get_help",
+      "picture_prompt": "a person on the phone talking to a helper",
+      "image_url": "/fixtures/img/council_step_8.jpg",
+      "technique_clip_id": null,
+      "status": "ready"
+    }
+  ],
+  "created_at": "2026-11-14T00:00:00+00:00"
+}
