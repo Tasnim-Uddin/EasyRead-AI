@@ -527,7 +527,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
       </div>
       <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
       <StepPicture step={step} lang={lang} />
-      <div className="step" aria-live="polite">
+      <div className="step" aria-live="polite" dir="auto">
         {step.text}
       </div>
       <div className="actions">
@@ -544,7 +544,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
       </div>
       <div className="guide">
         <GuideFace />
-        <div className="bubble">
+        <div className="bubble" dir="auto">
           <b>{t(lang, "guideSays")}</b>
           {step.say || step.text}
         </div>
@@ -1098,7 +1098,7 @@ export function PrintSheet({ guide, lang }: { guide: Guide; lang: string }) {
           <li key={s.index} className={s.kind === "warning" || s.kind === "get_help" ? "warn" : ""}>
             <b>{s.index + 1}</b>
             {s.image_url && <img src={s.image_url} alt="" />}
-            <span>{s.text}</span>
+            <span dir="auto">{s.text}</span>
           </li>
         ))}
       </ol>
