@@ -1,5 +1,6 @@
 import type { Clip, Guide, Step } from "../types";
 import { t } from "../i18n";
+import { speak } from "../speech";
 
 interface Props {
   guide: Guide;
@@ -8,14 +9,7 @@ interface Props {
   clips: Clip[];
   playClip: boolean;
   onIndex: (i: number) => void;
-}
-
-function speak(text: string, lang: string) {
-  if (!("speechSynthesis" in window)) return;
-  window.speechSynthesis.cancel();
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = lang;
-  window.speechSynthesis.speak(u);
+  onWatch: () => void;
 }
 
 function Picture({ step }: { step: Step }) {
@@ -30,7 +24,7 @@ function Picture({ step }: { step: Step }) {
   );
 }
 
-export default function StepViewer({ guide, index, lang, clips, playClip, onIndex }: Props) {
+export default function StepViewer({ guide, index, lang, clips, playClip, onIndex, onWatch }: Props) {
   const step = guide.steps[index];
   if (!step) return null;
   const total = guide.steps.length;
@@ -56,12 +50,15 @@ export default function StepViewer({ guide, index, lang, clips, playClip, onInde
 
       <Picture step={step} />
       <p className={`steptext kind-${step.kind}`}>{step.text}</p>
-      <button className="btn pill" onClick={() => speak(step.text, lang)}>
+      <button className="btn pill" onClick={() => void speak(step.text, lang)}>
         🔊 {t(lang, "listenAgain")}
       </button>
 
       {step.kind === "how" && (
         <div className="clipbox">
+          <button className="btn pill" onClick={onWatch}>
+            ▶ {t(lang, "watch")}
+          </button>
           {clip ? (
             <video
               key={clip.id + playClip}

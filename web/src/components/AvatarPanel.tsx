@@ -10,6 +10,8 @@ interface Props {
   onQuestion: (q: string) => void;
   onAsk: (e: React.FormEvent) => void;
   answer: string | null;
+  voice: boolean;
+  onVoice: (v: boolean) => void;
   onStart: () => void;
   onStop: () => void;
 }
@@ -26,6 +28,7 @@ export default function AvatarPanel(p: Props) {
         <video id={AVATAR_VIDEO_ID} autoPlay playsInline />
         {p.state !== "live" && (
           <div className="avatar-cover">
+            <div className="face" aria-hidden="true">🙂</div>
             <button className="btn primary big" onClick={p.onStart} disabled={p.state === "connecting"}>
               {p.state === "connecting" ? "…" : `🎙 ${t(p.lang, "talk")}`}
             </button>
@@ -42,6 +45,10 @@ export default function AvatarPanel(p: Props) {
           </button>
         )}
       </div>
+
+      <label className="voice">
+        <input type="checkbox" checked={p.voice} onChange={(e) => p.onVoice(e.target.checked)} /> {t(p.lang, "readAuto")}
+      </label>
 
       {p.caption && (
         <div className="bubble" aria-live="polite">
