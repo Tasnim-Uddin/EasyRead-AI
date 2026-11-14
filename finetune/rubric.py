@@ -89,8 +89,8 @@ def score_doc(doc_type: str, content: dict, steps: list[dict]) -> dict:
         "no_jargon": not any(w in joined for w in JARGON | DOC_JARGON),
         "digits_not_words": not any(re.search(rf"\b{w}\b", joined) for w in NUM_WORDS),
         "dates_amounts_faithful": all(n in joined for n in need),
-        "no_invented_numbers": _nums(" ".join(t for s, t in zip(steps, texts) if s.get("kind") != "get_help")) <= _nums(src),
-        "safety_step": steps[-1].get("kind") == "get_help" if steps else False,
+        "no_invented_numbers": _nums(" ".join(texts)) <= _nums(src),
+        "no_own_safety_step": not any(x.get("kind") == "get_help" for x in steps),  # the app appends the safety line
         "plain_voice": not any(NEVER.search(t) for t in texts),
         "picture_prompts": all(len(s.get("picture_prompt", "").split()) >= 3
                                and not PIC_BAD.search(s.get("picture_prompt", "")) for s in steps),
