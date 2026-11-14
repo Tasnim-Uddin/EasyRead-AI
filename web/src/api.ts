@@ -4,7 +4,11 @@ import type { AskResult, Clip, Guide, ServerEvent } from "./types";
 export const sampleGuide = fixture as unknown as Guide;
 
 async function json<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  if (!res.ok) {
+    // The server sends { error, detail } for upload problems (too many pages, bad file type, ...)
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.detail ?? body?.error ?? `${res.status} ${res.statusText}`);
+  }
   return res.json() as Promise<T>;
 }
 

@@ -32,6 +32,7 @@ const en: Dict = {
   noMedical: "This guide explains your own document. It is not medical advice. Ask your pharmacist or GP.",
   print: "Print",
   devPanel: "Tool calls",
+  tooMany: "You can add up to 8 pages. The extra pages were left out.",
   tellBack: "Tell me back",
   readAuto: "Read aloud automatically",
   eyebrow: "Clear health information, made for you",

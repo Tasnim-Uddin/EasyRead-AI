@@ -30,7 +30,14 @@ export interface Guide {
   id: string;
   status: GuideStatus;
   language: string;
-  source: { kind: string; image_urls: string[]; is_sample: boolean };
+  doc_type?: "how_to" | "letter" | "bill" | "form" | "other"; // missing = how_to
+  domain?: string;
+  source: {
+    kind: string;
+    image_urls: string[];
+    is_sample: boolean;
+    documents?: { index: number; role: string; role_source: string; image_url: string }[];
+  };
   facts: Facts | null;
   steps: Step[];
   created_at: string;
