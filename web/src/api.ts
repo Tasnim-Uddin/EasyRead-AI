@@ -2,6 +2,12 @@ import fixture from "../../demo/fixtures/guide_inhaler.json";
 import council from "../../demo/fixtures/guide_council_letter.json";
 import flatpack from "../../demo/fixtures/guide_flatpack.json";
 import cachedInhaler from "../../demo/fixtures/cached/guide_cached_inhaler.json";
+import inhaler_es from "../../demo/fixtures/i18n/guide_inhaler_es.json";
+import inhaler_ar from "../../demo/fixtures/i18n/guide_inhaler_ar.json";
+import council_es from "../../demo/fixtures/i18n/guide_council_letter_es.json";
+import council_ar from "../../demo/fixtures/i18n/guide_council_letter_ar.json";
+import flatpack_es from "../../demo/fixtures/i18n/guide_flatpack_es.json";
+import flatpack_ar from "../../demo/fixtures/i18n/guide_flatpack_ar.json";
 import { isFallback, t } from "./i18n";
 import type { AskResult, Clip, Guide, ServerEvent } from "./types";
 
@@ -12,6 +18,24 @@ export const SAMPLES: Record<string, Guide> = {
   flatpack: flatpack as unknown as Guide,
   "cached-inhaler": cachedInhaler as unknown as Guide, // saved real run (demo/cache_run.py)
 };
+
+/** Translated copies of the samples (demo/fixtures/i18n), by sample name then language code. */
+const TRANSLATED: Record<string, Record<string, Guide>> = {
+  inhaler: { es: inhaler_es as unknown as Guide, ar: inhaler_ar as unknown as Guide },
+  council: { es: council_es as unknown as Guide, ar: council_ar as unknown as Guide },
+  flatpack: { es: flatpack_es as unknown as Guide, ar: flatpack_ar as unknown as Guide },
+};
+
+/** The sample `name` in `lang`: the translated one if there is one, else the English sample. */
+export function sampleFor(name: string, lang: string): Guide | undefined {
+  return TRANSLATED[name]?.[lang] ?? SAMPLES[name];
+}
+
+/** The same sample as `g` in `lang` (English when it has no translation), or null if `g` is not a known sample. */
+export function sampleVariant(g: Guide, lang: string): Guide | null {
+  const name = Object.keys(SAMPLES).find((n) => [SAMPLES[n], ...Object.values(TRANSLATED[n] ?? {})].some((x) => x.id === g.id));
+  return name ? (sampleFor(name, lang) ?? null) : null;
+}
 
 /** An error from the server: `code` is its `error` field (or "server" / "client"), `message` the English detail. */
 export class ApiError extends Error {

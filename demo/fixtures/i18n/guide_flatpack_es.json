@@ -19,12 +19,12 @@
     "note": "SOLO EJEMPLO. Instrucciones ficticias para una estantería ficticia. No es un producto real."
   },
   "facts": {
-    "title": "Cómo montar tu estantería",
+    "title": "Cómo montar su estantería",
     "source_steps": [
-      "Pon todas las piezas.",
-      "Une los 2 lados a la parte de arriba con 4 tornillos.",
-      "Desliza el panel trasero en la ranura.",
-      "Pon la estantería de pie contra una pared."
+      "Ponga todas las piezas.",
+      "Una los 2 lados a la parte de arriba con 4 tornillos.",
+      "Deslice el panel trasero en la ranura.",
+      "Ponga la estantería de pie contra una pared."
     ],
     "medicine": null,
     "dose": null,
@@ -33,22 +33,22 @@
     "device_type": "unknown",
     "device_confidence": 0,
     "warnings": [
-      "Pide a otra persona que te ayude a levantarla."
+      "Pida a otra persona que le ayude a levantarla."
     ],
     "get_help": [
-      "Si falta una pieza, llama a la tienda."
+      "Si falta una pieza, llame a la tienda."
     ],
     "unreadable": [],
     "conflicts": []
   },
   "content": null,
   "safety_lines": [
-    "Si algo se rompe o parece peligroso, para y pide ayuda."
+    "Si algo se rompe o parece peligroso, pare y pida ayuda."
   ],
   "steps": [
     {
       "index": 0,
-      "text": "Vas a montar una estantería pequeña.",
+      "text": "Va a montar una estantería pequeña.",
       "text_en": "You are building a small bookshelf.",
       "kind": "what",
       "picture_prompt": "a small wooden bookshelf standing against a wall",
@@ -58,7 +58,7 @@
     },
     {
       "index": 1,
-      "text": "Pon todas las piezas en el suelo.",
+      "text": "Ponga todas las piezas en el suelo.",
       "text_en": "Lay out all the parts on the floor.",
       "kind": "how",
       "picture_prompt": "wooden shelf parts and screws laid out on a floor",
@@ -68,7 +68,7 @@
     },
     {
       "index": 2,
-      "text": "Une los 2 lados a la parte de arriba con 4 tornillos.",
+      "text": "Una los 2 lados a la parte de arriba con 4 tornillos.",
       "text_en": "Join the 2 sides to the top with 4 screws.",
       "kind": "how",
       "picture_prompt": "a hand turning a screwdriver to join a wooden side to a top board",
@@ -78,7 +78,7 @@
     },
     {
       "index": 3,
-      "text": "Desliza el panel trasero en la ranura.",
+      "text": "Deslice el panel trasero en la ranura.",
       "text_en": "Slide the back panel into the groove.",
       "kind": "how",
       "picture_prompt": "a thin back panel sliding into a groove in a wooden frame",
@@ -88,7 +88,7 @@
     },
     {
       "index": 4,
-      "text": "Pide a otra persona que te ayude a levantarla.",
+      "text": "Pida a otra persona que le ayude a levantarla.",
       "text_en": "Ask a second person to help you lift it.",
       "kind": "warning",
       "picture_prompt": "two people lifting a wooden shelf together",
@@ -98,7 +98,7 @@
     },
     {
       "index": 5,
-      "text": "Pon la estantería de pie contra una pared.",
+      "text": "Ponga la estantería de pie contra una pared.",
       "text_en": "Stand the shelf up against a wall.",
       "kind": "how",
       "picture_prompt": "a finished bookshelf standing against a wall",
@@ -108,7 +108,7 @@
     },
     {
       "index": 6,
-      "text": "¿Falta una pieza? Llama a la tienda.",
+      "text": "¿Falta una pieza? Llame a la tienda.",
       "text_en": "A part is missing? Call the shop.",
       "kind": "get_help",
       "picture_prompt": "a person on the phone holding a screw",
@@ -118,7 +118,7 @@
     },
     {
       "index": 7,
-      "text": "Si algo se rompe o parece peligroso, para y pide ayuda.",
+      "text": "Si algo se rompe o parece peligroso, pare y pida ayuda.",
       "text_en": "If something breaks or feels unsafe, stop and ask for help.",
       "kind": "get_help",
       "picture_prompt": "a person on the phone talking to a helper",

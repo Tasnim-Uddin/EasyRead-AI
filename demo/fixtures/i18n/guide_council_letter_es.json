@@ -31,20 +31,20 @@
     "conflicts": []
   },
   "content": {
-    "what_this_is": "Esta carta dice que ha cambiado tu recibo del impuesto municipal.",
+    "what_this_is": "Esta carta dice que ha cambiado su recibo del impuesto municipal.",
     "what_to_do": [
-      "Mira el nuevo importe en la carta.",
-      "Paga la primera parte antes del 1 de diciembre.",
-      "Llama al ayuntamiento si no puedes pagar."
+      "Mire el nuevo importe en la carta.",
+      "Pague la primera parte antes del 1 de diciembre.",
+      "Llame al ayuntamiento si no puede pagar."
     ],
     "by_when": [
       {
         "date": "1 de diciembre de 2026",
-        "what": "paga la primera parte"
+        "what": "pague la primera parte"
       },
       {
         "date": "15 de diciembre de 2026",
-        "what": "dile al ayuntamiento si no estás de acuerdo"
+        "what": "dígale al ayuntamiento si no está de acuerdo"
       }
     ],
     "amounts": [
@@ -59,12 +59,12 @@
     ]
   },
   "safety_lines": [
-    "Pide consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice."
+    "Pida consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice."
   ],
   "steps": [
     {
       "index": 0,
-      "text": "Esta carta dice que ha cambiado tu recibo del impuesto municipal.",
+      "text": "Esta carta dice que ha cambiado su recibo del impuesto municipal.",
       "text_en": "This letter says your council tax bill has changed.",
       "kind": "what",
       "picture_prompt": "a person reading a letter at a table",
@@ -74,7 +74,7 @@
     },
     {
       "index": 1,
-      "text": "Mira el nuevo importe en la carta.",
+      "text": "Mire el nuevo importe en la carta.",
       "text_en": "Check the new amount in the letter.",
       "kind": "how",
       "picture_prompt": "a person calmly doing one simple task at a desk",
@@ -84,7 +84,7 @@
     },
     {
       "index": 2,
-      "text": "Paga la primera parte antes del 1 de diciembre.",
+      "text": "Pague la primera parte antes del 1 de diciembre.",
       "text_en": "Pay the first part by 1 December.",
       "kind": "how",
       "picture_prompt": "a person calmly doing one simple task at a desk",
@@ -94,7 +94,7 @@
     },
     {
       "index": 3,
-      "text": "Llama al ayuntamiento si no puedes pagar.",
+      "text": "Llame al ayuntamiento si no puede pagar.",
       "text_en": "Call the council if you cannot pay.",
       "kind": "how",
       "picture_prompt": "a person calmly doing one simple task at a desk",
@@ -104,7 +104,7 @@
     },
     {
       "index": 4,
-      "text": "Antes del 1 de diciembre de 2026: paga la primera parte",
+      "text": "Antes del 1 de diciembre de 2026: pague la primera parte",
       "text_en": "By 1 December 2026: pay the first part",
       "kind": "when",
       "picture_prompt": "a calendar page with one day circled",
@@ -114,7 +114,7 @@
     },
     {
       "index": 5,
-      "text": "Antes del 15 de diciembre de 2026: dile al ayuntamiento si no estás de acuerdo",
+      "text": "Antes del 15 de diciembre de 2026: dígale al ayuntamiento si no está de acuerdo",
       "text_en": "By 15 December 2026: tell the council if you disagree",
       "kind": "when",
       "picture_prompt": "a calendar page with one day circled",
@@ -144,7 +144,7 @@
     },
     {
       "index": 8,
-      "text": "Pide consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice.",
+      "text": "Pida consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice.",
       "text_en": "Get free advice before you sign or pay. For example, Citizens Advice.",
       "kind": "get_help",
       "picture_prompt": "a person on the phone talking to a helper",
