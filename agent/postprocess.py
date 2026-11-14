@@ -220,7 +220,24 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
     return steps
 
 
+KNOW = re.compile(r"^(?:you\s+)?(?:need\s+to\s+)?know\s+(?:that\s+)?", re.I)
+
+
+def drop_know(steps: list[dict]) -> list[dict]:
+    """'Know that the council says...' -> 'The council says...'. The verb-first rule makes the model start fact
+    steps with 'Know'; a plain statement reads better. Only for what/when steps, and only if words remain."""
+    out = []
+    for s in steps:
+        t = s["text_en"]
+        rest = KNOW.sub("", t, count=1) if s["kind"] in ("what", "when") else t
+        if rest != t and len(rest.split()) >= 2:
+            t = rest[0].upper() + rest[1:]
+        out.append({**s, "text_en": t})
+    return out
+
+
 def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None) -> list[dict]:
+    steps = drop_know(steps)
     steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
     steps = merge_dose_limits(steps)
     if doc_type == "how_to" and domain == "medicine":
