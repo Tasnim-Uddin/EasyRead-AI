@@ -205,7 +205,9 @@ export default function App() {
               </button>
               {answer && <p className="answer">{answer}</p>}
             </form>
-            <button className="btn" onClick={() => window.print()}>
+            <button className="btn" onClick={() =>
+                guide.id.startsWith("g_sample") ? window.print() : window.open(`/api/guides/${guide.id}/sheet`, "_blank")
+              }>
               {t(lang, "print")}
             </button>
           </div>
