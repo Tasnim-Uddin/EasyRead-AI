@@ -5,6 +5,7 @@ const PATHS: Record<string, { vb: number; d: string; fill?: boolean }> = {
   camera: { vb: 48, d: "M6 15h8l3-5h14l3 5h8v22H6zM24 19a7 7 0 100 14 7 7 0 000-14z" },
   upload: { vb: 32, d: "M16 22V6M9 12l7-7 7 7M5 27h22" },
   x: { vb: 24, d: "M5 5l14 14M19 5L5 19" },
+  home: { vb: 24, d: "M3 11l9-7 9 7M5 9.5V20h5v-6h4v6h5V9.5" },
   play: { vb: 32, d: "M9 5l18 11L9 27z", fill: true },
   mic: { vb: 32, d: "M11 3h10v17H11zM6 15a10 10 0 0020 0M16 25v4" },
   print: { vb: 32, d: "M9 12V4h14v8M9 23H5V12h22v11h-4M9 19h14v9H9z" },

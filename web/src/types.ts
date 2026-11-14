@@ -42,7 +42,7 @@ export interface Guide {
   id: string;
   status: GuideStatus;
   /** Set when status is failed because the upload is not a paper, or no words could be read. */
-  error_code?: "not_a_document" | "unreadable";
+  error_code?: "not_a_document" | "unreadable" | "ai_timeout" | "image_unreadable" | "demo_mode_no_key";
   language: string;
   doc_type?: "how_to" | "letter" | "bill" | "form" | "other"; // missing = how_to
   domain?: string;

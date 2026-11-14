@@ -151,7 +151,38 @@ export function useAnam(
     }
   }, []);
 
+  /** The guide says exactly this text (e.g. the on-screen check verdict). */
+  const talk = useCallback((text: string) => {
+    try {
+      void clientRef.current?.talk(text);
+    } catch {
+      /* not live */
+    }
+  }, []);
+
+  /** Stop the guide mid-sentence. */
+  const interrupt = useCallback(() => {
+    try {
+      clientRef.current?.interruptPersona();
+    } catch {
+      /* not live */
+    }
+  }, []);
+
+  /** Another sound took the audio (read-aloud, a clip): quiet the guide's video; restore unless the user muted it. */
+  const soundOffRef = useRef(soundOff);
+  soundOffRef.current = soundOff;
+  const quiet = useCallback(
+    (q: boolean) => {
+      const v = document.getElementById(videoId) as HTMLVideoElement | null;
+      if (!v || !clientRef.current) return;
+      if (q) interrupt();
+      v.muted = q || soundOffRef.current;
+    },
+    [videoId, interrupt],
+  );
+
   useEffect(() => () => void stop(), [stop]);
 
-  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send };
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet };
 }

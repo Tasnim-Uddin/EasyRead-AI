@@ -42,7 +42,7 @@ const en: Dict = {
   print: "Print",
   devPanel: "Tool calls",
   tooMany: "You can add up to 8 pages. The extra pages were left out.",
-  tellBack: "Tell me back",
+  tellBack: "Check I've got it",
   readAuto: "Read aloud automatically",
   eyebrow: "Clear health information, made for you",
   heroA: "Turn hard health words into",
@@ -163,7 +163,7 @@ Object.assign(en, {
   notSureMed: "Ask your pharmacist or doctor. For advice, call 111. In an emergency, call 999.",
   savePrint: "Save or print my guide",
   talkGuide: "Talk to your guide",
-  tellBack: "Tell me back",
+  tellBack: "Check I've got it",
   yourGuideTitle: "Your guide",
   startTalk: "Start talking",
   endTalk: "End",
@@ -284,7 +284,7 @@ Object.assign(es, {
   upload: "Subir un archivo",
   ask: "Preguntar",
   tooMany: "Puede añadir hasta 8 páginas. Las demás se quedaron fuera.",
-  tellBack: "Dígamelo",
+  tellBack: "Comprobar que lo entendí",
   readAuto: "Leer en voz alta automáticamente",
   eyebrow: "Información de salud clara, hecha para ti",
   heroA: "Convierta palabras difíciles de salud en",
@@ -458,7 +458,7 @@ Object.assign(ar, {
   upload: "ارفع ملفًا",
   ask: "اسأل",
   tooMany: "يمكنك إضافة حتى 8 صفحات. تم تجاهل الصفحات الزائدة.",
-  tellBack: "أعد عليّ ما فهمت",
+  tellBack: "تحقّق من فهمي",
   readAuto: "اقرأ بصوت عالٍ تلقائيًا",
   eyebrow: "معلومات صحية واضحة، مصممة لك",
   heroA: "حوّل كلمات الصحة الصعبة إلى",
@@ -655,7 +655,7 @@ const ur: Dict = {
   print: "پرنٹ کریں",
   devPanel: "ٹول کالز",
   tooMany: "آپ زیادہ سے زیادہ 8 صفحات شامل کر سکتے ہیں۔ باقی صفحات چھوڑ دیے گئے۔",
-  tellBack: "مجھے واپس بتائیں",
+  tellBack: "جانچیں کہ میں سمجھ گیا",
   readAuto: "خود بخود بلند آواز سے پڑھیں",
   eyebrow: "صحت کی واضح معلومات، آپ کے لیے",
   heroA: "صحت کے مشکل الفاظ کو بدلیں",
@@ -852,7 +852,7 @@ const pl: Dict = {
   print: "Drukuj",
   devPanel: "Wywołania narzędzi",
   tooMany: "Możesz dodać do 8 stron. Pozostałe pominęliśmy.",
-  tellBack: "Powiedz mi to z powrotem",
+  tellBack: "Sprawdź, czy rozumiem",
   readAuto: "Czytaj na głos automatycznie",
   eyebrow: "Jasne informacje o zdrowiu, dla Ciebie",
   heroA: "Zamień trudne słowa o zdrowiu w",
@@ -1161,7 +1161,7 @@ const bn: Dict = {
   notSureMed: "আপনার ফার্মাসিস্ট বা ডাক্তারকে জিজ্ঞাসা করুন। পরামর্শের জন্য ১১১ নম্বরে ফোন করুন। জরুরি হলে ৯৯৯ নম্বরে ফোন করুন।",
   savePrint: "আমার গাইড সেভ বা প্রিন্ট করুন",
   talkGuide: "আপনার গাইডের সঙ্গে কথা বলুন",
-  tellBack: "আমাকে বলে শোনান",
+  tellBack: "বুঝেছি কিনা দেখুন",
   yourGuideTitle: "আপনার গাইড",
   startTalk: "কথা শুরু করুন",
   endTalk: "শেষ",
@@ -1664,7 +1664,7 @@ Object.assign(en, {
   scanHint: "Letter, label or leaflet",
   takePhoto: "Take a photo",
   lastPaper: "Last paper",
-  privateHere: "Your photo stays private, on this phone.",
+  privateHere: "We only use your photo to make your steps. You can delete it any time.",
   talkGuideSub: "Ask a question or see it shown",
   connecting: "Connecting to your guide",
   papersTap: "Tap a paper to open its guide.",
@@ -1685,7 +1685,7 @@ Object.assign(es, {
   scanHint: "Carta, etiqueta o prospecto",
   takePhoto: "Hacer una foto",
   lastPaper: "Último papel",
-  privateHere: "Su foto es privada, en este teléfono.",
+  privateHere: "Solo usamos su foto para hacer sus pasos. Puede borrarla cuando quiera.",
   talkGuideSub: "Haga una pregunta o véalo",
   connecting: "Conectando con su guía",
   papersTap: "Toque un papel para abrir su guía.",
@@ -1706,7 +1706,7 @@ Object.assign(ar, {
   scanHint: "رسالة أو ملصق أو نشرة",
   takePhoto: "التقط صورة",
   lastPaper: "آخر ورقة",
-  privateHere: "صورتك تبقى خاصة، على هذا الهاتف.",
+  privateHere: "نستخدم صورتك فقط لإعداد خطواتك. يمكنك حذفها في أي وقت.",
   talkGuideSub: "اسأل سؤالًا أو شاهد الشرح",
   connecting: "نتصل بدليلك",
   papersTap: "اضغط على ورقة لفتح دليلها.",
@@ -1727,7 +1727,7 @@ Object.assign(ur, {
   scanHint: "خط، لیبل یا پرچہ",
   takePhoto: "تصویر لیں",
   lastPaper: "آخری کاغذ",
-  privateHere: "آپ کی تصویر نجی رہتی ہے، اسی فون پر۔",
+  privateHere: "ہم آپ کی تصویر صرف آپ کے مراحل بنانے کے لیے استعمال کرتے ہیں۔ آپ اسے کسی بھی وقت حذف کر سکتے ہیں۔",
   talkGuideSub: "سوال پوچھیں یا دیکھ کر سمجھیں",
   connecting: "آپ کی گائیڈ سے جڑ رہے ہیں",
   papersTap: "کسی کاغذ پر ٹیپ کر کے اس کی گائیڈ کھولیں۔",
@@ -1748,7 +1748,7 @@ Object.assign(pl, {
   scanHint: "List, etykieta lub ulotka",
   takePhoto: "Zrób zdjęcie",
   lastPaper: "Ostatni papier",
-  privateHere: "Twoje zdjęcie zostaje prywatne, na tym telefonie.",
+  privateHere: "Używamy zdjęcia tylko do przygotowania kroków. Możesz je usunąć w każdej chwili.",
   talkGuideSub: "Zadaj pytanie albo zobacz, jak to zrobić",
   connecting: "Łączymy z przewodnikiem",
   papersTap: "Dotknij papieru, aby otworzyć jego przewodnik.",
@@ -1769,7 +1769,7 @@ Object.assign(bn, {
   scanHint: "চিঠি, লেবেল বা লিফলেট",
   takePhoto: "ছবি তুলুন",
   lastPaper: "শেষ কাগজ",
-  privateHere: "আপনার ছবি গোপন থাকে, এই ফোনেই।",
+  privateHere: "আমরা আপনার ছবি শুধু আপনার ধাপ তৈরিতে ব্যবহার করি। যেকোনো সময় মুছে ফেলতে পারেন।",
   talkGuideSub: "প্রশ্ন করুন বা দেখে নিন",
   connecting: "আপনার গাইডের সাথে যুক্ত হচ্ছে",
   papersTap: "গাইড খুলতে একটি কাগজে চাপুন।",
@@ -1785,6 +1785,20 @@ Object.assign(bn, {
   liveNow: "লাইভ",
   readAnswer: "উত্তর শুনুন",
 });
+
+// v3 guide-led
+Object.assign(en, { errTimeout: "This took too long. Please try again in a minute.", errDemoKey: "This demo cannot read new papers right now. Try a sample.", errImage: "We could not open this picture. Try another photo or a PDF." });
+Object.assign(es, { errTimeout: "Esto tardó demasiado. Inténtelo de nuevo en un minuto.", errDemoKey: "Esta demo no puede leer papeles nuevos ahora. Pruebe un ejemplo.", errImage: "No pudimos abrir esta imagen. Pruebe otra foto o un PDF." });
+Object.assign(ar, { errTimeout: "استغرق هذا وقتًا طويلًا. حاول مرة أخرى بعد دقيقة.", errDemoKey: "لا يمكن لهذا العرض قراءة أوراق جديدة الآن. جرّب مثالًا.", errImage: "تعذّر فتح هذه الصورة. جرّب صورة أخرى أو ملف PDF." });
+Object.assign(ur, { errTimeout: "اس میں بہت وقت لگ گیا۔ ایک منٹ بعد دوبارہ کوشش کریں۔", errDemoKey: "یہ ڈیمو ابھی نئے کاغذ نہیں پڑھ سکتا۔ کوئی نمونہ آزمائیں۔", errImage: "ہم یہ تصویر نہیں کھول سکے۔ دوسری تصویر یا PDF آزمائیں۔" });
+Object.assign(pl, { errTimeout: "To trwało za długo. Spróbuj ponownie za minutę.", errDemoKey: "To demo nie może teraz czytać nowych dokumentów. Wypróbuj przykład.", errImage: "Nie udało się otworzyć tego obrazu. Spróbuj innego zdjęcia lub PDF." });
+Object.assign(bn, { errTimeout: "এতে খুব বেশি সময় লেগেছে। এক মিনিট পরে আবার চেষ্টা করুন।", errDemoKey: "এই ডেমো এখন নতুন কাগজ পড়তে পারে না। একটি নমুনা চেষ্টা করুন।", errImage: "এই ছবিটি খোলা যায়নি। অন্য ছবি বা PDF চেষ্টা করুন।" });
+Object.assign(en, {"startGuide": "Start your guide", "startGuideSub": "Tap once to hear your guide read each step", "hideGuide": "Hide guide", "showGuide": "Show guide", "guideMoved": "Your guide moved to step {n}", "pauseGuide": "Pause guide", "resumeGuide": "Resume guide", "askQ": "Ask a question", "cancel": "Cancel", "home": "Home", "summaryNav": "Summary", "noVideo": "No video for this step", "readingSlow": "This is taking longer than usual.", "retry": "Try again", "serverDown": "We could not reach the server. Check your internet and try again."});
+Object.assign(es, {"startGuide": "Empezar con su guía", "startGuideSub": "Toque una vez para oír cada paso", "hideGuide": "Ocultar guía", "showGuide": "Mostrar guía", "guideMoved": "Su guía pasó al paso {n}", "pauseGuide": "Pausar guía", "resumeGuide": "Seguir", "askQ": "Hacer una pregunta", "cancel": "Cancelar", "home": "Inicio", "summaryNav": "Resumen", "noVideo": "No hay vídeo para este paso", "readingSlow": "Esto tarda más de lo normal.", "retry": "Intentar de nuevo", "serverDown": "No pudimos conectar con el servidor. Revise su internet e inténtelo de nuevo."});
+Object.assign(ar, {"startGuide": "ابدأ مع مرشدك", "startGuideSub": "اضغط مرة لتسمع كل خطوة", "hideGuide": "إخفاء المرشد", "showGuide": "إظهار المرشد", "guideMoved": "انتقل مرشدك إلى الخطوة {n}", "pauseGuide": "إيقاف المرشد مؤقتًا", "resumeGuide": "متابعة", "askQ": "اطرح سؤالًا", "cancel": "إلغاء", "home": "الرئيسية", "summaryNav": "الملخص", "noVideo": "لا يوجد فيديو لهذه الخطوة", "readingSlow": "يستغرق هذا وقتًا أطول من المعتاد.", "retry": "حاول مرة أخرى", "serverDown": "تعذّر الاتصال بالخادم. تحقق من الإنترنت وحاول مرة أخرى."});
+Object.assign(ur, {"startGuide": "اپنا گائیڈ شروع کریں", "startGuideSub": "ہر مرحلہ سننے کے لیے ایک بار ٹیپ کریں", "hideGuide": "گائیڈ چھپائیں", "showGuide": "گائیڈ دکھائیں", "guideMoved": "آپ کا گائیڈ مرحلہ {n} پر چلا گیا", "pauseGuide": "گائیڈ روکیں", "resumeGuide": "جاری رکھیں", "askQ": "سوال پوچھیں", "cancel": "منسوخ کریں", "home": "ہوم", "summaryNav": "خلاصہ", "noVideo": "اس مرحلے کی کوئی ویڈیو نہیں", "readingSlow": "اس میں معمول سے زیادہ وقت لگ رہا ہے۔", "retry": "دوبارہ کوشش کریں", "serverDown": "سرور سے رابطہ نہیں ہو سکا۔ انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔"});
+Object.assign(pl, {"startGuide": "Włącz przewodnika", "startGuideSub": "Dotknij raz, aby słyszeć każdy krok", "hideGuide": "Ukryj przewodnika", "showGuide": "Pokaż przewodnika", "guideMoved": "Przewodnik przeszedł do kroku {n}", "pauseGuide": "Wstrzymaj", "resumeGuide": "Wznów", "askQ": "Zadaj pytanie", "cancel": "Anuluj", "home": "Start", "summaryNav": "Podsumowanie", "noVideo": "Brak filmu do tego kroku", "readingSlow": "To trwa dłużej niż zwykle.", "retry": "Spróbuj ponownie", "serverDown": "Nie udało się połączyć z serwerem. Sprawdź internet i spróbuj ponownie."});
+Object.assign(bn, {"startGuide": "আপনার গাইড শুরু করুন", "startGuideSub": "প্রতিটি ধাপ শুনতে একবার ট্যাপ করুন", "hideGuide": "গাইড লুকান", "showGuide": "গাইড দেখান", "guideMoved": "আপনার গাইড ধাপ {n}-এ গেছে", "pauseGuide": "গাইড থামান", "resumeGuide": "আবার চালান", "askQ": "প্রশ্ন করুন", "cancel": "বাতিল", "home": "হোম", "summaryNav": "সারাংশ", "noVideo": "এই ধাপের কোনো ভিডিও নেই", "readingSlow": "এতে স্বাভাবিকের চেয়ে বেশি সময় লাগছে।", "retry": "আবার চেষ্টা করুন", "serverDown": "সার্ভারে পৌঁছানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।"});
 
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
 

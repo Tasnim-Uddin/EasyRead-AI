@@ -4,7 +4,7 @@ import { LANGUAGES, isFallback, t, tf } from "./i18n";
 import { Counted, Counter, CountThen, T } from "./bidi";
 import { canSpeak, findWorld, isRtl, languageLabel, languageValue, searchLanguages } from "./languages";
 import Icon, { GuideFace } from "./icons";
-import { speak } from "./speech";
+import { claimAudio, releaseAudio, speak } from "./speech";
 import type { AnamState } from "./useAnam";
 import { THEMES, THEME_KEY, type Theme } from "./look";
 
@@ -31,8 +31,16 @@ export interface LiveInfo {
   state?: AnamState;
   /** Start the live avatar right here (in the dock), on the step the user is looking at. Never automatic. */
   onStartHere?: () => void;
+  /** Guide-led: the guide is wanted (default). Hidden = plain read-aloud. */
+  guideOn?: boolean;
+  onHide?: () => void;
+  onShow?: () => void;
+  /** Stop the guide mid-sentence. */
+  onPause?: () => void;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
+/** Home and Summary shortcuts for every title bar. */
+export const NavContext = createContext<{ onHome?: () => void; onSummary?: () => void }>({});
 const useLive = () => {
   const c = useContext(LiveContext);
   return c && c.live ? c : null;
@@ -51,17 +59,18 @@ function GuideDock({ text, lang }: { text: string; lang: string }) {
   const info = useDock();
   if (!info) return null;
   if (!info.live) {
-    // Not live: one calm slim row. It is an offer: tapping it starts the guide right here, never on its own.
+    // Not live: one clear "Start your guide" tap (browsers need a tap before any sound). Never starts on its own.
     const start = info.onStartHere ?? info.onTalk;
     if (!start) return null;
     const st = info.state;
+    const on = info.guideOn !== false;
     const sub =
-      st === "connecting" ? t(lang, "connecting") + "…" : st === "standin" ? t(lang, "talkStandin") : st === "error" ? t(lang, "talkError") : t(lang, "talkGuideSub");
+      st === "connecting" ? t(lang, "connecting") + "…" : st === "standin" ? t(lang, "talkStandin") : st === "error" ? t(lang, "talkError") : on ? t(lang, "startGuideSub") : t(lang, "talkGuideSub");
     return (
-      <button className="dock dock-slim" onClick={start} disabled={st === "connecting"} aria-busy={st === "connecting"}>
+      <button className={"dock dock-slim" + (on ? " dock-start" : "")} onClick={start} disabled={st === "connecting"} aria-busy={st === "connecting"}>
         <GuideFace />
         <span className="dock-txt">
-          <b>{t(lang, "talkGuide")}</b>
+          <b>{t(lang, on ? "startGuide" : "showGuide")}</b>
           <small role={st === "standin" || st === "error" ? "status" : undefined}>{sub}</small>
         </span>
         <span className="dock-go">
@@ -79,9 +88,25 @@ function GuideDock({ text, lang }: { text: string; lang: string }) {
           <b>{t(lang, "guideSays")}</b>
           <span dir="auto">{caption}</span>
         </div>
-        <button className="icon-btn end" onClick={info.onEnd} aria-label={t(lang, "endTalk")}>
-          <Icon name="endCall" />
+        <button className="icon-btn end" onClick={info.onHide ?? info.onEnd} aria-label={t(lang, "hideGuide")} title={t(lang, "hideGuide")}>
+          <Icon name="x" />
         </button>
+      </div>
+      <div className="dock-ctl">
+        {info.onPause && (
+          <button type="button" className="btn quiet small" onClick={info.onPause}>
+            {t(lang, "pauseGuide")}
+          </button>
+        )}
+        <button type="button" className="btn quiet small" onClick={info.onToggleSound} aria-pressed={info.soundOff}>
+          <Icon name="volume" />
+          {t(lang, info.soundOff ? "soundOn" : "soundOff")}
+        </button>
+        {info.onHide && (
+          <button type="button" className="btn quiet small" onClick={info.onHide}>
+            {t(lang, "hideGuide")}
+          </button>
+        )}
       </div>
       <TypeBar lang={lang} onSend={info.onSend}>
         <button type="button" className="icon-btn mic" onClick={info.onToggleMic} aria-pressed={info.micMuted} aria-label={t(lang, info.micMuted ? "unmuteMic" : "muteMic")}>
@@ -354,13 +379,26 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
 
 /** Back on the start side, the title centred, an optional control on the end side (mirrors in RTL). */
 export function TitleBar({ title, lang, onBack, right }: { title: React.ReactNode; lang: string; onBack: () => void; right?: React.ReactNode }) {
+  const nav = useContext(NavContext);
   return (
     <div className="title-top">
       <button className="round" onClick={onBack} aria-label={t(lang, "back2")}>
         <Icon name="back" />
       </button>
       <h1>{title}</h1>
-      <div className="title-end">{right}</div>
+      <div className="title-end">
+        {right}
+        {nav.onSummary && (
+          <button className="round" onClick={nav.onSummary} aria-label={t(lang, "summaryNav")} title={t(lang, "summaryNav")}>
+            <Icon name="list" />
+          </button>
+        )}
+        {nav.onHome && (
+          <button className="round" onClick={nav.onHome} aria-label={t(lang, "home")} title={t(lang, "home")}>
+            <Icon name="home" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -560,8 +598,14 @@ export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onPap
 }
 
 /* ---------- 3. reading ---------- */
-export function Reading({ lang, status }: { lang: string; status: GuideStatus | "uploading" }) {
+export function Reading({ lang, status, onCancel, onRetry }: { lang: string; status: GuideStatus | "uploading"; onCancel?: () => void; onRetry?: () => void }) {
   const stage = status === "uploading" || status === "extracting" ? 0 : status === "writing" ? 1 : 2;
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    const timer = setTimeout(() => setSlow(true), 90000);
+    return () => clearTimeout(timer);
+  }, [status]);
   const rows = ["rowRead", "rowSimple", "rowPictures"];
   return (
     <div className="screen" role="status" aria-live="polite">
@@ -590,6 +634,19 @@ export function Reading({ lang, status }: { lang: string; status: GuideStatus | 
             </div>
           ))}
         </div>
+        {slow && <p role="alert">{t(lang, "readingSlow")}</p>}
+      </div>
+      <div className="foot">
+        {slow && onRetry && (
+          <button className="btn" onClick={onRetry}>
+            {t(lang, "retry")}
+          </button>
+        )}
+        {onCancel && (
+          <button className="btn quiet" onClick={onCancel}>
+            {t(lang, "cancel")}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -876,19 +933,27 @@ interface StepProps {
   onIndex: (i: number) => void;
   onFinish: () => void;
   onShowHow: () => void;
+  moved?: number | null;
+  askOpen?: boolean;
+  onAskOpen?: (open: boolean) => void;
+  onAsk?: (q: string) => void;
+  answer?: string | null;
+  busy?: boolean;
+  onCheck?: () => void;
 }
 export function stepHasHow(guide: Guide, step: Step, clips: Clip[]) {
   const clip = step.technique_clip_id ? clips.find((c) => c.id === step.technique_clip_id) : undefined;
   return !!clip || (kindOf(guide) !== "letter" && kindOf(guide) !== "form" && step.kind === "how");
 }
-export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow }: StepProps) {
+export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow, moved, askOpen, onAskOpen, onAsk, answer, busy, onCheck }: StepProps) {
   const live = useLive();
   const dock = !!useDock();
   const step = guide.steps[index];
   if (!step) return null;
   const total = guide.steps.length;
   const last = index >= total - 1;
-  const listen = canSpeak(lang);
+  // While the guide is live it is the one voice: no separate Listen button.
+  const listen = canSpeak(lang) && !live;
   const how = stepHasHow(guide, step, clips);
   return (
     <div className={"screen step-screen" + (live ? " is-live" : "")}>
@@ -912,6 +977,11 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
           />
         ))}
       </div>
+      {moved != null && (
+        <p className="moved-note" role="status">
+          <span dir={isFallback(lang, "guideMoved") ? "ltr" : undefined}>{tf(lang, "guideMoved", { n: moved })}</span>
+        </p>
+      )}
       <StepPicture step={step} lang={lang} />
       <div className="step" aria-live="polite" dir="auto">
         {step.text}
@@ -931,6 +1001,23 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
             </button>
           )}
         </div>
+      )}
+      {onAskOpen && (
+        <div className="step-more">
+          <button className="btn surface" onClick={() => onAskOpen(true)}>
+            <Icon name="chat" />
+            {t(lang, "askQ")}
+          </button>
+          {onCheck && (
+            <button className="btn quiet" onClick={onCheck}>
+              <Icon name="swap" />
+              {t(lang, "tellBack")}
+            </button>
+          )}
+        </div>
+      )}
+      {askOpen && onAskOpen && onAsk && (
+        <AskSheet lang={lang} live={!!live} answer={answer ?? null} busy={!!busy} onAsk={onAsk} onClose={() => onAskOpen(false)} />
       )}
       {!dock && (
         <div className="guide">
@@ -960,6 +1047,62 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
   );
 }
 
+/** Ask on the step screen: type or speak; the guide (or the document answer) replies, the user stays on the step. */
+function AskSheet({ lang, live, answer, busy, onAsk, onClose }: { lang: string; live: boolean; answer: string | null; busy: boolean; onAsk: (q: string) => void; onClose: () => void }) {
+  const [q, setQ] = useState("");
+  const [sent, setSent] = useState(false);
+  const [listening, setListening] = useState(false);
+  const SR = window as unknown as { SpeechRecognition?: new () => any; webkitSpeechRecognition?: new () => any }; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const Rec = SR.SpeechRecognition ?? SR.webkitSpeechRecognition;
+  const submit = (text: string) => {
+    if (!text.trim()) return;
+    setSent(true);
+    onAsk(text);
+  };
+  function mic() {
+    if (!Rec) return;
+    const r = new Rec();
+    r.lang = findWorld(lang)?.code ?? lang;
+    r.interimResults = false;
+    r.onresult = (e: { results: ArrayLike<ArrayLike<{ transcript: string }>> }) => {
+      const text = e.results[0][0].transcript;
+      setQ(text);
+      submit(text);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    setListening(true);
+    r.start();
+  }
+  return (
+    <div className="sheet-wrap" role="dialog" aria-modal="true" aria-label={t(lang, "askQ")} onClick={onClose}>
+      <div className="ask-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-head">
+          <b>{t(lang, "askQ")}</b>
+          <button className="round" onClick={onClose} aria-label={t(lang, "close")}>
+            <Icon name="x" />
+          </button>
+        </div>
+        <textarea dir="auto" value={q} onChange={(e) => setQ(e.target.value)} rows={2} placeholder={t(lang, "askExample")} />
+        <div className="sheet-actions">
+          {Rec && (
+            <button className="btn quiet" onClick={mic} aria-pressed={listening}>
+              <Icon name="mic" />
+              {listening ? t(lang, "listening") : t(lang, "speak")}
+            </button>
+          )}
+          <button className="btn" onClick={() => submit(q)} disabled={!q.trim() || busy}>
+            <Icon name="send" />
+            {t(lang, "askQ")}
+          </button>
+        </div>
+        {sent && !live && (busy ? <p role="status">…</p> : answer ? <div className="answer" dir="auto" aria-live="polite">{answer}</div> : null)}
+        {sent && live && <p className="sub" role="status">{t(lang, "guideSays")}…</p>}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- 6. show me how ---------- */
 export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide; index: number; lang: string; clips: Clip[]; onBack: () => void }) {
   const step = guide.steps[index];
@@ -971,6 +1114,12 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
   useEffect(() => {
     if (vid.current) vid.current.playbackRate = slow ? 0.5 : 1;
   }, [slow, playing]);
+  // A clip has the floor while it plays: the guide is quieted, and comes back after.
+  useEffect(() => {
+    if (!playing || !clip) return;
+    claimAudio("clip");
+    return () => releaseAudio("clip");
+  }, [playing, clip]);
   if (!step) return null;
   const play = () => {
     setPlaying(true);
@@ -992,11 +1141,12 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
         ) : (
           <Icon name="hand" size={72} />
         )}
-        {!playing && (
+        {!playing && clip && (
           <button className="play" onClick={play} aria-label={t(lang, "playAgain")}>
             <Icon name="play" />
           </button>
         )}
+        {!clip && <p className="no-video" role="status">{t(lang, "noVideo")}</p>}
       </div>
       <div className="cap">{clip?.caption_en ?? step.text}</div>
       {clip?.unchecked ? (
@@ -1345,7 +1495,7 @@ export function buildQuestions(g: Guide, lang = "en"): Question[] {
   return out.slice(0, 3);
 }
 
-export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang: string; onCheck: (answer: string) => void; onClose: () => void }) {
+export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang: string; onCheck: (answer: string, correct: boolean) => void; onClose: () => void }) {
   const qs = useMemo(() => buildQuestions(guide, lang), [guide, lang]);
   const [qi, setQi] = useState(0);
   const [pick, setPick] = useState<number | null>(null);
@@ -1365,10 +1515,8 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
   const right = pick === q.correct;
   return (
     <div className="screen">
+      <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onClose} />
       <div className="prog">
-        <button className="round" onClick={onClose} aria-label={t(lang, "close")}>
-          <Icon name="x" />
-        </button>
         <div className="bars">
           {qs.map((_, i) => (
             <button key={i} className={i <= qi ? "d" : ""} tabIndex={-1} aria-hidden="true" />
@@ -1409,7 +1557,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
             disabled={pick === null}
             onClick={() => {
               setChecked(true);
-              onCheck(q.options[pick!]);
+              onCheck(q.options[pick!], pick === q.correct);
             }}
           >
             {t(lang, "tbCheck")}

@@ -1,21 +1,53 @@
-// Stand-in voice while the Anam avatar is unavailable. Tries the server's ElevenLabs
-// endpoint (POST /api/tts {text, language} -> audio), then falls back to the browser voice.
+// The one audio owner. Anything that makes sound (read-aloud, the live guide, a clip) claims it first,
+// which stops the others. Read-aloud tries the server's ElevenLabs endpoint (POST /api/tts) and falls
+// back to the browser voice. Every speak() gets a token: a late reply after a newer claim never plays.
 import { canSpeak, findWorld, markVoiceUnsupported } from "./languages";
 
 let audio: HTMLAudioElement | null = null;
 let ttsMissing = false;
+let token = 0;
+
+export type AudioOwner = "none" | "tts" | "guide" | "clip";
+let owner: AudioOwner = "none";
+/** Set by the app: quiets (true) or restores (false) the live guide's voice. */
+let guideQuiet: (quiet: boolean) => void = () => {};
+export function setGuideQuiet(fn: (quiet: boolean) => void) {
+  guideQuiet = fn;
+}
 
 /** Voice speed, 0.6 (slow) to 1.2 (quick). Set from the settings screen. */
 export const voiceSettings = { rate: 1 };
 
-export function stopSpeaking() {
+function stopTts() {
+  token += 1; // cancels any read-aloud still fetching
   audio?.pause();
   audio = null;
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
 }
 
+/** Take the audio: stops whatever else is playing. */
+export function claimAudio(who: AudioOwner) {
+  if (who !== "tts") stopTts();
+  if (who === "guide") guideQuiet(false);
+  else if (who !== "none") guideQuiet(true);
+  owner = who;
+}
+/** Give the audio back (a clip ended): the guide may speak again. */
+export function releaseAudio(who: AudioOwner) {
+  if (owner !== who) return;
+  owner = "none";
+  if (who === "clip") guideQuiet(false);
+}
+export const audioOwner = () => owner;
+
+export function stopSpeaking() {
+  stopTts();
+  if (owner === "tts") owner = "none";
+}
+
 function browserVoice(text: string, lang: string) {
   if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = findWorld(lang)?.code ?? lang;
   u.rate = voiceSettings.rate;
@@ -23,9 +55,11 @@ function browserVoice(text: string, lang: string) {
 }
 
 export async function speak(text: string, lang: string): Promise<void> {
-  stopSpeaking();
+  stopTts();
+  const mine = token;
   if (!text) return;
   if (!canSpeak(lang)) return; // never read foreign text with an English voice
+  claimAudio("tts");
   if (!ttsMissing) {
     try {
       const res = await fetch("/api/tts", {
@@ -33,22 +67,29 @@ export async function speak(text: string, lang: string): Promise<void> {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text, language: lang }),
       });
+      if (mine !== token) return; // stopped or replaced while fetching
       if (res.ok && (res.headers.get("content-type") ?? "").startsWith("audio")) {
-        audio = new Audio(URL.createObjectURL(await res.blob()));
-        audio.playbackRate = voiceSettings.rate;
-        await audio.play();
-        return;
-      }
-      if (res.status === 422) {
-        // The server has no voice for this language: use a matching browser voice, or stay silent.
+        const blob = await res.blob();
+        if (mine !== token) return;
+        const a = new Audio(URL.createObjectURL(blob));
+        a.playbackRate = voiceSettings.rate;
+        audio = a;
+        try {
+          await a.play();
+          return;
+        } catch {
+          if (mine !== token) return;
+          audio = null; // autoplay blocked: use the browser voice below
+        }
+      } else if (res.status === 422) {
         markVoiceUnsupported(lang);
         if (canSpeak(lang)) browserVoice(text, lang);
         return;
-      }
-      if (res.status === 404 || res.status === 405) ttsMissing = true; // endpoint not built yet
+      } else if (res.status === 404 || res.status === 405) ttsMissing = true;
     } catch {
-      /* server unreachable: use the browser voice */
+      if (mine !== token) return;
     }
   }
+  if (mine !== token) return;
   browserVoice(text, lang);
 }
