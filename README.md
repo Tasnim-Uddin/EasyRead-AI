@@ -37,7 +37,7 @@ Three sample guides are built in and work offline: an inhaler (`demo/fixtures/gu
 
 ## Screenshots
 
-_To be added before submission._ The app screens are: home, photo check, file tray, reading, summary, step, technique clip, ask, talk to the guide, tell me back, error and settings. Early Figma Make frames are in `design/`.
+_To be added before submission._ The app screens are: home, photo check, file tray, reading, summary, step, technique clip, ask, talk to the guide, tell me back, error and settings. The approved phone-first design is in Figma: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w. The earlier Figma Make frames in `design/` were replaced by it.
 
 ## How it works
 
@@ -67,7 +67,7 @@ Phone (web/, React)                       Server (agent/, FastAPI)
 | Upload, extraction, steps, pictures, translation, Ask with the 999 check | Working. Needs `ANTHROPIC_API_KEY`; pictures need `FAL_KEY` |
 | Sample guides, all screens, settings, print sheet, dev panel | Working with no keys |
 | ElevenLabs voice | Working with `ELEVENLABS_API_KEY`; browser voice otherwise |
-| Adaption fine-tuned rewriter | Code is wired in and runs once a tuned model id is set. Results below are not filled in yet. The `adaption` package is not in `requirements.txt` |
+| Adaption fine-tuned rewriter | Code is wired in and runs once a tuned model id is set. Results below are not filled in yet.|
 | Anam avatar | Planned for the live demo. The server builds the persona and tools and requests a session token, and the web app has the tool handlers. Without `ANAM_API_KEY` the server returns a mock token and the app shows an illustrated stand-in. A live Anam session is not shown in this repo |
 | Technique clips | Planned. The library index lists draft clips, but none has a video or a human check yet, so the server shows none |
 | Photo annotation (fal image edit) | The function exists in `media/`. The server does not call it yet |
@@ -128,7 +128,7 @@ cd web && npm run build               # type-check and production build
 | Anam | Avatar model `cara-4`, avatar id `071b0286-4cce-4808-bee2-e642f1062de3`, voice and LLM ids from the Anam docs examples; `@anam-ai/js-sdk` | Avatar and client tool calling | `agent/persona.py`, `web/src/useAnam.ts` |
 | ElevenLabs | `eleven_multilingual_v2` | Read-aloud in several languages | `agent/tts.py` |
 | MongoDB Atlas | `pymongo` | Optional guide storage | `agent/store.py` |
-| Figma Make | File linked in `design/README.md` | App design | `design/` |
+| Figma | File `tNc9gbdjtkrXMAgsvRT30w` (earlier drafts: Figma Make, `design/`) | App design | `design/` |
 | Libraries | FastAPI, uvicorn, httpx, pypdf, React 18, Vite, TypeScript | App | `requirements.txt`, `web/package.json` |
 
 Datasets: none from outside. The Easy Read training and evaluation sets are built in this repo (`finetune/build_dataset.py`, `finetune/seeds.py`) from fictional medicine and document fact sets, drafted with Claude and filtered by the rubric. No real patient data. Held-out seeds are never used for training. Sample papers and pictures in `demo/` and `media/samples/` are fictional or generated.
@@ -158,7 +158,7 @@ Results: _to be filled in after the fine-tune run (dataset size, win rate, Adapt
 - Track 03 main prize: a paper becomes a guide with pictures, a voice and answers.
 - fal: step pictures in one style from `fal-ai/flux/dev`. Image edit and image-to-video are in `media/` for annotation and the technique library, but are not in the live flow yet (see the status table).
 - Anam: an avatar with client tools (`show_step`, `next_step`, `previous_step`, `play_technique`, `answer_from_document`, `check_understanding`, `set_language`). The status table says what runs without a key.
-- Figma: designed in Figma Make first (`design/`), then built as the web app. Accessibility choices: one step per screen, large type, read-aloud, right-to-left layouts.
+- Figma: designed in Figma first (https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w), then built as the web app. Accessibility choices: one step per screen, large type, read-aloud, right-to-left layouts.
 - Adaption: the Easy Read rewriter, ranked by win rate against the base model (result to be added above).
 
 ## Team
