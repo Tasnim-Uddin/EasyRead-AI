@@ -11,7 +11,7 @@ import httpx
 MODELS = {
     "step_picture": "fal-ai/flux/dev",            # ~$0.025/image, same quality as flux-pro 1.1 in our test
     "annotate": "fal-ai/flux-kontext/dev",        # instruction-based image edit
-    "clip": "fal-ai/kling-video/v2.1/standard/image-to-video",  # offline library building only
+    "clip": "fal-ai/kling-video/v2.5-turbo/standard/image-to-video",  # offline library building only, ~$0.21 per 5 s clip
 }
 
 # Approved palette: cream #FFF6E9 background, ink #3A2A20 outlines, orange #FF9B3D accent, sage #C9E2D2 and butter #FFE49A fills.

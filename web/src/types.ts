@@ -67,6 +67,8 @@ export interface Clip {
   checked_by?: string;
   checked_against?: string;
   checked_at?: string;
+  /** Set by the server only in demo mode (SHOW_UNCHECKED_CLIPS=1): the clip has no human sign-off. */
+  unchecked?: boolean;
 }
 
 export type Escalate = "none" | "pharmacist" | "111" | "999";

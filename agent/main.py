@@ -46,6 +46,9 @@ store = Store()
 UPLOADS = pathlib.Path(os.environ.get("UPLOAD_DIR", tempfile.gettempdir())) / "easyread_uploads"
 UPLOADS.mkdir(parents=True, exist_ok=True)
 app.mount("/api/uploads", StaticFiles(directory=UPLOADS), name="uploads")
+_CLIPS = pathlib.Path(__file__).resolve().parents[1] / "library" / "clips"
+if _CLIPS.is_dir():
+    app.mount("/api/library/clips", StaticFiles(directory=_CLIPS), name="library_clips")
 _tasks: set = set()
 
 FIXTURES = pathlib.Path(__file__).resolve().parents[1] / "demo" / "fixtures"

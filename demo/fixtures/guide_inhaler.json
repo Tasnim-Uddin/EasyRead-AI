@@ -70,7 +70,7 @@
       "kind": "how",
       "picture_prompt": "portrait of a person with puffed round cheeks and tightly closed mouth, eyes closed, one hand pinching nothing, holding their breath, a small clock with a shaded sector at the top corner, no inhaler",
       "image_url": "/fixtures/img/step_4.png",
-      "technique_clip_id": null,
+      "technique_clip_id": "inhaler_mdi_hold",
       "status": "ready"
     },
     {

@@ -781,7 +781,12 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
         )}
       </div>
       <div className="cap">{clip?.caption_en ?? step.text}</div>
-      {clip ? (
+      {clip?.unchecked ? (
+        <div className="check butter">
+          <Icon name="alert" />
+          {t(lang, "clipUnchecked")}
+        </div>
+      ) : clip ? (
         <div className="check">
           <Icon name="check" />
           {(clip.checked_against ?? "").includes("nhs.uk") ? t(lang, "clipNhs") : t(lang, "clipChecked")}
