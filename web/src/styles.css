@@ -340,3 +340,9 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
 .card, .card .big, .card p, .qtitle, .ttl, .cap, .choice, .bubble, .answer, .chip, .conflict { overflow-wrap: anywhere; min-width: 0; }
 .chip:disabled { opacity: .5; cursor: not-allowed; }
 .chip:focus-visible, .choice:focus-visible, .round:focus-visible { outline: 0.25rem solid var(--sage-ink); outline-offset: 0.1875rem; }
+
+/* type to the avatar (talk screen) */
+.typebar { display: flex; gap: 0.5rem; padding: 0.75rem 1.5rem 0; }
+.typebar input { flex: 1; min-height: var(--tap); border-radius: var(--r-sm); border: 2px solid var(--cream-deep); padding: 0 0.875rem; font: inherit; background: var(--white); color: var(--ink); }
+.typebar input:focus-visible { outline: 3px solid var(--sun-deep); outline-offset: 2px; }
+.typebar .btn { width: auto; min-height: var(--tap); padding: 0 1.25rem; }
