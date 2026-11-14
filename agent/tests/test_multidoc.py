@@ -1,7 +1,7 @@
 """Multi-file guides and document types. Every model call is mocked: nothing here touches the network."""
 import json, pathlib, time
 import pytest
-from agent import docs, doctypes
+from agent import docs, doctypes, pipeline
 
 JPEG = b"\xff\xd8\xff\xe0" + b"0" * 50
 PNG = b"\x89PNG\r\n\x1a\n" + b"0" * 50
@@ -287,3 +287,45 @@ def test_count_pages_pypdf_and_fallback(monkeypatch):
     fake.PdfReader = lambda f: types.SimpleNamespace(pages=[0] * 7)
     monkeypatch.setitem(sys.modules, "pypdf", fake)
     assert docs.count_pages(pdf(3), "application/pdf") == 7
+
+
+def test_letter_uses_tuned_rewriter_with_doc_type_and_content(mocked, monkeypatch):
+    seen = {}
+
+    async def tuned(facts, language="en", doc_type="how_to", content=None):
+        seen.update(doc_type=doc_type, content=content)
+        return [{"text_en": "This letter is about your council tax.", "kind": "what", "picture_prompt": "a letter"}]
+
+    monkeypatch.setattr(pipeline, "write_easy_read", tuned)
+    mocked["raw"] = LETTER
+    g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
+    assert g["status"] == "ready" and seen["doc_type"] == "letter" and seen["content"] == g["content"]
+    assert g["steps"][0]["text_en"] == "This letter is about your council tax."
+    assert g["steps"][-1]["kind"] == "get_help"
+
+
+def test_form_falls_back_when_rewriter_fails(mocked, monkeypatch):
+    async def boom(*a, **k):
+        raise ImportError("finetune missing")
+
+    monkeypatch.setattr(pipeline, "write_easy_read", boom)
+    mocked["raw"] = FORM
+    g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
+    assert g["status"] == "ready" and len(g["steps"]) >= len(FORM["fields"])
+
+
+def test_rewriter_wrapper_passes_args_only_for_typed_docs(monkeypatch):
+    import asyncio, sys, types
+    from agent import rewriter
+    calls = []
+    mod = types.ModuleType("finetune")
+
+    async def ft(*a):
+        calls.append(a)
+        return []
+
+    mod.write_easy_read = ft
+    monkeypatch.setitem(sys.modules, "finetune", mod)
+    asyncio.run(rewriter.write_easy_read({"x": 1}, "en"))
+    asyncio.run(rewriter.write_easy_read({"x": 1}, "en", "bill", {"amounts": []}))
+    assert calls[0] == ({"x": 1}, "en") and calls[1] == ({"x": 1}, "en", "bill", {"amounts": []})
