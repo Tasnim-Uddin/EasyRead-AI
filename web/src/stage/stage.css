@@ -204,3 +204,8 @@
 button.gs-callout { border: 0; text-align: start; cursor: pointer; font: inherit; color: var(--ink); }
 .gs-conflict { flex: 1; display: flex; flex-direction: column; }
 .gs-conflict .x-conflict { margin-top: 0; }
+.gs-conflict { position: relative; }
+.gs-conflict-av { position: relative; height: 0; z-index: 3; }
+.gs-conflict-av .gs-av-slot.circle { top: 0.75rem; inset-inline-end: 0.75rem; width: 4.25rem; height: 4.25rem; }
+.gs-conflict .x-conflict h2 { padding-inline-end: 4.75rem; }
+.gs-conflict .x-row .btn { flex: 1 1 0; width: auto; min-width: 0; }

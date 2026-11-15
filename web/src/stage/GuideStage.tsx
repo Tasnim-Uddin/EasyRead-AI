@@ -701,6 +701,13 @@ export function GuideStage(p: GuideStageProps) {
 
   const conflictView = conflictOpen && (s.phase === "step" || readMode) && s.phase !== "finish" && (
     <div className="gs-conflict">
+      {!readMode && (
+        <div className="gs-conflict-av">
+          <button type="button" className="gs-av-slot circle" data-avatar-slot="gs" data-shape="circle" onClick={() => setSheet("controls")} aria-label={t(lang, "gs_openControls")}>
+            {!live && <img src="/guide-face.jpg" alt="" />}
+          </button>
+        </div>
+      )}
       <ConflictCard
         guide={guide}
         lang={lang}
