@@ -28,8 +28,6 @@ import {
   PrintSheet,
   Reading,
   Settings,
-  Summary,
-  summaryText,
   TalkScreen,
   TellBack,
   Tray,
@@ -42,16 +40,21 @@ import { CropScreen, type Cropped } from "./camera/Crop";
 import { QualityScreen } from "./camera/Quality";
 import { AddPaperSheet } from "./camera/AddPaper";
 import type { Quad } from "./camera/detect";
+import { backAction, canGoBack, createHistory, moveTo, previous, push as pushScreen, replace as replaceScreen, type ScreenHistory } from "./nav/history";
+import { resumeTarget } from "./nav/resume";
+import { getProgress } from "./extras/guides";
+import "./nav/strings";
 
 /** The Q&A could not answer (server error): a plain line in the user's language, never advice. */
 let fallbackLang = "en";
 const safeFallback = () => t(fallbackLang, "gs_qaFailed");
 /** The guide has this long to join before the steps open in Read mode instead (Figma 19a). */
 
-type Screen = "home" | "camera" | "check" | "quality" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers" | Extra;
+// "done" is the "You did it" page after the last step: its own screen, so Back from Save or share lands on it.
+type Screen = "home" | "camera" | "check" | "quality" | "tray" | "reading" | "step" | "done" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers" | Extra;
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 /** Screens where the live guide may keep running. Anywhere else ends the session. */
-const GUIDE_FLOW = new Set<Screen>(["step", "clip", "ask", "talk", "tellback"]);
+const GUIDE_FLOW = new Set<Screen>(["step", "done", "clip", "ask", "talk", "tellback"]);
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -88,7 +91,9 @@ export default function App() {
   // `?lang=ar` opens the app in that language (demo and screenshot links); otherwise the remembered one.
   const [lang, setLang] = useState(() => cleanLanguage(new URLSearchParams(location.search).get("lang") ?? "") || load("er.lang", "en"));
   const [screen, setScreen] = useState<Screen>(() => (needsWelcome() ? "welcome" : "home"));
-  const [prevScreen, setPrevScreen] = useState<Screen>("home");
+  // The screens the user went through (nav/history.ts), mirrored into the browser's history so every Back agrees.
+  const [hist, setHist] = useState<ScreenHistory<Screen>>(() => createHistory(screen));
+  const histRef = useRef(hist);
   const [guide, setGuide] = useState<Guide | null>(null);
   const [index, setIndex] = useState(0);
   const [clips, setClips] = useState<Clip[]>([]);
@@ -151,15 +156,22 @@ export default function App() {
 
   const screenRef = useRef<Screen>("home");
   screenRef.current = screen;
-  // Each screen change is a browser history entry, so the phone's Back button moves within the app.
+  const setHistory = useCallback((h: ScreenHistory<Screen>) => {
+    histRef.current = h;
+    setHist(h);
+  }, []);
+  // Each screen change is a browser history entry (state = screen + depth in the stack), so the phone's Back
+  // button, the Android back gesture and the app's back arrow all move through the same stack.
   const go = useCallback((s: Screen, replace = false) => {
     stopSpeaking();
-    if (s !== "step") setAskOpen(false);
+    if (s !== "step" && s !== "done") setAskOpen(false);
     if (s !== screenRef.current) {
+      const h = replace ? replaceScreen(histRef.current, s) : pushScreen(histRef.current, s);
+      setHistory(h);
       try {
         // Same URL, screen kept in history state: writing the hash would fire hashchange, which reloads (main.tsx).
-        if (replace) history.replaceState({ screen: s }, "");
-        else history.pushState({ screen: s }, "");
+        if (replace) history.replaceState({ screen: s, depth: h.at }, "");
+        else history.pushState({ screen: s, depth: h.at }, "");
       } catch {
         /* history blocked: still change screen */
       }
@@ -167,10 +179,31 @@ export default function App() {
     screenRef.current = s;
     setScreen(s);
     window.scrollTo(0, 0);
-  }, []);
+  }, [setHistory]);
+  /** The back arrow: the previous screen in the stack (the browser's Back does the same), or Home when nothing is behind. */
+  const back = useCallback(() => {
+    const a = backAction(histRef.current, "home" as Screen);
+    if (a.kind === "pop") {
+      try {
+        window.history.back(); // popstate below moves the stack and the screen
+        return;
+      } catch {
+        /* history blocked: fall through */
+      }
+    }
+    go("home", true);
+  }, [go]);
   useEffect(() => {
+    try {
+      // The entry the app opened on is depth 0 (only while nothing has been pushed yet: StrictMode runs this twice).
+      if (histRef.current.at === 0) history.replaceState({ screen: screenRef.current, depth: 0 }, "");
+    } catch {
+      /* history blocked */
+    }
     const onPop = (e: PopStateEvent) => {
-      const s = (e.state as { screen?: Screen } | null)?.screen ?? "home";
+      const st = (e.state as { screen?: Screen; depth?: number } | null) ?? {};
+      const s = st.screen ?? "home";
+      setHistory(moveTo(histRef.current, st.depth ?? 0, s));
       stopSpeaking();
       setAskOpen(false);
       screenRef.current = s;
@@ -178,13 +211,13 @@ export default function App() {
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [setHistory]);
   useEffect(() => save("er.guideOn", guideOn), [guideOn]);
   // Browser Back/Forward can land on a screen whose data is gone (a checked photo, a deleted guide): never a blank page.
   useEffect(() => {
     if (screen === "check" && !checking) go(items.length ? "tray" : "home", true);
     else if (screen === "quality" && !pendingQuality) go(checking ? "check" : items.length ? "tray" : "home", true);
-    else if (!guide && ["summary", "step", "clip", "ask", "talk", "tellback", "share"].includes(screen)) go("home", true);
+    else if (!guide && ["step", "done", "clip", "ask", "talk", "tellback", "share"].includes(screen)) go("home", true);
     else if (screen === "tray" && items.length === 0) go("home", true);
     else if (screen === "reading" && !guide && !uploading) go(items.length ? "tray" : "home", true);
   }, [screen, checking, pendingQuality, guide, items.length, uploading, go]);
@@ -202,8 +235,9 @@ export default function App() {
   // v4 extras: remember the step reached (My guides "Continue"), the guide's type and own photo.
   useEffect(() => extrasOnGuide(guide), [guide?.id, guide?.status]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
+    // Opening the guide again from My guides resumes here (nav/resume.ts); finished guides open on "You did it".
     if (guide && screen === "step") saveProgress(guide.id, index, guide.steps.length);
-    if (guide && screen === "tellback") saveProgress(guide.id, guide.steps.length - 1, guide.steps.length, true);
+    if (guide && (screen === "done" || screen === "tellback")) saveProgress(guide.id, guide.steps.length - 1, guide.steps.length, true);
   }, [guide?.id, index, screen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => save("er.rate", rate), [rate]);
   useEffect(() => save("er.voice", voice), [voice]);
@@ -302,7 +336,7 @@ export default function App() {
   const handlers = useMemo<Record<string, ToolHandler>>(() => {
     const stepSay = (i: number) => {
       const s = guideRef.current?.steps[i];
-      return s ? `Showing step ${i + 1}. ${s.text}` : "There is no such step.";
+      return s ? tf(langRef.current, "nav_showingStep", { n: i + 1, text: s.text }) : t(langRef.current, "nav_noSuchStep");
     };
     const g = () => guideRef.current;
     const server = async (name: string, args: Record<string, unknown>) => {
@@ -326,8 +360,8 @@ export default function App() {
     return {
       show_step: ({ index: i }) => (offSteps() ? OFF : guideMove(Number(i))),
       next_step: () =>
-        offSteps() ? OFF : indexRef.current >= (g()?.steps.length ?? 1) - 1 ? "That was the last step." : guideMove(indexRef.current + 1),
-      previous_step: () => (offSteps() ? OFF : indexRef.current <= 0 ? "This is the first step." : guideMove(indexRef.current - 1)),
+        offSteps() ? OFF : indexRef.current >= (g()?.steps.length ?? 1) - 1 ? t(langRef.current, "nav_lastStep") : guideMove(indexRef.current + 1),
+      previous_step: () => (offSteps() ? OFF : indexRef.current <= 0 ? t(langRef.current, "nav_firstStep") : guideMove(indexRef.current - 1)),
       play_technique: ({ step_index }) => {
         if (offSteps()) return OFF;
         const i = goto(Number(step_index));
@@ -335,8 +369,8 @@ export default function App() {
         const clip = clips.find((c) => c.id === step?.technique_clip_id);
         if (clip) go("clip");
         return clip
-          ? `${clip.unchecked ? "Playing a demo video that a pharmacist has not checked yet." : "Playing the checked video."} ${clip.caption_en}`
-          : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
+          ? `${t(langRef.current, clip.unchecked ? "nav_clipUnchecked" : "nav_clipChecked")} ${clip.caption_en}`
+          : t(langRef.current, "nav_noClip");
       },
       answer_from_document: async ({ question: q }) => {
         if (!g()) return safeFallback();
@@ -363,12 +397,12 @@ export default function App() {
           ? typeof args.correct === "boolean"
             ? t(langRef.current, args.correct ? "tbRight" : "tbWrong")
             : args.answer
-            ? "Thank you. If you are not sure, go back through the steps or ask your pharmacist."
-            : `In your own words, how do you use ${g()!.facts?.medicine ?? "your medicine"}?`
+            ? t(langRef.current, "nav_tbThanks")
+            : t(langRef.current, "nav_tbAsk")
           : server("check_understanding", args),
       set_language: async ({ language }) => {
         const code = languageValue(String(language));
-        if (!cleanLanguage(code)) return "I can't switch to that language yet.";
+        if (!cleanLanguage(code)) return t(langRef.current, "nav_noLang");
         setLang(code);
         anamLangRef.current(code);
         if (g() && isSample(g())) {
@@ -382,7 +416,7 @@ export default function App() {
             setLangBusy(false);
           }
         }
-        return `Switched to ${languageLabel(code)}.`;
+        return tf(code, "nav_switched", { lang: languageLabel(code) });
       },
     };
   }, [clips, goto, go]);
@@ -592,12 +626,6 @@ export default function App() {
     go(items.length ? "tray" : "home", true);
   }
 
-  // Summary back keeps the paper and the guide: back to where the user came from.
-  function leaveSummary() {
-    if (window.history.state?.screen && window.history.length > 1) window.history.back();
-    else go("home");
-  }
-
   // Everything that belongs to one guide, cleared whenever another guide opens.
   function resetGuideState() {
     stoppingRef.current = true;
@@ -677,11 +705,13 @@ export default function App() {
       const g = sample ? api.sampleVariant(sample, langRef.current) ?? sample : await api.getGuide(id);
       resetGuideState();
       setGuide(g);
-      setIndex(at !== undefined ? Math.min(at, Math.max(0, g.steps.length - 1)) : 0);
-      // Not ready yet (still being made, or it failed): the progress screen opens the summary or the error when it can.
-      // v4: a ready guide opens on the guide intro (or the step to continue from); the summary is no longer in the main path.
+      // Never a restart: the step the user left off on, or "You did it" when they finished it (nav/resume.ts).
+      const to = resumeTarget(g.steps.length, getProgress(id), at);
+      setIndex(to.index);
+      // Not ready yet (still being made, or it failed): the progress screen opens the guide or the error when it can.
       setReadMode(!guideOn);
-      go(g.status === "ready" && g.steps.length ? "step" : "reading");
+      setCantConnect(false);
+      go(g.status === "ready" && g.steps.length ? to.screen : "reading");
     } catch (e) {
       if (e instanceof api.ApiError && e.code !== "server") {
         forgetGuide(id);
@@ -711,24 +741,24 @@ export default function App() {
     setDemo(on);
   }
 
-  function openSample(name: string, to: Screen = "summary", at = 0) {
+  function openSample(name: string, to: Screen = "step", at = 0) {
     const g = api.sampleFor(name, langRef.current);
     if (!g) return;
     resetGuideState();
     setGuide(g);
     setIndex(at);
-    go(to);
+    setReadMode(!guideOn);
+    setCantConnect(false);
+    // The old summary page is gone: an old #/sample/x/summary link opens the steps.
+    go((to as string) === "summary" ? "step" : to);
   }
 
   /* ---- hash routes, so each screen can be opened directly (demo and screenshots) ---- */
   useEffect(() => {
     const parts = location.hash.replace(/^#\/?/, "").split("/");
-    if (!parts[0]) {
-      window.history.replaceState({ screen: "home" }, "");
-      return;
-    }
+    if (!parts[0]) return; // the first history entry was set when the app opened (depth 0)
     if (parts[0] === "sample") {
-      const to = (parts[2] as Screen) || "summary";
+      const to = (parts[2] as Screen) || "step";
       openSample(parts[1], to, Number(parts[3] ?? 0));
       if (to === "ask") setAnswer(null);
     } else if (parts[0] === "tray" || parts[0] === "check") {
@@ -770,8 +800,7 @@ export default function App() {
   }
 
   function openSettings() {
-    setPrevScreen(screen === "settings" ? prevScreen : screen);
-    go("settings");
+    go("settings"); // Back returns to the screen it was opened from (the history stack)
   }
 
   function print() {
@@ -853,13 +882,23 @@ export default function App() {
     onPause: anam.interrupt,
   };
   const debug = demo && /[?&]debug=1/.test(location.search);
-  const toHome = () => go("home");
-  const toSummary = guide ? () => go("summary") : undefined;
-
+  const toHome = () => {
+    stoppingRef.current = true;
+    go("home");
+  };
+  // The guide stage's "You did it" page and its steps are one mounted stage: the page is its own history entry.
+  const finishSteps = () => go("done");
+  // "Go through it again": back to the steps entry when it is right behind, so the stack never doubles up.
+  const againSteps = () => {
+    setIndex(0);
+    if (previous(histRef.current) === "step") back();
+    else go("step", true);
+  };
+  const nav = { onHome: screen === "home" ? undefined : toHome, onBack: screen !== "home" && canGoBack(hist) ? back : undefined };
 
   return (
     <LiveContext.Provider value={liveInfo}>
-      <NavContext.Provider value={{ onHome: screen === "home" ? undefined : toHome, onSummary: screen === "summary" || screen === "step" ? undefined : toSummary }}>
+      <NavContext.Provider value={nav}>
       <div className="phone">
         <input ref={cameraRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { checkSource.current = "camera"; onCamera(e.target.files); e.target.value = ""; }} />
         <input ref={uploadRef} hidden multiple type="file" accept="application/pdf,image/*" onChange={(e) => { if (!retakingRef.current) checkSource.current = "upload"; onUpload(e.target.files); e.target.value = ""; }} />
@@ -973,25 +1012,15 @@ export default function App() {
             onHome={() => { setGuide(null); go("home"); }}
           />
         )}
-        {screen === "summary" && guide && (
-          <Summary
-            guide={guide}
-            lang={lang}
-            onLanguage={changeLanguage}
-            onSettings={openSettings}
-            onPapers={openPapers}
-            onBack={leaveSummary}
-            onStart={() => { setIndex(0); setReadMode(true); setCantConnect(false); go("step"); }}
-            onStartGuide={guideOn ? () => { setIndex(0); setReadMode(false); setCantConnect(false); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
-            onListen={() => void speak(summaryText(guide), lang)}
-            onSeePaper={paperImages(guide).length ? () => setPaperOpen(true) : undefined}
-          />
-        )}
-        {screen === "step" && guide && (
+        {(screen === "step" || screen === "done") && guide && (
           <GuideStage
             key={guideSeq}
             guide={guide}
             index={index}
+            finished={screen === "done"}
+            onFinish={finishSteps}
+            onAgain={againSteps}
+            onBack={nav.onBack}
             lang={lang}
             anam={anam}
             live={isLive}
@@ -1010,7 +1039,7 @@ export default function App() {
             onScale={setScale}
           />
         )}
-        {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}
+        {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={back} />}
         {screen === "ask" && guide && (
           <AskScreen
             key={guideSeq}
@@ -1024,7 +1053,7 @@ export default function App() {
             onTalk={() => go("talk")}
             onTellBack={() => { go("tellback"); }}
             onPrint={print}
-            onBack={() => go("step")}
+            onBack={back}
           />
         )}
         {screen === "talk" && guide && (
@@ -1035,7 +1064,7 @@ export default function App() {
             sttMissing={anam.sttMissing}
             caption={lastSay}
             onLanguage={changeLanguage}
-            onBack={() => go("ask")}
+            onBack={back}
             onStart={() => void anam.start(guide.id, lang, index)}
             onStop={() => void anam.stop()}
             micMuted={anam.micMuted}
@@ -1052,8 +1081,8 @@ export default function App() {
             guide={guide}
             lang={lang}
             onCheck={(a, correct) => void runTool("check_understanding", { answer: a, correct })}
-            onClose={() => go("summary")}
-            onBack={() => go("step")}
+            onClose={() => go("done")}
+            onBack={back}
             backLabel={tf(lang, "stepN", { n: index + 1 })}
             onPapers={openPapers}
           />
@@ -1083,7 +1112,7 @@ export default function App() {
             onRate={setRate}
             onVoice={setVoice}
             onLanguage={changeLanguage}
-            onBack={() => go(prevScreen === "settings" ? "home" : prevScreen)}
+            onBack={back}
             demo={demo}
             onDemo={changeDemo}
           />
@@ -1107,7 +1136,7 @@ export default function App() {
           lang={lang}
           guide={guide}
           go={(s, r) => go(s as Screen, r)}
-          back={() => (window.history.state?.screen && window.history.length > 1 ? window.history.back() : go("home"))}
+          back={back}
           onLanguage={changeLanguage}
           onShareGuide={(g) => { if (g.id !== guideRef.current?.id) { resetGuideState(); setGuide(g); } }}
           myCount={mine.length}

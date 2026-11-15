@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { LANGUAGES, t } from "../i18n";
 import { languageLabel, languageValue, searchLanguages } from "../languages";
 import Icon from "../icons";
+import { NavStart } from "../nav/NavStart";
 import type { AnamState } from "../useAnam";
 
 export const AVATAR_VIDEO_ID = "anam-video";
@@ -39,8 +40,8 @@ export interface LiveInfo {
   onAsk?: () => void;
 }
 export const LiveContext = createContext<LiveInfo | null>(null);
-/** Home and Summary shortcuts for every title bar. */
-export const NavContext = createContext<{ onHome?: () => void; onSummary?: () => void }>({});
+/** Home and Back (to the previous screen in the app's history) for every top bar. Undefined = not shown. */
+export const NavContext = createContext<{ onHome?: () => void; onBack?: () => void }>({});
 export const useLive = () => {
   const c = useContext(LiveContext);
   return c && c.live ? c : null;
@@ -146,16 +147,13 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
   const home = onBrand ?? nav.onHome;
   return (
     <div className="top">
+      {/* Home (and Back) always first, in the same corner as on every other screen. */}
+      <NavStart lang={lang} onHome={home} onBack={nav.onBack} />
       <button className="brand" onClick={home} disabled={!home} aria-label={home ? `EasyRead, ${t(lang, "home")}` : undefined}>
         <i />
         EasyRead
       </button>
       <div className="top-right">
-        {home && (
-          <button className="round home-btn" onClick={home} aria-label={t(lang, "home")} title={t(lang, "home")}>
-            <Icon name="home" />
-          </button>
-        )}
         <LangPill lang={lang} onLanguage={onLanguage} />
         {onPapers && (
           <button className="papers-btn" onClick={onPapers}>
@@ -171,29 +169,15 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
   );
 }
 
-/** Back on the start side, the title centred, an optional control on the end side (mirrors in RTL). */
+/** Home then Back on the start side (the same place on every screen), the title centred, optional controls on the
+ *  end side. The whole bar mirrors in RTL. */
 export function TitleBar({ title, lang, onBack, right, backLabel }: { title: React.ReactNode; lang: string; onBack: () => void; right?: React.ReactNode; backLabel?: string }) {
   const nav = useContext(NavContext);
   return (
     <div className="title-top">
-      <button className={"round" + (backLabel ? " back-named" : "")} onClick={onBack} aria-label={backLabel ?? t(lang, "back2")}>
-        <Icon name="back" />
-        {backLabel && <span>{backLabel}</span>}
-      </button>
+      <NavStart lang={lang} onHome={nav.onHome} onBack={onBack} backLabel={backLabel} />
       <h1>{title}</h1>
-      <div className="title-end">
-        {right}
-        {nav.onSummary && (
-          <button className="round" onClick={nav.onSummary} aria-label={t(lang, "summaryNav")} title={t(lang, "summaryNav")}>
-            <Icon name="list" />
-          </button>
-        )}
-        {nav.onHome && (
-          <button className="round" onClick={nav.onHome} aria-label={t(lang, "home")} title={t(lang, "home")}>
-            <Icon name="home" />
-          </button>
-        )}
-      </div>
+      <div className="title-end">{right}</div>
     </div>
   );
 }

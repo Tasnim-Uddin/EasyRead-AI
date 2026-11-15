@@ -16,6 +16,7 @@ import { openRemindMe, openShare } from "../extras/bus";
 import { ConflictCard } from "../extras/ConflictCard";
 import { TextSizeSheet } from "../extras/TextSize";
 import { hasDates } from "../extras/RemindMe";
+import { NavStart } from "../nav/NavStart";
 import "./strings";
 import "./stage.css";
 
@@ -48,6 +49,14 @@ export interface GuideStageProps {
   onReadMode: (on: boolean) => void;
   onTryAgain: () => void;
   onHome: () => void;
+  /** The top bar's back arrow: the previous screen in the app's history (undefined when nothing is behind). */
+  onBack?: () => void;
+  /** The app shows "You did it" (its own screen, so Back from Save or share returns to it). */
+  finished?: boolean;
+  /** The user went past the last step: the app opens the "You did it" screen. */
+  onFinish?: () => void;
+  /** "Go through it again": the app goes back to the steps screen. */
+  onAgain?: () => void;
   onPapers: () => void;
   onCheck: () => void;
   /** Text size (Aa in the guide controls). */
@@ -130,7 +139,7 @@ function Talking({ on, small }: { on: boolean; small?: boolean }) {
 
 function Toggle({ on, label, icon, onClick, disabled }: { on: boolean; label: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean }) {
   return (
-    <button type="button" className="gs-toggle" role="switch" aria-checked={on} onClick={onClick} disabled={disabled}>
+    <button type="button" className="gs-toggle" role="switch" aria-checked={on} aria-label={label} title={label} onClick={onClick} disabled={disabled}>
       {icon}
       <span>{label}</span>
       <span className={"gs-sw" + (on ? " on" : "")} />
@@ -351,7 +360,10 @@ function recognizer(): (new () => Rec) | null {
 export function GuideStage(p: GuideStageProps) {
   const { guide, lang, anam, live, readMode } = p;
   const total = guide.steps.length;
-  const [s, dispatch] = useReducer(stageReducer, undefined, () => initialStage(total, p.index, p.startPhase ?? (p.index > 0 ? "step" : "intro")));
+  // Read mode has no intro (no guide to meet): it opens on step 1 with its progress bar. A finished guide opens on "You did it".
+  const [s, dispatch] = useReducer(stageReducer, undefined, () =>
+    initialStage(total, p.finished ? total - 1 : p.index, p.finished ? "finish" : p.startPhase ?? (p.index > 0 || readMode ? "step" : "intro")),
+  );
   const sRef = useRef(s);
   sRef.current = s;
   const step = guide.steps[s.index];
@@ -422,6 +434,7 @@ export function GuideStage(p: GuideStageProps) {
         } else narrate(after.index, e.type === "start" ? "start" : e.type === "back" ? "back" : "move");
       }
       if (after.phase === "finish" && before.phase !== "finish") {
+        p.onFinish?.();
         tell(
           SHOW_CHECK
             ? `The user finished all ${total} steps. In one short sentence say they did it, then ask if they would like to check they have got it. Do not call a tool.`
@@ -441,6 +454,20 @@ export function GuideStage(p: GuideStageProps) {
     seenMove.current = p.moveSeq ?? 0;
     if (p.index !== sRef.current.index || toolMove) dispatch({ type: "sync", index: p.index });
   }, [p.index, p.moveSeq]);
+
+  // The "You did it" screen follows the app's history: Back from it shows the last step again; Forward (or opening a
+  // finished guide) shows it. Only a change of `finished` moves the phase, so "Go through it again" never bounces back.
+  const wasFinished = useRef(!!p.finished);
+  useEffect(() => {
+    if (wasFinished.current === !!p.finished) return;
+    wasFinished.current = !!p.finished;
+    if (p.finished && sRef.current.phase !== "finish") dispatch({ type: "finish" });
+    else if (!p.finished && sRef.current.phase === "finish") dispatch({ type: "back" });
+  }, [p.finished]);
+  // Read mode never shows the intro (switching to it there goes straight to step 1, with the progress bar).
+  useEffect(() => {
+    if (readMode && s.phase === "intro") dispatch({ type: "start" });
+  }, [readMode, s.phase]);
 
   useEffect(() => {
     if (!goingBack) return;
@@ -717,14 +744,15 @@ export function GuideStage(p: GuideStageProps) {
   const userSaid = live ? anam.userCaption : recUser;
 
   /* ---- header ---- */
-  const stepHeader = s.phase !== "intro" && s.phase !== "finish";
+  // The step count and progress bar show from step 1 (the intro is "about to start step 1"); "You did it" has neither.
+  const finishing = s.phase === "finish";
+  const stepHeader = !finishing;
+  // One layout for every phase: Home, Back | count | mic, Read/Guide. The finish page has no mode controls.
   const header = (
     <header className="gs-top">
-      <button className="gs-round" onClick={p.onHome} aria-label={t(lang, "gs_home")}>
-        <Icon name="home" />
-      </button>
-      {stepHeader ? <h1 className={"gs-count" + (readMode ? " start" : "")}>{tf(lang, "gs_stepOf", { n: s.index + 1, m: total })}</h1> : <span className="gs-grow" />}
-      {!readMode && live && (
+      <NavStart lang={lang} onHome={p.onHome} onBack={p.onBack} look="gs-round" />
+      {stepHeader ? <h1 className="gs-count">{tf(lang, "gs_stepOf", { n: s.index + 1, m: total })}</h1> : <span className="gs-grow" />}
+      {!finishing && !readMode && live && (
         <button
           type="button"
           className={"gs-mictoggle" + (anam.micMuted ? " off" : "")}
@@ -741,16 +769,12 @@ export function GuideStage(p: GuideStageProps) {
           <span>{t(lang, anam.micMuted ? "gs_micOff" : "gs_micOn")}</span>
         </button>
       )}
-      {readMode ? (
+      {finishing ? null : readMode ? (
         <Toggle on={false} label={t(lang, "gs_guide")} icon={<SpeakerIcon />} onClick={() => p.onReadMode(false)} />
-      ) : s.phase === "intro" ? (
-        <Toggle on={false} label={t(lang, "gs_readMode")} icon={<BookIcon />} onClick={() => p.onReadMode(true)} />
-      ) : s.phase !== "finish" ? (
-        <button className="gs-round" onClick={() => p.onReadMode(true)} aria-label={t(lang, "gs_readMode")}>
+      ) : (
+        <button className="gs-round" onClick={() => p.onReadMode(true)} aria-label={t(lang, "gs_readMode")} title={t(lang, "gs_readMode")}>
           <BookIcon />
         </button>
-      ) : (
-        !live && <span className="gs-grow" />
       )}
     </header>
   );
@@ -808,13 +832,20 @@ export function GuideStage(p: GuideStageProps) {
       />
     </div>
   );
+  /** "Go through it again": step 1, and the app leaves the "You did it" screen. */
+  const again = () => {
+    wasFinished.current = false;
+    run({ type: "restart" });
+    p.onAgain?.();
+  };
+
   /* ================================================================ Read mode (12, 19a) */
   if (readMode) {
     const finished = s.phase === "finish";
     return (
       <div className="screen gs gs-read">
         {header}
-        {p.cantConnect ? (
+        {finished ? null : p.cantConnect ? (
           <div className="gs-banner" role="status">
             <p>{t(lang, "gs_cantConnect")}</p>
             <button className="gs-pill" onClick={p.onTryAgain}>
@@ -831,7 +862,7 @@ export function GuideStage(p: GuideStageProps) {
         {conflictView ? (
           conflictView
         ) : finished ? (
-          <FinishBody lang={lang} total={total} caption={t(lang, FINISH_LINE)} label={t(lang, "gs_yourGuide")} p={p} onAgain={() => run({ type: "restart" })} />
+          <FinishBody lang={lang} total={total} caption={t(lang, FINISH_LINE)} label={t(lang, "gs_yourGuide")} p={p} onAgain={again} />
         ) : s.phase === "ask" || s.phase === "answer" ? (
           <AskPanel
             lang={lang}
@@ -896,7 +927,7 @@ export function GuideStage(p: GuideStageProps) {
           caption={caption}
           label={captionLabel}
           p={p}
-          onAgain={() => run({ type: "restart" })}
+          onAgain={again}
           avatar={
             <div className="gs-finish-av">
               <div className="gs-av-slot circle" data-avatar-slot="gs" data-shape="finish">
@@ -1274,10 +1305,16 @@ function FinishBody({ lang, total, caption, label, p, onAgain, avatar }: { lang:
             {t(lang, "gs_remind")}
           </button>
         )}
-        <button className="gs-link" onClick={onAgain}>
-          <Icon name="history" />
-          {t(lang, "gs_again")}
-        </button>
+        <div className="gs-two">
+          <button className="gs-link" onClick={onAgain}>
+            <Icon name="history" />
+            {t(lang, "gs_again")}
+          </button>
+          <button className="gs-link" onClick={p.onHome}>
+            <Icon name="home" />
+            {t(lang, "gs_home")}
+          </button>
+        </div>
       </div>
     </div>
   );

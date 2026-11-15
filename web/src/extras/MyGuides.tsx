@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { t, tf } from "../i18n";
 import Icon from "../icons";
+import { NavStart } from "../nav/NavStart";
+import { NavContext } from "../screens/shared";
 import { XIcon } from "./icons";
 import { buildChips, CHIP_ICON, chipKey, continueRow, getProgress, groupOf, groupRows, matches, rowTitle, type ChipKey, type GuideRow } from "./guides";
 import "./strings";
@@ -99,6 +101,7 @@ interface Props {
 
 /** 14a-f My guides: search, type chips, Continue, Today / This week / Earlier, a menu per guide. */
 export function MyGuides({ lang, rows, failed, onBack, onOpen, onDelete, onRename, onRetry, onNew }: Props) {
+  const nav = useContext(NavContext);
   const [q, setQ] = useState("");
   const [chip, setChip] = useState<ChipKey | "all">("all");
   const [sheet, setSheet] = useState<Sheet>(null);
@@ -144,9 +147,7 @@ export function MyGuides({ lang, rows, failed, onBack, onOpen, onDelete, onRenam
     <div className="screen x-guides">
       <div className="x-gh">
         <div className="x-gh-top">
-          <button className="round" onClick={onBack} aria-label={t(lang, "home")}>
-            <Icon name="home" />
-          </button>
+          <NavStart lang={lang} onHome={onBack} onBack={nav.onBack} />
           <h1>{t(lang, "myGuides")}</h1>
           {!empty && rows && (
             <span className="x-count">

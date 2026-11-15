@@ -38,6 +38,7 @@ export type StageEvent =
   | { type: "answered"; answer: string; grounded?: boolean | null; askWho?: string | null }
   | { type: "backToStep" }
   | { type: "restart" }
+  | { type: "finish" } // the app opened "You did it" directly (a finished guide, or browser Forward)
   | { type: "total"; total: number };
 
 export function initialStage(total: number, index = 0, phase: Phase = "intro"): StageState {
@@ -101,6 +102,8 @@ export function stageReducer(s: StageState, e: StageEvent): StageState {
       return { ...s, ...clearAsk, phase: s.askFrom, dir: "none" };
     case "restart":
       return { ...initialStage(s.total, 0, "step") };
+    case "finish":
+      return { ...s, ...clearAsk, phase: "finish", index: clamp(s.total - 1, s.total), dir: "none" };
   }
 }
 
