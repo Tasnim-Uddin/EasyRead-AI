@@ -44,9 +44,7 @@
       "Tell your doctor if your usual dose stops working.",
       "Do not use more often than advised."
     ],
-    "get_help": [
-      "Call 999 if you have severe difficulty breathing or swelling of the face or lips."
-    ],
+    "get_help": [],
     "unreadable": [],
     "conflicts": [
       {
@@ -166,21 +164,6 @@
       "status": "ready",
       "say": "Tell your doctor if your usual dose stops working. Do not use your inhaler more often than advised. Take care with this one.",
       "visual": null
-    },
-    {
-      "index": 8,
-      "text": "Call 999 if you have severe difficulty breathing or swelling of your face or lips.",
-      "text_en": "Call 999 if you have severe difficulty breathing or swelling of your face or lips.",
-      "kind": "get_help",
-      "picture_prompt": "A person holding a phone to their ear, looking worried, with one hand on their chest and a slightly swollen face",
-      "image_url": "/fixtures/img/step_7.png",
-      "technique_clip_id": null,
-      "status": "ready",
-      "say": "Call 999 if you have severe difficulty breathing or swelling of your face or lips.",
-      "visual": {
-        "kind": "closeup",
-        "id": "phone_call"
-      }
     }
   ],
   "created_at": "2026-11-14T18:22:43.972442+00:00"
