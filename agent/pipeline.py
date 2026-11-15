@@ -356,6 +356,22 @@ def not_readable(ex: dict) -> str | None:
     return None
 
 
+def form_label_quotes(ex: dict) -> list[dict]:
+    """The quotes to place on the paper. On a form, every box label the reader listed is a quote as well: the
+    model's 12 quotes often skip some boxes. A label that is not printed is simply not found by OCR (no box)."""
+    quotes = list(ex.get("quotes") or [])
+    if ex.get("doc_type") != "form":
+        return quotes
+    have = {q["t"].strip(" :").lower() for q in quotes}
+    pages = len(ex.get("documents") or []) or 1
+    for f in (ex.get("content") or {}).get("fields") or []:
+        label = (f.get("label") or "").split(" (")[0].strip(" :")
+        if label and len(label) <= 80 and label.lower() not in have:
+            have.add(label.lower())
+            quotes.append({"t": label, "page": 0 if pages == 1 else None})
+    return quotes
+
+
 async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
     """Highlights, number cards, checked dates and unreadable regions from the OCR of the user's own pages.
     Never fails the guide: without OCR, steps simply have no highlights."""
@@ -370,7 +386,7 @@ async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
     try:
         pdfs = [locate.pdf_text(f[0]) if f[1] == "application/pdf" else "" for f in files]
         locate.ground_urgency(guide["steps"], locate.page_words(pages, pdfs))
-        stats = locate.attach(guide, ex.get("quotes") or [], pages)
+        stats = locate.attach(guide, form_label_quotes(ex), pages)
         ocr_ok = any(p is not None for p in pages) or any(pdfs)
         guide["dates"] = locate.check_dates(ex.get("dates") or [], pages, pdfs, ocr_ok)
         guide["unreadable_regions"] = locate.unreadable_regions(pages, ex.get("unreadable_parts") or [])

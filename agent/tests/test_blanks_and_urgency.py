@@ -196,6 +196,13 @@ def test_form_step_highlights_only_its_own_box():
     assert locate.quotes_for_step(step2, quotes, form=True)[0]["t"] == "Family doctor telephone:"
     step3 = "Find the box called Home Address. Write your home address."
     assert locate.quotes_for_step(step3, quotes, form=True)[0]["t"] == "Home Address:"
+    # the step names a shorter form of a long printed label: still its own box
+    long = [{"t": "Address of Next of Kin during the activity (if different from above):", "page": 0},
+            {"t": "Contact Telephone No: Home", "page": 0}, {"t": "Home Address:", "page": 0}]
+    step4 = "Find the box called Address of Next of Kin during the activity. Write where they will be."
+    assert locate.quotes_for_step(step4, long, form=True)[0]["t"].startswith("Address of Next of Kin")
+    step5 = "Find the box called Contact Telephone No: Home. Write your home phone number."
+    assert locate.quotes_for_step(step5, long, form=True)[0]["t"] == "Contact Telephone No: Home"
 
 
 @pytest.mark.parametrize("guide,who", [
@@ -210,6 +217,17 @@ def test_form_step_highlights_only_its_own_box():
 def test_ask_who_for_new_papers(guide, who):
     from agent import qa
     assert qa.ask_who(guide, "en") == who
+
+
+def test_form_box_labels_are_quotes_too():
+    from agent.pipeline import form_label_quotes
+    ex = {"doc_type": "form", "documents": [{"index": 1}], "quotes": [{"t": "Tutor Group:", "page": 0}],
+          "content": {"fields": [{"label": "Tutor Group", "what_to_write": "x"},
+                                 {"label": "Address of Next of Kin during the activity (if different from above)", "what_to_write": "x"},
+                                 {"label": "Signed", "what_to_write": "x"}]}}
+    assert [q["t"] for q in form_label_quotes(ex)] == ["Tutor Group:", "Address of Next of Kin during the activity", "Signed"]
+    letter = {**ex, "doc_type": "letter"}
+    assert form_label_quotes(letter) == ex["quotes"]
 
 
 FORM = {"doc_type": "form", "domain": "school", "facts": {}}
