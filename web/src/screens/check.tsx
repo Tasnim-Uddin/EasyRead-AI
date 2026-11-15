@@ -7,7 +7,7 @@ import Icon, { GuideFace } from "../icons";
 import { NavContext } from "./shared";
 import { buildQuestions } from "../extras/questions";
 import { XIcon } from "../extras/icons";
-import { closeUpFor } from "../extras/closeup";
+import { CloseUpPic, hasCloseUp } from "../extras/closeup";
 import "../extras/strings";
 import "../extras/extras.css";
 
@@ -17,11 +17,17 @@ export { buildQuestions, type Question } from "../extras/questions";
 function StepAgain({ guide, index, lang, onClose }: { guide: Guide; index: number; lang: string; onClose: () => void }) {
   const s = guide.steps[index];
   if (!s) return null;
-  const C = closeUpFor(s.visual?.id);
+  const cu = hasCloseUp(s.visual?.id);
   return (
     <div className="x-again" role="region" aria-label={tf(lang, "stepN", { n: index + 1 })}>
       <small>{tf(lang, "stepN", { n: index + 1 })}</small>
-      {C ? <C id={s.visual!.id} lang={lang} /> : s.image_url ? <img src={s.image_url} alt="" /> : null}
+      {cu ? (
+        <div className="x-again-cu">
+          <CloseUpPic id={s.visual?.id} playing />
+        </div>
+      ) : s.image_url ? (
+        <img src={s.image_url} alt="" />
+      ) : null}
       <p dir="auto">{s.text}</p>
       <button className="btn soft" onClick={onClose}>
         <XIcon name="check" />
@@ -162,8 +168,8 @@ export function TellBack({
           const cls = !answered ? "" : i === q.correct ? " right" : i === pick ? " wrong" : " dim";
           return (
             <button key={i} role="radio" aria-checked={pick === i} className={"x-answer" + cls} onClick={() => choose(i)} disabled={answered && i !== pick && i !== q.correct}>
-              <span className="pic">
-                <XIcon name={q.icons[i] ?? "doc"} />
+              <span className={"pic" + (hasCloseUp(q.visuals[i]) ? " cu" : "")}>
+                {hasCloseUp(q.visuals[i]) ? <CloseUpPic id={q.visuals[i]} playing={!answered || i === q.correct} /> : <XIcon name={q.icons[i] ?? "doc"} />}
               </span>
               <span className="txt">
                 <span dir="auto">{o}</span>

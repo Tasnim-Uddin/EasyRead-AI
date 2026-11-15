@@ -179,6 +179,12 @@ describe("Check I've got it", () => {
     expect(buildQuestions(inhaler as unknown as Guide).length).toBeGreaterThanOrEqual(2);
     expect(buildQuestions(flatpack as unknown as Guide).length).toBeGreaterThanOrEqual(2);
   });
+  it("uses the steps' close-ups as picture answers", () => {
+    const q = buildQuestions(inhaler as unknown as Guide).find((x) => x.q === "What do you do first?")!;
+    expect(q.options[q.correct]).toBe("Shake the inhaler 4 times.");
+    expect(q.visuals[q.correct]).toBe("inhaler_shake");
+    expect(q.visuals.filter(Boolean).length).toBe(3);
+  });
 });
 
 describe("share sheet", () => {
