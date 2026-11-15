@@ -332,6 +332,7 @@ export default function App() {
   }, []);
 
   const anamLangRef = useRef<(code: string) => void>(() => {});
+  const anamRelangRef = useRef<(code: string, stepIndex: number) => Promise<void>>(async () => {});
   const anamStopRef = useRef<() => Promise<void>>(async () => {});
   const handlers = useMemo<Record<string, ToolHandler>>(() => {
     const stepSay = (i: number) => {
@@ -416,6 +417,8 @@ export default function App() {
             setLangBusy(false);
           }
         }
+        // The live guide speaks with the voice chosen at session start: start her again in the new language.
+        void anamRelangRef.current(code, indexRef.current);
         return tf(code, "nav_switched", { lang: languageLabel(code) });
       },
     };
@@ -423,6 +426,7 @@ export default function App() {
 
   const anam = useAnam(AVATAR_VIDEO_ID, handlers, addLog);
   anamLangRef.current = anam.setLanguage;
+  anamRelangRef.current = anam.relanguage;
   anamStopRef.current = anam.stop;
   // Leaving the steps / questions / check (Home, My papers, Settings, Summary, a new paper, browser Back)
   // ends the live session: stream stopped, mic released, audio off. It never keeps talking off-screen.

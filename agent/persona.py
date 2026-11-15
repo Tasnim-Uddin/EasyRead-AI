@@ -107,7 +107,15 @@ def voice_id(language: str) -> str:
     then ANAM_VOICE_ID, then the English default."""
     env = os.environ.get
     per_lang = env(f"ANAM_VOICE_ID_{language.upper()}") if language and language.isalpha() and len(language) <= 8 else None
-    return per_lang or env("ANAM_VOICE_ID", DEFAULTS["voiceId"])
+    if per_lang:
+        return per_lang
+    if language and language.isalpha() and len(language) <= 8 and language != "en":
+        # The English default voice cannot speak other languages (the guide goes silent). A multilingual voice
+        # (ANAM_VOICE_ID_MULTI, else the Spanish or Arabic one, which are multilingual ElevenLabs voices) is used instead.
+        multi = env("ANAM_VOICE_ID_MULTI") or env("ANAM_VOICE_ID_ES") or env("ANAM_VOICE_ID_AR")
+        if multi:
+            return multi
+    return env("ANAM_VOICE_ID", DEFAULTS["voiceId"])
 
 
 def persona_config(guide: dict, language: str, step_index: int = 0) -> dict:
