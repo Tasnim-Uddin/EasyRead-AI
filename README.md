@@ -42,7 +42,7 @@ Built for Imperial AI Hack 2026, Track 03: Voice, Vision & Generative Media.
 flowchart TD
     A["Upload<br/>photos or PDFs, several files<br/>roles: label, leaflet, device photo, letter, form"] --> B["Claude vision: one call over all files<br/>doc type, facts, device type from the device photo"]
     B --> C["Easy Read rewrite<br/>one idea per sentence, 15 words or fewer"]
-    C --> D["Safety post-processing<br/>label/leaflet conflict flag, 999/111 line,<br/>fact add-back for dates and amounts"]
+    C --> D["Safety post-processing<br/>label/leaflet conflict flag, 111/pharmacist line,<br/>fact add-back for dates and amounts"]
     D --> E["fal pictures<br/>all at once; the guide opens before they finish"]
     E --> F["Listen<br/>ElevenLabs read-aloud"]
     E --> G["Talk: Anam avatar<br/>drives the app with client tools"]
@@ -126,15 +126,15 @@ The avatar talks you through the guide and drives the app with client tools. Cod
 
 **The guide as context.** When a session starts, the server puts the guide into the persona's system prompt: document type, facts, content, safety lines and every Easy Read step, plus the ground rules (`agent/persona.py`, `system_prompt`). The avatar starts on the step the user is on.
 
-**One avatar across screens.** There is one `<video>` element for the avatar. It moves to a slot on each screen (step, ask, talk), so the session and the video keep running as you move around the app (`web/src/screens.tsx`).
+**One avatar across screens.** There is one `<video>` element for the avatar. It moves to a slot on each screen (step, ask, talk), so the session and the video keep running as you move around the app (`web/src/screens/guide.tsx`).
 
 **Safety boundary.**
 
-- The prompt tells the avatar to answer questions only through `answer_from_document`. That tool runs the same grounded Q&A and 999 check as the Ask screen.
-- If the answer says 999 or 111, the tool adds "If this is an emergency, call 999" or "Call 111 for urgent advice" to what the avatar says.
-- The prompt also tells it: never give medical advice or change doses, say "call 999" for serious symptoms in every language, and use only library clips.
+- The prompt tells the avatar to answer questions only through `answer_from_document`. That tool runs the same grounded Q&A as the Ask screen.
+- If the answer says 111, the tool adds "Call 111 for urgent advice" to what the avatar says.
+- The prompt also tells it: never give medical advice or change doses, and use only library clips.
 
-**Evidence: the Tool calls panel.** Every tool call, from the avatar or from an on-screen button, is logged with its arguments, time taken and the line returned. Open **Tool calls (n)** at the bottom of the screen to see it (`DevPanel` in `web/src/screens.tsx`).
+**Evidence: the Tool calls panel.** Every tool call, from the avatar or from an on-screen button, is logged with its arguments, time taken and the line returned. Open **Tool calls (n)** at the bottom of the screen to see it (`DevPanel` in `web/src/screens/settings.tsx`).
 
 ## Designed in Figma
 
@@ -150,7 +150,6 @@ Design principles for low literacy:
 - **Read-aloud everywhere.** A Listen button on every step and summary, and a talking guide. Every spoken line also shows as a caption.
 - **Pictures without words.** The same picture works in every language.
 - **Right to left.** Arabic, Urdu and other right-to-left languages flip the whole layout.
-- **999 always visible.** A "call 999" link is on every guide screen.
 - **Plain words.** Buttons are short verbs ("Take a photo", "Make my guide"). Errors say what went wrong and what to do.
 
 Figma (left) next to the built app (right), for every screen:
@@ -184,10 +183,10 @@ Ground rules, and where the code enforces them:
 | Rule | How it is enforced |
 |---|---|
 | Explain the user's paper only. No medical advice, no diagnosis, no dose changes | Prompts for extraction, rewrite, Q&A and the avatar (`agent/pipeline.py`, `agent/qa.py`, `agent/persona.py`) |
-| Serious symptoms: call 999, every time | `agent/qa.py` matches emergency words (chest pain, cannot breathe, overdose, allergic reaction, in several languages) **before any model call** and returns "call 999". Urgent words return 111. If the model says 999 but the answer lacks the number, the code adds it |
+| Urgent questions: call 111 | `agent/qa.py` matches urgent words and returns 111. The app adds no 999 line or link; a 999 line printed on the paper itself is kept |
 | Out-of-scope questions are refused | If the answer is not in the document, Q&A returns "ask your pharmacist or GP" (or free advice for non-medicine papers) |
 | Label and leaflet disagree | The guide shows one fixed flag, "Your label and leaflet say different things. Ask your pharmacist.", and never picks a dose (`postprocess.normalise_conflict`, `doctypes.finish_steps`) |
-| Every guide ends with a safety line | Medicine: 999, 111, pharmacist or GP. How-to: stop and ask for help. Letter, bill, form: get free advice (`doctypes.safety_lines`, added if missing) |
+| Every guide ends with a safety line | Medicine: 111, pharmacist or GP. How-to: stop and ask for help. Letter, bill, form: get free advice (`doctypes.safety_lines`, added if missing) |
 | Never drop or invent facts | Any date, time or amount the rewrite dropped is added back as its own step (`doctypes.ensure_content_facts`). Unreadable parts are listed and the guide says so |
 | No text inside pictures | The fal prompt forbids text, so a picture cannot show a wrong dose |
 | Technique clips only from a checked library | A clip shows only when `checked_by`, `checked_against` (an nhs.uk page) and `checked_at` are set. None are checked yet. Demo mode (`SHOW_UNCHECKED_CLIPS=1`) shows them with a "Not yet checked by a pharmacist" badge, and the avatar says so |
@@ -219,7 +218,7 @@ Three sample guides work offline: an inhaler (`demo/fixtures/guide_inhaler.json`
 
 | Part | Status |
 |---|---|
-| Upload, extraction, steps, pictures, translation, Ask with the 999 check | Working. Needs `ANTHROPIC_API_KEY`; pictures need `FAL_KEY` |
+| Upload, extraction, steps, pictures, translation, Ask | Working. Needs `ANTHROPIC_API_KEY`; pictures need `FAL_KEY` |
 | Sample guides, all screens, settings, print sheet, Tool calls panel | Working with no keys |
 | ElevenLabs voice | Working with `ELEVENLABS_API_KEY`; browser voice otherwise |
 | Anam avatar | Working with `ANAM_API_KEY`. Without it the server returns a mock token and the app shows an illustrated stand-in |

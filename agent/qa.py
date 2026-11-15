@@ -1,24 +1,13 @@
-"""Grounded Q&A with the 999/111 guardrail. The emergency check is deterministic and runs before any model call."""
+"""Grounded Q&A from the user's own paper, with a deterministic 111 nudge for urgent wording."""
 import json, re
 from . import langs, llm
 from .pipeline import load_library
 
-EMERGENCY = [  # multilingual substrings, lowercase
-    "chest pain", "can't breathe", "cant breathe", "cannot breathe", "struggling to breathe", "hard to breathe",
-    "overdose", "took too many", "allergic reaction", "anaphyla", "throat is closing", "swelling", "face is swelling", "collapsed", "unconscious",
-    "suicid", "dolor de pecho", "no puedo respirar", "sobredosis", "reacción alérgica", "no puedo respirar bien",
-    "বুকে ব্যথা", "শ্বাস", "ألم في الصدر", "لا أستطيع التنفس", "جرعة زائدة", "حساسية",
-    "douleur à la poitrine", "overdosis", "सीने में दर्द", "सांस",
-    "ból w klatce", "nie mogę oddychać", "duszę się", "przedawkow", "reakcja alergiczna", "obrzęk",
-    "سینے میں درد", "سانس نہیں", "سانس لینے میں", "زیادہ خوراک",
-]
 URGENT = ["urgent", "getting worse", "urgente", "empeora"]
 MSG = {
-    "en": {"999": "This sounds serious. Call 999 now.",
-           "111": "This may need quick advice. Call 111 now.",
+    "en": {"111": "This may need quick advice. Call 111 now.",
            "pharmacist": "I do not know. It is not in your paper. Ask your pharmacist or GP."},
-    "es": {"999": "Esto puede ser grave. Llame al 999 ahora.",
-           "111": "Esto puede necesitar consejo rápido. Llame al 111 ahora.",
+    "es": {"111": "Esto puede necesitar consejo rápido. Llame al 111 ahora.",
            "pharmacist": "No encuentro eso en su documento. Pregunte a su farmacéutico o a su médico."},
 }
 
@@ -28,10 +17,8 @@ def msg(kind: str, lang: str) -> str:
     return MSG.get(lang, MSG["en"])[kind]
 
 
-def emergency_level(q: str) -> str:
+def urgency_level(q: str) -> str:
     ql = q.lower().replace("\u2019", "'").replace("\u2018", "'")
-    if any(k in ql for k in EMERGENCY):
-        return "999"
     if any(k in ql for k in URGENT):
         return "111"
     return "none"
@@ -55,13 +42,13 @@ def _local_answer(guide: dict, q: str, lang: str):
 
 QA_SYSTEM = """You answer a patient's question using ONLY the DOCUMENT FACTS and STEPS provided.
 Never give medical advice, diagnose, or change doses. If the answer is not in the document, set grounded=false and tell them to ask their pharmacist or GP.
-If the question describes a serious symptom (chest pain, cannot breathe, overdose, allergic reaction) set escalate "999"; urgent but not an emergency "111".
-Answer in language '{lang}' in 1-2 short simple sentences. Return JSON only: {{"answer": str, "grounded": bool, "escalate": "none|pharmacist|111|999"}}"""
+If the question sounds urgent set escalate "111".
+Answer in language '{lang}' in 1-2 short simple sentences. Return JSON only: {{"answer": str, "grounded": bool, "escalate": "none|pharmacist|111"}}"""
 
 
 async def lmsg(kind: str, lang: str) -> str:
     """Safety line in the user's language. Languages without a table: the model translates it. The English line is
-    added only if the translation lost the number to call (999 / 111), so a good translation stays all in one language.
+    added only if the translation lost the number to call (111), so a good translation stays all in one language.
     No key or a failed call: English alone."""
     if lang in MSG:
         return MSG[lang][kind]
@@ -78,9 +65,7 @@ async def lmsg(kind: str, lang: str) -> str:
 
 
 async def ask(guide: dict, question: str, language: str) -> dict:
-    level = emergency_level(question)
-    if level == "999":
-        return {"answer": await lmsg("999", language), "grounded": True, "escalate": "999"}
+    level = urgency_level(question)
     ans = None
     if llm.available():
         try:
@@ -89,12 +74,10 @@ async def ask(guide: dict, question: str, language: str) -> dict:
                              ensure_ascii=False)
             r = await llm.complete_json(QA_SYSTEM.format(lang=langs.name_of(language)), f"DOCUMENT:\n{ctx}\n\nQUESTION: {question}", 500)
             esc = r.get("escalate", "none")
-            if esc not in ("none", "pharmacist", "111", "999"):
+            if esc not in ("none", "pharmacist", "111"):
                 esc = "pharmacist"
             if level == "111" and esc == "none":
                 esc = "111"
-            if esc == "999" and "999" not in r["answer"]:
-                r["answer"] += " " + await lmsg("999", language)
             ans = {"answer": r["answer"], "grounded": bool(r.get("grounded")), "escalate": esc}
             if not ans["grounded"] and esc == "none":
                 ans["escalate"] = "pharmacist"

@@ -315,7 +315,7 @@ export default function App() {
           if (isSample(g())) return SAFE_FALLBACK;
           throw e;
         }
-        const tail = r.escalate === "999" ? " If this is an emergency, call 999." : r.escalate === "111" ? " Call 111 for urgent advice." : "";
+        const tail = r.escalate === "111" ? " Call 111 for urgent advice." : "";
         return r.answer + tail;
       },
       check_understanding: (args) =>

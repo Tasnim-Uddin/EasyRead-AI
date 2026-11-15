@@ -161,7 +161,7 @@ async def translate_steps(steps: list[dict], language: str):
 
 
 async def translate_safety(guide: dict, language: str):
-    """The 999 / pharmacist / advice lines must read in the guide's language. The English originals are kept."""
+    """The pharmacist / advice lines must read in the guide's language. The English originals are kept."""
     en = guide.setdefault("safety_lines_en", list(guide.get("safety_lines") or []))
     if language == "en" or not en:
         guide["safety_lines"] = list(en)
@@ -170,7 +170,7 @@ async def translate_safety(guide: dict, language: str):
         return
     try:
         out = await llm.complete_json(
-            f"Translate each safety sentence into {langs.name_of(language)}. Keep it short and simple, keep numbers such as 999 and 111 "
+            f"Translate each safety sentence into {langs.name_of(language)}. Keep it short and simple, keep numbers such as 111 "
             "as digits, never weaken or change the meaning. Return a JSON array of strings, same order.",
             json.dumps(en, ensure_ascii=False))
         if isinstance(out, list) and len(out) == len(en) and all(isinstance(x, str) and x.strip() for x in out):

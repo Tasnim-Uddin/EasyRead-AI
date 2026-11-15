@@ -26,10 +26,10 @@ def test_sse(client):
 
 
 @pytest.mark.parametrize("q,lang", [("I have chest pain", "en"), ("no puedo respirar", "es"), ("I think I took an overdose", "en")])
-def test_999(client, q, lang):
+def test_no_app_added_999(client, q, lang):
     g = make_guide(client)
     r = client.post(f"/api/guides/{g['id']}/ask", json={"question": q, "language": lang}).json()
-    assert r["escalate"] == "999" and "999" in r["answer"]
+    assert r["escalate"] in ("none", "pharmacist", "111") and "Call 999" not in r["answer"]
 
 
 def test_ask_grounded_and_ungrounded(client):
@@ -48,7 +48,7 @@ def test_anam_mock_and_persona(client):
     assert {t["name"] for t in cfg["tools"]} == {"show_step", "next_step", "previous_step", "play_technique",
                                                   "answer_from_document", "check_understanding", "set_language"}
     assert all(t["awaitResult"] and t["toolTimeoutSeconds"] <= 30 for t in cfg["tools"])
-    assert "999" in cfg["systemPrompt"] and "Salbutamol" in cfg["systemPrompt"]
+    assert "Salbutamol" in cfg["systemPrompt"] and 'say "call 999"' not in cfg["systemPrompt"]
 
 
 def test_every_step_has_say(client):
@@ -72,7 +72,7 @@ def test_language_and_library_and_404(client):
 def test_tools_endpoint(client):
     g = make_guide(client)
     r = client.post("/api/tools/answer_from_document", json={"guide_id": g["id"], "question": "chest pain"}).json()
-    assert r["escalate"] == "999" and "999" in r["say"]
+    assert r["escalate"] != "999" and "Call 999" not in r["say"]
     assert client.post("/api/tools/check_understanding", json={"guide_id": g["id"]}).json()["say"]
     assert client.post("/api/tools/set_language", json={"guide_id": g["id"], "language": "es"}).json()["language"] == "es"
 

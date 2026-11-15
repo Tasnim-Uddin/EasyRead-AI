@@ -78,7 +78,7 @@ export interface Clip {
   unchecked?: boolean;
 }
 
-export type Escalate = "none" | "pharmacist" | "111" | "999";
+export type Escalate = "none" | "pharmacist" | "111";
 export interface AskResult {
   answer: string;
   grounded: boolean;

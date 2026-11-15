@@ -75,7 +75,7 @@ The extraction step classifies the whole upload set into `doc_type`. **`steps` i
 For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields `null` and empty lists.
 
 **Safety lines** (`guide.safety_lines`, also added as a final `get_help` step if not already there):
-- medicine: "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP." (the deterministic 999 guard in `/ask` still runs before any model call)
+- medicine: "For advice, call 111 or ask your pharmacist or GP." (the app adds no 999 line or link; a 999 line printed on the paper itself is kept)
 - how_to, not medicine (furniture, a phone, a boiler; `domain` "other"): "If something breaks or feels unsafe, stop and ask for help." Facts carry `title` and `source_steps`; steps use kinds `what|how|warning|get_help`.
 - everything else: "Get free advice before you sign or pay. For example, Citizens Advice."
 
@@ -90,7 +90,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
   - All files go to the vision model in **one** extraction call.
   - Limits: at most **8 files** (device photo included), **20 pages** in total (a PDF counts its pages), 15 MB per file. Errors are JSON `{ error, detail }`: `413 too_many_files`, `413 too_many_pages`, `413 file_too_large`, `400 unsupported_file_type`, `400 bad_role`, `400 bad_roles` (more roles than files, or not a list), `400 document_required` (when the server has a model key and no file was sent).
 - `GET /api/guides/{id}` → Guide.
-- `GET /api/guides?ids=g_a,g_b` → `{ guides: [ { id, title, language, doc_type, created_at, status, thumbnail } ] }`, newest first ("My papers"). `title` = `facts.medicine`, else `content.what_this_is`, else `facts.title`, else the first step's text; `thumbnail` = the first step `image_url` (or null). **Privacy: the list is per device, never global.** The web keeps the ids of the guides it created in `localStorage` (`er.myGuides`) and sends them here; the server returns only those ids (unknown ids and samples are skipped, at most 200). No `ids` → `{ guides: [] }`.
+- `GET /api/guides?ids=g_a,g_b` → `{ guides: [ { id, title, language, doc_type, created_at, status, thumbnail } ] }`, newest first ("My guides"). `title` = `facts.medicine`, else `content.what_this_is`, else `facts.title`, else the first step's text; `thumbnail` = the first step `image_url` (or null). **Privacy: the list is per device, never global.** The web keeps the ids of the guides it created in `localStorage` (`er.myGuides`) and sends them here; the server returns only those ids (unknown ids and samples are skipped, at most 200). No `ids` → `{ guides: [] }`.
 - `DELETE /api/guides/{id}` → `{ deleted: id }`; removes the guide, its saved JSON and its uploaded files. `404` for unknown ids and samples.
 - Guides that were still being made when the server stopped come back as `ready` (if their steps were written; unfinished pictures are `failed`) or `failed`.
 - `GET /api/guides/{id}/events` → **Server-Sent Events**:
@@ -100,7 +100,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
   { "type": "tool_log", "tool": "next_step", "args": {…}, "ms": 12 }   // dev panel
   ```
 - `POST /api/guides/{id}/language` `{ language }` → re-translates the step texts (pictures are reused) → Guide.
-- `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none"|"pharmacist"|"111"|"999" }`. Answers come only from `facts` + the library.
+- `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none"|"pharmacist"|"111" }`. Answers come only from `facts` + the library.
 - `POST /api/anam/session` `{ guide_id, language, step_index? }` → `{ sessionToken }` (502 `{detail}` if Anam refuses; web/ then keeps the stand-in). Creates an Anam session token server-side; the persona's system prompt includes the guide's facts and steps plus the ground rules.
 - `POST /api/tools/{name}` `{ guide_id, ...args }` → `{ say, ... }` for the server-handled tools `answer_from_document`, `check_understanding`, `set_language` (`set_language` also returns the updated `guide`). `POST /api/guides/{id}/check_understanding` `{ answer? }` → `{ say, correct }` is the same logic.
 - `POST /api/anam/session` without `ANAM_API_KEY` returns `{ sessionToken: "dev-mock-token", mock: true, personaConfig }` so the UI can integrate.
