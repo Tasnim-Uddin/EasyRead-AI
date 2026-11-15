@@ -1,9 +1,23 @@
 import type { Guide, Highlight, Step } from "../types";
 
-/** What fills the stage for a step, in priority order: close-up > highlight on your photo > picture > words only. */
+/**
+ * Close-ups that show an action on the paper itself. For these, the user's OWN photo with the words highlighted
+ * wins when the step has a located highlight; physical-action close-ups (inhaler, cream, screwdriver...) always win.
+ */
+export const PAPER_ACTION_CLOSEUPS: ReadonlySet<string> = new Set([
+  "write_in_box", "sign_here", "tick_box", "pay_card", "pay_bank", "phone_call",
+  "go_online", "calendar_date", "post_letter", "bring_document", "keep_safe", "clock_wait",
+]);
+
+type Callout = { value: string; sub?: string } | null;
+
+/**
+ * What fills the stage for a step: a physical-action close-up > a highlight on the user's photo > a paper-action
+ * close-up (with the callout card) > the picture > words only.
+ */
 export type StepVisual =
-  | { kind: "closeup"; id: string }
-  | { kind: "highlight"; url: string; highlights: Highlight[]; callout: { value: string; sub?: string } | null }
+  | { kind: "closeup"; id: string; callout: Callout }
+  | { kind: "highlight"; url: string; highlights: Highlight[]; callout: Callout }
   | { kind: "image"; url: string }
   | { kind: "text" };
 
@@ -12,15 +26,19 @@ const validQuad = (q: unknown): q is [number, number][] =>
 
 export function chooseVisual(step: Step | undefined, guide: Pick<Guide, "source">, hasCloseUp: (id: string) => boolean): StepVisual {
   if (!step) return { kind: "text" };
+  const callout: Callout = step.callout?.value ? step.callout : null;
   const v = step.visual;
-  if (v && v.kind === "closeup" && v.id && hasCloseUp(v.id)) return { kind: "closeup", id: v.id };
+  const closeup = v && v.kind === "closeup" && v.id && hasCloseUp(v.id) ? v.id : null;
+  const paperAction = !!closeup && PAPER_ACTION_CLOSEUPS.has(closeup);
+  if (closeup && !paperAction) return { kind: "closeup", id: closeup, callout: null };
   const urls = guide.source?.image_urls ?? [];
   const hs = (step.highlights ?? []).filter((h) => h && validQuad(h.quad) && Number.isInteger(h.page) && !!urls[h.page]);
   if (hs.length) {
     // One photo at a time: the page of the first highlight.
     const page = hs[0].page;
-    return { kind: "highlight", url: urls[page], highlights: hs.filter((h) => h.page === page), callout: step.callout?.value ? step.callout : null };
+    return { kind: "highlight", url: urls[page], highlights: hs.filter((h) => h.page === page), callout };
   }
+  if (closeup) return { kind: "closeup", id: closeup, callout };
   if (step.image_url) return { kind: "image", url: step.image_url };
   return { kind: "text" };
 }

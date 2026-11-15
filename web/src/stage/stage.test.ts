@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { avatarBig, initialStage, narrationTimeoutMs, stageReducer as r, tailCaption, whoToAsk, type StageState } from "./machine";
-import { chooseVisual, quadsBox, zoomTo } from "./visual";
+import { chooseVisual, PAPER_ACTION_CLOSEUPS, quadsBox, zoomTo } from "./visual";
 import type { Step } from "../types";
 
 const s0 = () => initialStage(3);
@@ -118,9 +118,26 @@ const guide = { source: { kind: "x", image_urls: ["/p0.jpg", "/p1.jpg"], is_samp
 describe("visual priority", () => {
   const yes = () => true;
   const no = () => false;
-  it("close-up wins when the library has it", () => {
+  it("a physical-action close-up wins over a highlight", () => {
     const s = step({ visual: { kind: "closeup", id: "inhaler_shake" }, highlights: [{ page: 0, text: "x", quad }], image_url: "/i.png" });
-    expect(chooseVisual(s, guide, yes)).toEqual({ kind: "closeup", id: "inhaler_shake" });
+    expect(chooseVisual(s, guide, yes)).toEqual({ kind: "closeup", id: "inhaler_shake", callout: null });
+  });
+  it("a paper-action close-up gives way to the highlight on the user's photo", () => {
+    const s = step({ visual: { kind: "closeup", id: "pay_card" }, highlights: [{ page: 0, text: "x", quad }], callout: { value: "£212.50", sub: "by 17 Nov" } });
+    const v = chooseVisual(s, guide, yes);
+    expect(v.kind).toBe("highlight");
+    if (v.kind === "highlight") expect(v.callout).toEqual({ value: "£212.50", sub: "by 17 Nov" });
+  });
+  it("a paper-action close-up without a highlight keeps the callout card", () => {
+    const s = step({ visual: { kind: "closeup", id: "pay_card" }, callout: { value: "£212.50" }, image_url: "/i.png" });
+    expect(chooseVisual(s, guide, yes)).toEqual({ kind: "closeup", id: "pay_card", callout: { value: "£212.50" } });
+  });
+  it("the paper-action list", () => {
+    expect([...PAPER_ACTION_CLOSEUPS].sort()).toEqual(
+      ["bring_document", "calendar_date", "clock_wait", "go_online", "keep_safe", "pay_bank", "pay_card", "phone_call", "post_letter", "sign_here", "tick_box", "write_in_box"],
+    );
+    for (const id of ["inhaler_shake", "spacer_use", "tablet_with_water", "eye_drops", "liquid_measure_spoon", "cream_apply", "rinse_mouth", "screwdriver_turn", "plug_in"])
+      expect(PAPER_ACTION_CLOSEUPS.has(id)).toBe(false);
   });
   it("unknown close-up falls through to the highlight on the user's photo", () => {
     const s = step({ visual: { kind: "closeup", id: "nope" }, highlights: [{ page: 1, text: "x", quad }], callout: { value: "£5" }, image_url: "/i.png" });

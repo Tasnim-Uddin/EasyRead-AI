@@ -185,7 +185,18 @@ function HighlightPhoto({ url, highlights, callout, playing }: { url: string; hi
 const KIND_ICON: Record<string, string> = { what: "doc", when: "sun", how: "hand", warning: "alert", get_help: "alert" };
 
 function StepVisualView({ v, step, playing }: { v: StepVisual; step: Step; playing: boolean }) {
-  if (v.kind === "closeup") return <div className="gs-closeup"><CloseUp id={v.id} playing={playing} /></div>;
+  if (v.kind === "closeup")
+    return (
+      <div className="gs-closeup">
+        <CloseUp id={v.id} playing={playing} />
+        {v.callout && (
+          <div className="gs-callout on" dir="auto">
+            <b>{v.callout.value}</b>
+            {v.callout.sub && <span>{v.callout.sub}</span>}
+          </div>
+        )}
+      </div>
+    );
   if (v.kind === "highlight") return <HighlightPhoto url={v.url} highlights={v.highlights} callout={v.callout} playing={playing} />;
   if (v.kind === "image") return <img className="gs-img" src={v.url} alt="" />;
   return (
