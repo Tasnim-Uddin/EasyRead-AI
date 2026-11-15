@@ -8,9 +8,9 @@ from . import technique
 
 STOP = {"a", "an", "the", "your", "you", "to", "of", "is", "are", "and", "this", "that", "it", "for", "on", "in", "if"}
 MONEY = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?")
-# Step caps by guide shape (STYLE.md section 5: a letter is 1 line + 1-3 actions + by when + help;
-# how-to steps are one action each, so they get more room).
-CAPS = {"letter": 8, "bill": 8, "other": 8, "form": 14, "medicine": 16, "how_to": 12}
+# Step caps by guide shape. Easy Read guides aim for 6-12 steps; a letter's facts (every action, date, amount)
+# matter more than brevity, so letters get 10 (plus a few more only when every extra step holds its own date, time or amount). How-to steps are one action each, so they get more room.
+CAPS = {"letter": 10, "bill": 10, "other": 10, "form": 14, "medicine": 16, "how_to": 12}
 CONFLICT_TEXT = "Your label and leaflet say different things. Ask your pharmacist."
 RANK = {"what": 0, "how": 1, "when": 2, "warning": 3, "get_help": 4}
 
@@ -119,10 +119,25 @@ def drop_restated(steps: list[dict], doc_type: str) -> list[dict]:
                 continue
             if not money:
                 dates = re.findall(r"\b\d{1,2} [A-Z][a-z]+(?: \d{4})?", s["text_en"])
-                if dates and all(d.replace(" ", "") in before for d in dates):
+                # Same date is not the same fact: "pay by 30 Nov" does not cover "return the form by 30 Nov".
+                if dates and all(d.replace(" ", "") in before for d in dates) and any(
+                        all(d in k["text_en"] for d in dates) and _same_action(s["text_en"], k["text_en"]) for k in out):
                     continue
         out.append(s)
     return out
+
+
+_DAYS = re.compile(r"\b(?:january|february|march|april|may|june|july|august|september|october|november|december"
+                   r"|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b|^by [^:]+:", re.I)
+_COMMON = {"your", "with", "this", "that", "will", "have", "from", "they", "them", "their", "about", "there", "what",
+           "when", "also", "into", "been", "must", "need", "please"}
+
+
+def _same_action(a: str, b: str) -> bool:
+    """At least 60% of a's content words (dates removed) also appear in b."""
+    wa = {w for w in re.findall(r"[a-z]{4,}", _DAYS.sub(" ", a.lower())) if w not in _COMMON}
+    wb = set(re.findall(r"[a-z]{4,}", b.lower()))
+    return not wa or len(wa & wb) / len(wa) >= 0.6
 
 
 LIMIT = re.compile(r"\b(more than|more often|more times|maximum|at most|no more)\b", re.I)
@@ -194,6 +209,8 @@ def order(steps: list[dict], doc_type: str) -> list[dict]:
     rank = dict(RANK)
     if doc_type == "how_to":
         rank["when"] = 1
+    first_money = next((i for i, s in enumerate(steps) if i > 0 and s["kind"] == "what" and MONEY.search(s["text_en"])), None) \
+        if doc_type == "bill" and not (steps and MONEY.search(steps[0]["text_en"])) else None
 
     def key(ix):
         i, s = ix
@@ -202,6 +219,8 @@ def order(steps: list[dict], doc_type: str) -> list[dict]:
         r = rank.get(s["kind"], 1)
         if s["kind"] == "what" and i > 0:
             r = 1
+            if i == first_money:
+                r = 0  # a bill's total to pay comes straight after "what this is"
         return (r, i)
     return [s for _, s in sorted(enumerate(steps), key=key)]
 
@@ -330,6 +349,28 @@ def compress_warnings(steps: list[dict], has_conflict: bool) -> list[dict]:
         out[a] = {**out[a], "text_en": out[a]["text_en"].strip() + " " + out[b]["text_en"].strip()}
         del out[b]
         plain = [i for i, s in enumerate(out) if s["kind"] == "warning" and not is_conflict(s["text_en"])]
+    return out
+
+
+TARGET_STEPS = 12
+JOIN_MAX_WORDS = 20
+
+
+def fit_warnings(steps: list[dict], limit: int = TARGET_STEPS) -> list[dict]:
+    """Over the 6-12 step target: join the two shortest adjacent one-sentence warnings into one step (at most
+    JOIN_MAX_WORDS words), until the guide fits. Nothing is dropped; the checked technique steps are untouched."""
+    out = list(steps)
+    while len(out) > limit:
+        idx = [i for i, s in enumerate(out) if s["kind"] == "warning" and not is_conflict(s["text_en"])
+               and len(re.findall(r"[.!?](?:\s|$)", s["text_en"].strip() + " ")) <= 1]
+        pairs = [(len(out[a]["text_en"].split()) + len(out[b]["text_en"].split()), a, b) for a, b in zip(idx, idx[1:])
+                 if b == a + 1]
+        pairs = [p for p in pairs if p[0] <= JOIN_MAX_WORDS]
+        if not pairs:
+            break
+        _, a, b = min(pairs)
+        out[a] = {**out[a], "text_en": out[a]["text_en"].strip() + " " + out[b]["text_en"].strip()}
+        del out[b]
     return out
 
 

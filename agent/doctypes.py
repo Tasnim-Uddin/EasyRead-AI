@@ -130,29 +130,103 @@ def _facts_in(text: str) -> set[str]:
     return months | set(re.findall(r"£\s?\d[\d,]*(?:\.\d+)?|\d+(?:[:.]\d+)?", t.replace(" ", "")))
 
 
-def ensure_content_facts(steps: list[dict], doc_type: str, content: dict | None) -> list[dict]:
-    """letter/bill/other: the rewriter may drop a date, time or amount (a bill total, a trip date, a new dose).
-    Any content line whose numbers no step carries is added back as its deterministic step."""
-    if doc_type not in ("letter", "bill", "other") or not content:
-        return steps
-    have = set().union(*(_facts_in(s.get("text_en") or "") for s in steps)) if steps else set()
-    out = list(steps)
-    from agent import postprocess
-    for s in content_to_steps(doc_type, content):
-        need = _facts_in(s["text_en"])
-        if need and not need <= have:
-            out.append(s)
-            have |= need
-        elif not need and s["kind"] == "when" and not any(
-                postprocess.similar(s["text_en"], o.get("text_en") or "") or _overlap(s["text_en"], o.get("text_en") or "") >= 0.6
-                for o in out):
-            out.append(s)  # a follow-up with no date yet ("the hospital will send you the date") still matters
+_URL = re.compile(r"\b[\w.-]+@[\w-]+(?:\.[\w-]+)+|\b(?:https?://)?[a-z0-9-]+(?:\.[a-z0-9-]+)+/[\w/.-]*|\b(?:www\.)?[a-z0-9-]+\.(?:example|gov\.uk|nhs\.uk|org\.uk|co\.uk|com|org|uk)\b", re.I)
+
+
+def _links_in(text: str) -> set[str]:
+    """Web addresses and emails in a line (fenwick.example/ctax, help@x.org): a way to act is a fact too."""
+    return {m.lower().rstrip("/.") for m in _URL.findall(text)}
+
+
+def _covered(item: dict, steps: list[dict]) -> bool:
+    """A content line is covered when, for each of its sentences, ONE step carries all its numbers/links AND says
+    the same action (a shared date alone is not enough: "pay by 30 Nov" does not cover "return the form by 30 Nov")."""
+    parts = [p for p in re.split(r"(?<=[.!?])\s+", item["text_en"].strip()) if p]
+    if item.get("kind") == "when" or len(parts) < 2:
+        return _sentence_covered(item["text_en"], steps)
+    return all(_sentence_covered(p, steps) for p in parts)
+
+
+def _sentence_covered(text: str, steps: list[dict]) -> bool:
+    item = {"text_en": text}
+    need = _facts_in(text) | _links_in(text)
+    for s in steps:
+        t = s.get("text_en") or ""
+        if need and not need <= (_facts_in(t) | _links_in(t)):
+            continue
+        if any(n.startswith("£") for n in need):
+            return True  # an amount is its own fact: the step that carries it covers it
+        if postprocess.similar(item["text_en"], t) or _overlap(_action(item["text_en"]), t, _COMMON) >= 0.6:
+            return True
+    return False
+
+
+def _action(text: str) -> str:
+    """The words of a line without its dates, times and amounts ("By 30 November: Sign the form" -> "Sign the form")."""
+    text = re.sub(r"^By [^:]+:\s*", "", text)
+    return re.sub("|".join(_MONTHS) + r"|monday|tuesday|wednesday|thursday|friday|saturday|sunday", " ", text, flags=re.I)
+
+
+def ground_examples(steps: list[dict], content: dict | None) -> list[dict]:
+    """A step may add a made-up example ("Example: Jane Smith", "For example, Town Bank, Leeds"). An example is only
+    kept when its words come from the paper (the extracted content); otherwise the sentence is removed."""
+    src = " ".join(str(v) for v in _walk(content)).lower()
+    out = []
+    for s in steps:
+        parts = re.split(r"(?<=[.!?])\s+", (s.get("text_en") or "").strip())
+        keep = []
+        for p in parts:
+            m = re.match(r"^(?:for )?example[:,]?\s*(.+)$", p, re.I)
+            if m and not _overlap_all(m.group(1), src):
+                continue
+            keep.append(p)
+        text = " ".join(keep).strip()
+        if text:
+            out.append({**s, "text_en": text})
     return out
 
 
-def _overlap(a: str, b: str) -> float:
-    """Share of a's content words (4+ letters) that also appear in b."""
-    wa = {w for w in re.findall(r"[a-z]{4,}", a.lower())}
+def _walk(v):
+    if isinstance(v, dict):
+        for x in v.values():
+            yield from _walk(x)
+    elif isinstance(v, list):
+        for x in v:
+            yield from _walk(x)
+    elif isinstance(v, str):
+        yield v
+
+
+def _overlap_all(example: str, src: str) -> bool:
+    """True when every word and number of the example appears in the source text."""
+    words = re.findall(r"[a-z0-9]+", example.lower())
+    have = set(re.findall(r"[a-z0-9]+", src))
+    return bool(words) and all(w in have for w in words)
+
+
+def ensure_content_facts(steps: list[dict], doc_type: str, content: dict | None) -> list[dict]:
+    """letter/bill/other: the rewriter may drop a date, time, amount, web address or a whole action (a bill total,
+    a trip date, "return the form by 30 Nov", "visit x.example to set up a plan"). Any content line no step covers
+    is added back as its deterministic step. Every type: made-up examples are removed."""
+    steps = ground_examples(steps, content)
+    if doc_type not in ("letter", "bill", "other") or not content:
+        return steps
+    out = list(steps)
+    for s in content_to_steps(doc_type, content):
+        if s["kind"] == "what" and not out:
+            out.append(s)
+        elif s is not None and not _covered(s, out) and not (s["kind"] == "what" and not _facts_in(s["text_en"]) and out):
+            out.append(s)
+    return out
+
+
+_COMMON = {"your", "with", "this", "that", "will", "have", "from", "they", "them", "their", "about", "there", "what",
+           "when", "also", "into", "been", "must", "need", "please"}
+
+
+def _overlap(a: str, b: str, skip: set[str] = frozenset()) -> float:
+    """Share of a's content words (4+ letters, minus `skip`) that also appear in b."""
+    wa = {w for w in re.findall(r"[a-z]{4,}", a.lower()) if w not in skip}
     wb = {w for w in re.findall(r"[a-z]{4,}", b.lower())}
     return len(wa & wb) / len(wa) if wa else 1.0
 
@@ -176,7 +250,8 @@ def content_to_steps(doc_type: str, content: dict) -> list[dict]:
         out.append(_step("how", t, "a person calmly doing one simple task at a desk"))
     for b in content["by_when"][:3]:
         date = str(b.get("date") or "")
-        text = f"By {date}: {b['what']}" if re.search(r"\d", date) else str(b["what"])  # "date to come by letter" -> just the action
+        text = f"By {date}: {b['what']}" if re.search(r"\d", date) else str(b["what"])
+        text = text if re.search(r"[.!?]$", text.strip()) else text.strip() + "."  # "date to come by letter" -> just the action
         out.append(_step("when", text, "a calendar page with one day circled"))
     for a in content["amounts"][:3]:
         out.append(_step("what", f"{a['what']}: {a['amount']}".strip(": "), "a hand holding a few coins"))
@@ -193,4 +268,6 @@ def finish_steps(steps: list[dict], doc_type: str, domain: str, conflicts: list,
         key = "999" if domain == "medicine" else "ask for help" if doc_type == "how_to" else "free advice"
         if not any(key in s["text_en"] for s in steps):
             steps.append(_step("get_help", line, "a person on the phone talking to a helper"))
+    if doc_type == "how_to":
+        steps = postprocess.fit_warnings(steps)
     return postprocess.cap(steps, doc_type, domain)
