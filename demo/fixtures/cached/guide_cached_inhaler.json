@@ -73,7 +73,8 @@
       "image_url": "/fixtures/img/step_0.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Use 2 puffs when you wheeze or feel short of breath. This is what your label says."
+      "say": "Use 2 puffs when you wheeze or feel short of breath. This is what your label says.",
+      "visual": null
     },
     {
       "index": 1,
@@ -84,7 +85,8 @@
       "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Your label and leaflet say different things. Ask your pharmacist. Take care with this one."
+      "say": "Your label and leaflet say different things. Ask your pharmacist. Take care with this one.",
+      "visual": null
     },
     {
       "index": 2,
@@ -95,7 +97,11 @@
       "image_url": "/fixtures/img/step_2.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Shake your inhaler. Fit it into your spacer. Take your time."
+      "say": "Shake your inhaler. Fit it into your spacer. Take your time.",
+      "visual": {
+        "kind": "closeup",
+        "id": "inhaler_shake"
+      }
     },
     {
       "index": 3,
@@ -106,7 +112,11 @@
       "image_url": "/fixtures/img/step_3.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Put the spacer mouthpiece in your mouth. Close your lips around it. Take your time."
+      "say": "Put the spacer mouthpiece in your mouth. Close your lips around it. Take your time.",
+      "visual": {
+        "kind": "closeup",
+        "id": "spacer_use"
+      }
     },
     {
       "index": 4,
@@ -117,7 +127,11 @@
       "image_url": "/fixtures/img/step_4.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Press the inhaler once. Breathe in slowly through your mouth. Repeat for your second puff. Take your time."
+      "say": "Press the inhaler once. Breathe in slowly through your mouth. Repeat for your second puff. Take your time.",
+      "visual": {
+        "kind": "closeup",
+        "id": "spacer_use"
+      }
     },
     {
       "index": 5,
@@ -128,7 +142,8 @@
       "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Use your inhaler 4 times at most in 24 hours. Do not take more than 8 puffs in 24 hours. Take care with this one."
+      "say": "Use your inhaler 4 times at most in 24 hours. Do not take more than 8 puffs in 24 hours. Take care with this one.",
+      "visual": null
     },
     {
       "index": 6,
@@ -139,7 +154,8 @@
       "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Your label and your leaflet say different things. Ask your pharmacist which is right. Take care with this one."
+      "say": "Your label and your leaflet say different things. Ask your pharmacist which is right. Take care with this one.",
+      "visual": null
     },
     {
       "index": 7,
@@ -150,7 +166,8 @@
       "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Tell your doctor if your usual dose stops working. Do not use your inhaler more often than advised. Take care with this one."
+      "say": "Tell your doctor if your usual dose stops working. Do not use your inhaler more often than advised. Take care with this one.",
+      "visual": null
     },
     {
       "index": 8,
@@ -161,7 +178,11 @@
       "image_url": "/fixtures/img/step_7.png",
       "technique_clip_id": null,
       "status": "ready",
-      "say": "Call 999 if you have severe difficulty breathing or swelling of your face or lips."
+      "say": "Call 999 if you have severe difficulty breathing or swelling of your face or lips.",
+      "visual": {
+        "kind": "closeup",
+        "id": "phone_call"
+      }
     }
   ],
   "created_at": "2026-11-14T18:22:43.972442+00:00"
