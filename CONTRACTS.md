@@ -9,13 +9,14 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
 | API server | Python 3.12, FastAPI. Run `uvicorn agent.main:app --reload --port 8000` from the repo root | `agent/` (imports `media/`, `finetune/`) |
 | fal | `fal-client` (Python) | `media/` |
 | Technique-clip library | JSON index + media files (or fal URLs) | `library/` |
-| Easy Read rewriter | Adaption fine-tuned model; base LLM fallback behind the same function | `finetune/` |
+| Easy Read rewriter | Claude (live). The Adaption fine-tuned model is used instead when `ADAPTION_MODEL_ID` is set, behind the same function | `finetune/` |
+| Scan and OCR | OpenCV (edges, quality, flatten), RapidOCR + rapidfuzz (highlights) | `agent/scan.py`, `agent/locate.py` |
 | Storage | MongoDB Atlas (`pymongo`) when `MONGODB_URI` is set; otherwise one JSON file per guide in `GUIDES_DIR` (default `<repo>/data/guides`, gitignored), loaded at startup. Only the guide JSON is saved (text, facts, URLs), never the uploaded files | `agent/` |
 
 - The frontend dev server proxies `/api/*` to `http://localhost:8000`.
 - Python deps go in `requirements.txt` at the repo root.
-- Env var names are in `.env.example`. `PICTURE_CONCURRENCY` (default 9, at least 1) sets how many step pictures are made at once.
-- Languages use BCP-47 codes (`en`, `es`, `bn`, `ar`, …). `ar`, `ur` and `he` are right-to-left.
+- Env var names are in `.env.example`. `PICTURE_CONCURRENCY` (default 9, at least 1) sets how many step pictures are made at once; `PICTURE_CAP` (default 4, 0 = none) is the most fal pictures per guide.
+- Languages use BCP-47 codes (`en`, `es`, `bn`, `ar`, …). Right-to-left: `ar`, `ur`, `fa`, `ps`, `he` and others (`RTL_CODES` in `web/src/languages.ts`).
 
 ## 1. Guide JSON (the central object)
 
@@ -57,9 +58,9 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
   "kind": "what|when|how|warning|get_help",
   "say": "Take 2 puffs when you feel wheezy. Take your time.", // optional: the line the guide speaks in its bubble, in guide.language. Server default = text plus a short English tail by kind (translated guides: text only). Missing = show `text`
   "picture_prompt": "…",                         // for media/, never shown to users
-  "image_url": null,                              // live fal picture (no text in image)
+  "image_url": null,                              // fal close-up picture (no text in image); only for steps with no close-up and no highlight, at most PICTURE_CAP per guide
   "technique_clip_id": null,                      // a library clip id when kind == "how"
-  "status": "pending|generating|ready|failed"
+  "status": "pending|generating|ready|failed|skipped"  // skipped = no picture needed (close-up, highlight, or over the cap)
 }
 ```
 
@@ -92,7 +93,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 - `POST /api/scan` (multipart `image`, optional `quad` JSON = the user's own corners, normalised) → `{ "quad", "found", "quality": { "ok", "issues": [...], "block", "region"?, "metrics"? }, "size"? }`; no AI, no cost. `issues` ⊂ `small | blurry | dark | low_contrast | glare | cut_off`; `block` only for `small` or very blurry + flat (the UI then has no "Use it anyway"). Optional `region` `[x, y, w, h]` (normalised) marks where the problem is (glare), `metrics` `{ sharpness, brightness, contrast }` are for the dev panel, `size` `[w, h]` is the photo in px after EXIF rotation. Corners are measured on the photo as the phone shows it (EXIF orientation applied).
 - The app adds **no** advice/safety lines of its own (no 999, no 111). Lines printed on the paper itself are kept as steps.
 
-**Sample:** `demo/fixtures/guide_council_letter.json` (fictional, labelled sample; no images, `image_url: null`, `status: "skipped"`).
+**Samples:** `demo/fixtures/guide_inhaler.json`, `guide_council_letter.json`, `guide_flatpack.json` (fictional, labelled samples, `status: "ready"`, pictures in `demo/fixtures/img/`, some steps with a `visual` close-up). Spanish and Arabic copies are in `demo/fixtures/i18n/`.
 
 ## 2. Server HTTP API (`agent/`)
 - `POST /api/guides` (multipart: `document` (repeat the field for several files), optional `roles`, optional `device_photo`, `language`) → `{ guide_id }`. Processing continues in the background.
@@ -118,7 +119,9 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 - `POST /api/anam/session` without `ANAM_API_KEY` returns `{ sessionToken: "dev-mock-token", mock: true, personaConfig }` so the UI can integrate.
 - `POST /api/tts` `{ text, language }` → `audio/mpeg` (ElevenLabs multilingual model; voice from `ELEVENLABS_VOICE_ID`). Audio is cached on disk by hash of text+language+voice, so repeats cost nothing. Errors are JSON `{ error, detail }`: `503 tts_unavailable` when `ELEVENLABS_API_KEY` is unset (web/ should fall back to the browser voice), `400` empty text, `413` text over 600 characters, `502 tts_failed` if ElevenLabs errors.
 - `GET /api/library` → the library index (§5).
-- `GET /api/guides/{id}/sheet` → a printable HTML Easy Read sheet (stretch).
+- `GET /api/guides/{id}/sheet` → a printable HTML Easy Read sheet. (The web app's Save or share builds its own one-page PDF in the browser.)
+- `GET /api/health` → `{ ok, anthropic, anam, mongo }` (booleans only, never keys).
+- Optional access gate: with `ACCESS_CODE` set, every `/api/*` call needs the code (cookie `er_access` or header `X-Access-Code`); opening any page with `?code=…` sets the cookie.
 
 ## 3. Anam client tools (`type: "client"`, `awaitResult: true`, `toolTimeoutSeconds: 30`)
 `web/` registers a handler for each tool. UI-only tools are handled in the browser; the others POST to the server. Every handler returns a short `say` string (one or two sentences) that the avatar talks about.
@@ -127,17 +130,18 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 |---|---|---|---|
 | `show_step` | `index` | browser | Shows that step |
 | `next_step` / `previous_step` | — | browser | Moves through the steps |
-| `play_technique` | `step_index` | browser | Plays that step's library clip |
-| `answer_from_document` | `question` | server `/ask` | A grounded answer + escalation level |
-| `check_understanding` | `answer?` | server | Asks a "tell me back" question, or checks the user's reply |
-| `set_language` | `language` | server `/language` + browser | Switches the captions and the avatar's language |
+| `play_technique` | `step_index` | browser | Plays that step's checked library clip, or says there is no checked video (unchecked clips only with `SHOW_UNCHECKED_CLIPS=1`, with a badge) |
+| `answer_from_document` | `question` | server `/ask` | A grounded answer from the paper; when it is not on the paper, says so and names who to ask (`ask_who`) |
+| `check_understanding` | `answer?` | server | Asks a "tell me back" question, or checks the user's reply. Registered, but the "Check I've got it" button is hidden (`SHOW_CHECK`, `?check=1`) and the guide only offers it with `EASYREAD_SHOW_CHECK=1` |
+| `set_language` | `language` | server `/language` + browser | Translates the guide, then restarts the live session in the new language (voice, speech recognition, captions) on the same step |
 
 ## 4. `media/` Python interface (imported by `agent/`)
 ```python
-STYLE = "simple flat friendly illustration, thick outlines, soft colours, plain white background, one clear action, no text, no letters, no numbers"
+# Prompt parts: NO_TEXT, CLOSEUP (hands + the one object, no person), PALETTE and STYLE (same palette as web/src/closeups/).
+# wordless(prompt) strips names, dates, quotes and digits before a prompt is sent.
 
-async def make_step_picture(picture_prompt: str, seed: int | None = None) -> str: ...   # -> image_url
-async def annotate_photo(photo_url: str, labels: list[str]) -> str: ...                 # -> image_url with arrows/highlights
+async def make_step_picture(picture_prompt: str, seed: int | None = None) -> str: ...   # -> image_url (flux/schnell, 512x512)
+async def annotate_photo(photo_url: str, labels: list[str], numbered: bool = False) -> str: ...  # -> image_url (numbered circles when numbered=True)
 async def make_technique_clip(start_image_url: str, motion_prompt: str) -> str: ...     # -> video_url (offline, library building only)
 ```
 Each function raises `MediaError(msg)` on failure and reads fal model IDs from a `MODELS = {...}` dict in one place.
@@ -150,20 +154,20 @@ Each function raises `MediaError(msg)` on failure and reads fal model IDs from a
     "checked_by": "<github login>", "checked_against": "https://www.nhs.uk/…", "checked_at": "ISO-8601" }
 ] }
 ```
-Device types: `inhaler_mdi`, `inhaler_mdi_spacer`, `inhaler_dry_powder`, `cream_ointment`, `tablets`, plus the stretch types `eye_drops` and `nasal_spray`. **A clip without `checked_by` is never shown to users.**
+Device types: `inhaler_mdi`, `inhaler_mdi_spacer`, `inhaler_dry_powder`, `cream_ointment`, `tablets`, plus the stretch types `eye_drops` and `nasal_spray`. **A clip without `checked_by` is never shown to users** (only in demo mode, `SHOW_UNCHECKED_CLIPS=1`, with a "not yet checked" badge). Medicine technique *steps* come from the fixed outlines in `agent/technique.py`.
 
 ## 6. `finetune/` Python interface
 ```python
-def write_easy_read(facts: dict, language: str = "en") -> list[dict]:
-    """Returns 6–8 steps: [{"text_en", "kind", "picture_prompt"}].
-    Uses the Adaption model if ADAPTION_MODEL_ID is set, otherwise the base LLM with the same prompt."""
+async def write_easy_read(facts: dict, language: str = "en", doc_type: str = "how_to", content: dict | None = None) -> list[dict]:
+    """Returns steps (6-8 for how_to; shorter or longer for letter/bill/form): [{"text_en", "kind", "picture_prompt"}].
+    Uses the Adaption model if ADAPTION_MODEL_ID is set, otherwise Claude with the same prompt (always falls back)."""
 ```
 Easy Read rubric (used by the model **and** by the eval):
 - one idea per sentence, ≤15 words, active voice, present tense
 - no medical jargon (or it's explained), numbers as digits
 - the dose and timing are exactly faithful to `facts`
-- warnings and get-help steps always included
+- warnings and get-help steps included when the paper has them (the app adds none of its own)
 - every step has a concrete, drawable `picture_prompt`
 
 ## 7. Fixtures
-`demo/fixtures/guide_inhaler.json` (a full Guide with `status: "ready"`) plus its images in `demo/fixtures/img/`. Owned by `@rtkyboba`; until it exists, the lead's first PR adds a minimal version.
+`demo/fixtures/guide_inhaler.json`, `guide_council_letter.json` and `guide_flatpack.json` (full Guides with `status: "ready"`) plus their images in `demo/fixtures/img/`. Saved real runs live in `demo/fixtures/cached/` (`demo/cache_run.py`) and are served as `g_sample_cached_<name>`.

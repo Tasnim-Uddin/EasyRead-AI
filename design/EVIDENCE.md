@@ -2,14 +2,22 @@
 
 Prize: Best-Designed AI Product (Figma).
 
-Approved Figma file: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w
-(Page 1: the core 5 phone screens, then 10 more. All frames are 390 x 844, a phone.)
+Figma file: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w
 
-The screens were designed in Figma first. `web/src/styles.css` opens with the comment "approved phone design. Tokens from the Figma file", and its colours, type and radii come from the file. Then `web/` was built to match.
+## What is in the file now
 
-Full overview: [`evidence-grid.jpg`](evidence-grid.jpg) (Figma left, built right, for every screen).
+- **Start here.** How to read the file.
+- **01 Final design: v4 Guide stage.** About 68 phone frames (390 x 844). Home; camera finding the edges; crop with draggable corners and a magnifier; loading in three plain stages; the guide intro; steps with animated close-ups; a letter step that highlights the printed words on the user's own photo; ask by voice and by typing; going back; Read mode (no avatar, no sound); You did it; My guides (search, type filter, rename, delete); first run and language picker; add a paper; camera permission; photo check; "couldn't read this part"; "guide can't connect"; "not on the paper"; stop and error states.
+- **02 Design journey: how we chose.** Versions 1 to 4 side by side, with what we kept from each and the principles. v3 (guide in a dock beside the steps) is kept there as the step before v4 (the guide is the screen).
 
-## Side by side
+The web app (`web/`) was built from the v4 frames. Colour, type and radius tokens are in `web/src/styles.css`.
+
+**Where the built app differs from v4, after phone testing:** no check-in question after each step (the user moves with Back and Next); in guide mode the caption is what the guide says, with no second line of step text under the picture; the mic is off until the user presses Speak; "Check I've got it" is hidden for now; the old Summary screen and the Listen button were removed.
+
+## Earlier version (v2), kept as design history
+
+The table below is the earlier 15-frame version of the file (exports in `figma/`) next to the app as it was built then (`built/`). Several of these screens no longer exist in the final app (Summary, the Listen button, Tell me back).
+
 
 Figma frames are exported from the file with the Figma API (`design/figma/`). Built screens are headless Chrome captures at 390 x 844 of the running app on its sample data (`design/built/`). The route column is the URL used.
 
@@ -39,21 +47,13 @@ Extra built screens (no separate Figma frame):
 | Talk screen, before the avatar connects | ![](built/b16-talk.jpg) | `#/sample/inhaler/talk` |
 | Step with the live avatar layout | ![](built/b17-step-live.jpg) | `?fakelive#/sample/inhaler/step/1` |
 
-## Designing for low literacy
+## Designing for low literacy (final app)
 
-- **Big type.** Body text 20px, steps 32px, titles 38 to 40px, buttons 22px, set in rem so the Settings text-size slider scales everything. Tap targets are at least 64px tall.
-- **One step per screen.** One picture, one short sentence (15 words or fewer, from `docs/STYLE.md`), one big Next button. The step count ("2 of 9") sits on the progress bar.
-- **Read-aloud everywhere.** A Listen button on every step, "Listen to this" on summaries, a read-aloud setting, and a talking guide (avatar). Every line the voice says also shows as a caption.
-- **Wordless pictures.** Every step has one consistent illustration with no text inside it, so the same picture works in every language. Captions come from the interface in the chosen language.
-- **999 always visible.** "Serious problem? Call 999." is on the home screen and a persistent link on every guide screen. Medicine guides end with the pharmacist, 111 and 999 lines.
-- **Right to left.** Arabic and Urdu switch the whole layout to right to left (`dir="rtl"`). The Settings frame shows Arabic text with a "Right to left" label.
-- **Honest states.** If the checked technique video is not ready, the app says so and shows the picture. Sample guides are labelled "Sample document. Not a real patient."
-- **Plain words.** Buttons are verbs of one to three words ("Take a photo", "Use this", "Make my guide"). Errors say what went wrong and what to do.
-- **Palette and fonts.** Warm cream background (#FFF6E9), dark brown ink (#3A2A20, high contrast), orange for the one main action (#FF9B3D), sage green for information (#C9E2D2 with #24503A text), butter yellow for take-care notes (#FFE49A). Headings and buttons in Fredoka, body text in Atkinson Hyperlegible, a typeface made for low-vision readers. The tokens are in `web/src/styles.css`; the writing rules are in `docs/STYLE.md`.
-
-## Where the built app differs from the design
-
-- The annotated photo of the user's own device (frame 10) is built but off by default (`DEVICE_PHOTO_LABELS=1` turns it on), because live tests put the labels beside the parts, not on them.
-- The inhaler sample in the built app has 9 steps; the design shows 7.
-- The talk screen captures show an empty green avatar area, because no live avatar session runs offline (`?fakelive` shows the layout only).
-- The built app adds a small tool-call log at the bottom of screens.
+- **Big type.** Body text 20px, steps 32px, buttons 22px, set in rem so the 5-step text-size setting scales everything. Tap targets are at least 64px tall.
+- **One step per screen.** One visual, one short sentence (15 words or fewer, `docs/STYLE.md`), Back and Next always in the same place. A progress bar from step 1.
+- **Spoken and shown.** The live guide speaks each step, and every spoken line shows as a caption. Read mode gives the same steps with no avatar and no sound.
+- **Wordless visuals.** Animated close-ups, highlights on the user's own photo, and fal close-ups with no text inside, so a visual works in every language.
+- **Right to left.** Arabic, Urdu and other right-to-left languages flip the whole layout, including the top bar.
+- **Honest states.** "That's not on your paper" names who to ask; unreadable parts are shown; the app adds no advice of its own.
+- **Plain words.** Buttons are verbs of one to three words ("Take a photo", "Use this photo", "Speak", "Type"). Errors say what went wrong and what to do.
+- **Palette and fonts.** Warm cream background, dark brown ink (#3A2A20) for high contrast, orange for the one main action, sage green for the guide's words. Body text in Atkinson Hyperlegible, a typeface made for low-vision readers. Four colour themes (Original, Calm, Fresh, Warm).
