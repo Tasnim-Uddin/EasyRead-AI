@@ -1,0 +1,120 @@
+{
+ "note": "Real keyed run 2026-11-15 on demo/inputs/inhaler_label.png + inhaler_leaflet.png (no device photo): facts and the finished steps.",
+ "facts": {
+  "medicine": "Salbutamol 100 micrograms Evohaler (pressurised inhaler)",
+  "dose": "TWO puffs",
+  "frequency": "When needed for wheeze or breathlessness. Maximum 4 times in 24 hours.",
+  "route": "Inhaled through the mouth",
+  "device_type": "inhaler_mdi",
+  "device_confidence": 0.9,
+  "title": null,
+  "source_steps": [],
+  "warnings": [
+   "Your label and leaflet say different things. Ask your pharmacist.",
+   "Maximum 4 times in 24 hours.",
+   "Do not take more than 8 puffs in 24 hours.",
+   "Tell your doctor if your usual dose stops working.",
+   "Do not use more often than advised."
+  ],
+  "get_help": [
+   "Call 999 if you have severe difficulty breathing or swelling of the face or lips."
+  ],
+  "unreadable": [],
+  "conflicts": [
+   {
+    "field": "dose",
+    "label": "TWO puffs",
+    "leaflet": "Usual dose: ONE puff when needed. Adults may take up to 2 puffs if needed."
+   },
+   {
+    "field": "frequency",
+    "label": "When needed for wheeze or breathlessness. Maximum 4 times in 24 hours.",
+    "leaflet": "When needed. Do not take more than 8 puffs in 24 hours."
+   }
+  ]
+ },
+ "doc_type": "how_to",
+ "domain": "medicine",
+ "steps": [
+  {
+   "text_en": "Your label and leaflet say different things. Ask your pharmacist.",
+   "kind": "warning",
+   "picture_prompt": "a person holding a medicine box and a leaflet, looking unsure"
+  },
+  {
+   "text_en": "This is Salbutamol 100 micrograms Evohaler. It is an inhaler for wheeze or breathlessness.",
+   "kind": "what",
+   "picture_prompt": "A blue and grey pressurised inhaler with a cap, standing upright on a table"
+  },
+  {
+   "text_en": "Use your inhaler when you wheeze or feel breathless.",
+   "kind": "when",
+   "picture_prompt": "A person sitting on a chair with one hand on their chest, looking short of breath"
+  },
+  {
+   "text_en": "Take the cap off your inhaler. Check the mouthpiece is clear.",
+   "kind": "how",
+   "picture_prompt": "Hands holding an inhaler with the cap removed, shaking it gently"
+  },
+  {
+   "text_en": "Shake it 4 or 5 times.",
+   "kind": "how",
+   "picture_prompt": "Hands holding an inhaler with the cap removed, shaking it gently"
+  },
+  {
+   "text_en": "Hold your breath for up to 10 seconds, or as long as is comfortable.",
+   "kind": "how",
+   "picture_prompt": "A person breathing in with an inhaler, then a second picture of the same person holding their breath with cheeks slightly puffed"
+  },
+  {
+   "text_en": "Wait at least 30 seconds before your next puff.",
+   "kind": "how",
+   "picture_prompt": "A person rinsing their mouth with water from a glass over a bathroom sink and spitting into the sink"
+  },
+  {
+   "text_en": "Your label says 2 puffs.",
+   "kind": "warning",
+   "picture_prompt": "A pharmacist behind a counter holding an inhaler box and a folded leaflet, talking to a customer"
+  },
+  {
+   "text_en": "Your leaflet says the usual dose is 1 puff.",
+   "kind": "warning",
+   "picture_prompt": "A pharmacist behind a counter holding an inhaler box and a folded leaflet, talking to a customer"
+  },
+  {
+   "text_en": "Adults may take up to 2 puffs if needed.",
+   "kind": "warning",
+   "picture_prompt": "A pharmacist behind a counter holding an inhaler box and a folded leaflet, talking to a customer"
+  },
+  {
+   "text_en": "Ask your pharmacist how many puffs to take.",
+   "kind": "warning",
+   "picture_prompt": "A pharmacist behind a counter holding an inhaler box and a folded leaflet, talking to a customer"
+  },
+  {
+   "text_en": "Do not use your inhaler more than 4 times in 24 hours.",
+   "kind": "warning",
+   "picture_prompt": "A simple round clock with no numbers beside an inhaler, and a doctor listening to a patient"
+  },
+  {
+   "text_en": "Do not take more than 8 puffs in 24 hours.",
+   "kind": "warning",
+   "picture_prompt": "A simple round clock with no numbers beside an inhaler, and a doctor listening to a patient"
+  },
+  {
+   "text_en": "Do not use it more often than advised.",
+   "kind": "warning",
+   "picture_prompt": "A simple round clock with no numbers beside an inhaler, and a doctor listening to a patient"
+  },
+  {
+   "text_en": "Tell your doctor if your usual dose stops working.",
+   "kind": "warning",
+   "picture_prompt": "A simple round clock with no numbers beside an inhaler, and a doctor listening to a patient"
+  },
+  {
+   "text_en": "Call 999 if you have severe difficulty breathing. Call 999 if your face or lips swell.",
+   "kind": "get_help",
+   "picture_prompt": "A person holding a mobile phone to their ear, looking worried, with a ambulance parked outside the window"
+  }
+ ]
+}

@@ -13,9 +13,15 @@ One idea per step: split anything that has two actions into two steps. Each warn
 "tell your doctor" line), never a list of mixed facts.
 If facts.technique_outline is present, cover EVERY line of it as how steps in the same order, one action per step, in Easy Read words
 (for example breathe out, hold your breath, wait before a second puff). Add no dose or timing that is not in the facts or the outline.
+If the medicine is an inhaler and there is no technique_outline, the how steps must still be complete: breathe out gently,
+put the mouthpiece in your mouth and close your lips round it, press once and breathe in slowly and deeply, then hold your breath.
+Never skip the breathing-in step.
+Never repeat a fact: when label and leaflet disagree, the ONE conflict step is enough; do not add warning steps that restate
+what the label says, what the leaflet says, or "ask how many puffs". Put all dose limits (times or puffs in 24 hours) in ONE
+warning step, and leave out a vague limit ("not more often than advised") when a number is given.
 Do not repeat a step. Order: what, then how steps, then warnings, then get_help.
 """ + STYLE_RULES + """
-Return 6-12 steps as a JSON array of
+Aim for 6-9 steps (a checked technique outline may need more). Return 6-12 steps as a JSON array of
 {"text_en": str, "kind": "what|when|how|warning|get_help", "picture_prompt": str}. JSON only."""
 
 

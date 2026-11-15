@@ -186,7 +186,7 @@ def content_to_steps(doc_type: str, content: dict) -> list[dict]:
 def finish_steps(steps: list[dict], doc_type: str, domain: str, conflicts: list, device_type: str | None = None) -> list[dict]:
     """Tidy the steps (split, dedupe, technique check, STYLE.md order), make sure the conflict flag and the
     safety line are present, then cap the length."""
-    steps = postprocess.tidy(steps, doc_type, domain, device_type)
+    steps = postprocess.tidy(steps, doc_type, domain, device_type, bool(conflicts))
     if conflicts and not any(postprocess.is_conflict(s["text_en"]) for s in steps):
         steps.insert(0, _step("warning", CONFLICT_TEXT, "a person holding a medicine box and a leaflet, looking unsure"))
     for line in safety_lines(doc_type, domain):

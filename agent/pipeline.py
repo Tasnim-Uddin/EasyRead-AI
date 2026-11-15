@@ -1,6 +1,6 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
-from . import langs, llm, technique
+from . import langs, llm, postprocess, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
@@ -196,7 +196,10 @@ def easy_numbers(text: str) -> str:
 
 def summary_line_en(guide: dict) -> str:
     f = guide.get("facts") or {}
-    line = ", ".join(str(x) for x in (f.get("dose"), f.get("frequency")) if x)
+    parts = [str(x).strip() for x in (f.get("dose"), f.get("frequency")) if x and str(x).strip()]
+    # 'When needed' after a comma reads 'when needed' (keep acronyms like NHS, GP).
+    parts = parts[:1] + [p[0].lower() + p[1:] if len(p) > 1 and p[0].isupper() and p[1].islower() else p for p in parts[1:]]
+    line = ", ".join(parts)
     return easy_numbers(line[0].upper() + line[1:]) if line else line
 
 
@@ -367,6 +370,11 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             guide["source"]["image_urls"] = image_urls
             guide["source"]["documents"] = [{**d, "image_url": image_urls[d["index"] - 1] if d["index"] <= len(image_urls) else None}
                                             for d in ex["documents"]]
+            if domain == "medicine":
+                # No device photo: the label/leaflet text may still name the device (Evohaler, pressurised inhaler).
+                dev = postprocess.device_from_facts(facts)
+                if dev and dev != facts.get("device_type"):
+                    facts["device_type"] = dev
             guide.update(doc_type=dt, domain=domain, content=ex["content"], facts=facts,
                          safety_lines=safety_lines(dt, domain))
             status("writing")
