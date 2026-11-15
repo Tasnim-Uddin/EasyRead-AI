@@ -1,27 +1,62 @@
-"""Grounded Q&A from the user's own paper, with a deterministic 111 nudge for urgent wording."""
+"""Grounded Q&A from the user's own paper. When the answer is not on the paper, say so and name who to ask
+(from guide.sender). The app adds no advice lines of its own (no 111, no pharmacist line): `escalate` is kept for
+older clients and is always "none"."""
 import json, re
 from . import langs, llm
 from .pipeline import load_library
 
-URGENT = ["urgent", "getting worse", "urgente", "empeora"]
-MSG = {
-    "en": {"111": "This may need quick advice. Call 111 now.",
-           "pharmacist": "I do not know. It is not in your paper. Ask your pharmacist or GP."},
-    "es": {"111": "Esto puede necesitar consejo rápido. Llame al 111 ahora.",
-           "pharmacist": "No encuentro eso en su documento. Pregunte a su farmacéutico o a su médico."},
+NOT_ON_PAPER = {
+    "en": "That's not on your paper. Ask {who}.",
+    "es": "Eso no está en su papel. Pregunte a {who}.",
+    "ar": "هذا غير موجود في ورقتك. اسأل {who}.",
+    "ur": "یہ آپ کے کاغذ پر نہیں ہے۔ {who} سے پوچھیں۔",
+    "pl": "Tego nie ma na Twoim papierze. Zapytaj: {who}.",
+    "bn": "এটা আপনার কাগজে নেই। {who}-কে জিজ্ঞেস করুন।",
+}
+# Who to ask, by sender kind, when the paper names a kind of place rather than one we should repeat by name.
+WHO = {
+    "en": {"pharmacy": "the pharmacy", "gp": "your GP surgery", "hospital": "the hospital", "school": "the school",
+           "unknown": "whoever sent it"},
+    "es": {"pharmacy": "la farmacia", "gp": "su centro de salud", "hospital": "el hospital", "school": "la escuela",
+           "unknown": "quien se lo envió"},
+    "ar": {"pharmacy": "الصيدلية", "gp": "عيادة طبيبك", "hospital": "المستشفى", "school": "المدرسة",
+           "unknown": "من أرسلها"},
+    "ur": {"pharmacy": "فارمیسی", "gp": "اپنے جی پی کلینک", "hospital": "ہسپتال", "school": "اسکول",
+           "unknown": "جس نے یہ بھیجا"},
+    "pl": {"pharmacy": "aptekę", "gp": "swoją przychodnię", "hospital": "szpital", "school": "szkołę",
+           "unknown": "nadawcę"},
+    "bn": {"pharmacy": "ফার্মেসি", "gp": "আপনার জিপি সার্জারি", "hospital": "হাসপাতাল", "school": "স্কুল",
+           "unknown": "যে পাঠিয়েছে তাকে"},
 }
 
 
-def msg(kind: str, lang: str) -> str:
-    # Languages without a table here get the English line (it always has the number to call); the model answer is in their language.
-    return MSG.get(lang, MSG["en"])[kind]
+def ask_who(guide: dict, lang: str) -> str:
+    """'Northfield Borough Council', 'the pharmacy', 'the school'... in the user's language; else 'whoever sent it'.
+    Councils, companies and government offices are named as printed (a name is the same in every language)."""
+    s = guide.get("sender") or {}
+    table = WHO.get(lang, WHO["en"])
+    kind, name = s.get("kind"), (s.get("name") or "").strip()
+    if kind in table:
+        return table[kind]
+    if name and len(name) <= 48:
+        return name
+    return table["unknown"]
 
 
-def urgency_level(q: str) -> str:
-    ql = q.lower().replace("\u2019", "'").replace("\u2018", "'")
-    if any(k in ql for k in URGENT):
-        return "111"
-    return "none"
+def not_on_paper(guide: dict, lang: str) -> str:
+    return NOT_ON_PAPER.get(lang, NOT_ON_PAPER["en"]).format(who=ask_who(guide, lang))
+
+
+async def lnot_on_paper(guide: dict, lang: str) -> str:
+    """The 'not on your paper' line in any language: the table for the 6 app languages, the model for others."""
+    if lang in NOT_ON_PAPER or not llm.available():
+        return not_on_paper(guide, lang)
+    en = not_on_paper(guide, "en")
+    try:
+        out = (await llm.complete(f"Translate into {langs.name_of(lang)}. Keep names as they are. Reply with the translation only.", en, 200)).strip()
+        return out or en
+    except Exception:
+        return en
 
 
 def _words(t: str) -> set[str]:
@@ -40,54 +75,29 @@ def _local_answer(guide: dict, q: str, lang: str):
     return None
 
 
-QA_SYSTEM = """You answer a patient's question using ONLY the DOCUMENT FACTS and STEPS provided.
-Never give medical advice, diagnose, or change doses. If the answer is not in the document, set grounded=false and tell them to ask their pharmacist or GP.
-If the question sounds urgent set escalate "111".
-Answer in language '{lang}' in 1-2 short simple sentences. Return JSON only: {{"answer": str, "grounded": bool, "escalate": "none|pharmacist|111"}}"""
-
-
-async def lmsg(kind: str, lang: str) -> str:
-    """Safety line in the user's language. Languages without a table: the model translates it. The English line is
-    added only if the translation lost the number to call (111), so a good translation stays all in one language.
-    No key or a failed call: English alone."""
-    if lang in MSG:
-        return MSG[lang][kind]
-    en = MSG["en"][kind]
-    if lang == "en" or not llm.available():
-        return en
-    try:
-        out = await llm.complete(f"Translate into {langs.name_of(lang)}. Keep numbers as digits. Reply with the translation only.", en, 200)
-        out = out.strip()
-        number = re.search(r"\d+", en).group()
-        return out if out and number in out else (f"{out} {en}" if out else en)
-    except Exception:
-        return en
+QA_SYSTEM = """You answer a question about the user's own paper using ONLY the DOCUMENT FACTS, CONTENT and STEPS provided.
+Never give medical, legal or money advice, diagnose, or change doses. Never add advice of your own or phone numbers that are not on the paper.
+If the answer is not in the document, set grounded=false.
+Answer in language '{lang}' in 1-2 short simple sentences. Return JSON only: {{"answer": str, "grounded": bool}}"""
 
 
 async def ask(guide: dict, question: str, language: str) -> dict:
-    level = urgency_level(question)
     ans = None
     if llm.available():
         try:
-            ctx = json.dumps({"facts": guide.get("facts"), "content": guide.get("content"), "doc_type": guide.get("doc_type"), "steps": [s["text_en"] for s in guide.get("steps", [])],
+            ctx = json.dumps({"facts": guide.get("facts"), "content": guide.get("content"), "doc_type": guide.get("doc_type"),
+                              "sender": guide.get("sender"), "dates": guide.get("dates"),
+                              "steps": [s["text_en"] for s in guide.get("steps", [])],
                               "library": [{"device_type": c["device_type"], "caption": c["caption_en"]} for c in load_library()]},
                              ensure_ascii=False)
             r = await llm.complete_json(QA_SYSTEM.format(lang=langs.name_of(language)), f"DOCUMENT:\n{ctx}\n\nQUESTION: {question}", 500)
-            esc = r.get("escalate", "none")
-            if esc not in ("none", "pharmacist", "111"):
-                esc = "pharmacist"
-            if level == "111" and esc == "none":
-                esc = "111"
-            ans = {"answer": r["answer"], "grounded": bool(r.get("grounded")), "escalate": esc}
-            if not ans["grounded"] and esc == "none":
-                ans["escalate"] = "pharmacist"
+            ans = {"answer": r["answer"], "grounded": bool(r.get("grounded")), "escalate": "none"}
         except Exception:
             ans = None
     if ans is None:
         local = _local_answer(guide, question, language)
-        if local:
-            ans = {"answer": local, "grounded": True, "escalate": level if level != "none" else "none"}
-        else:
-            esc = "111" if level == "111" else "pharmacist"
-            ans = {"answer": await lmsg("111" if esc == "111" else "pharmacist", language), "grounded": False, "escalate": esc}
+        ans = {"answer": local, "grounded": True, "escalate": "none"} if local else {"grounded": False, "escalate": "none"}
+    if not ans["grounded"]:
+        ans["answer"] = await lnot_on_paper(guide, language)
+        ans["ask_who"] = ask_who(guide, language)
     return ans

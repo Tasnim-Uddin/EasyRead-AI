@@ -1,6 +1,6 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
-from . import langs, llm, postprocess, technique
+from . import langs, llm, locate, postprocess, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
@@ -46,7 +46,19 @@ Then, by doc_type:
   keep any exception the paper gives, for example "You can drink water"; for a list of medicine changes (stop, start, change a dose)
   give one sentence per medicine with its name and dose, up to 10];
   "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}] (at most 3, the total to pay first, then fees; leave out line items)
-- form: "fields": [{{"label": str, "what_to_write": str}}] in Easy Read words, one per box on the form"""
+- form: "fields": [{{"label": str, "what_to_write": str}}] in Easy Read words, one per box on the form
+
+Also always include (keep them short; copy printed words character for character, as printed, never reworded):
+"quotes": [{{"t": str, "p": N}}] at most 12: the printed words a reader must find on the paper: each amount, date, time,
+  reference or account number, phone number, web address, form box label (the label only, for example "Name(s) of account holder(s)"),
+  and the dose line. 1 to 5 words each. p = document number.
+"sender": {{"name": str, "kind": "pharmacy|gp|hospital|council|school|company|government|other", "contact": str|null}} or null.
+"dates": [{{"what": short English action, "date": "YYYY-MM-DD", "time": "HH:MM"|null, "quote": the printed date words, "amount": str|null}}]
+  for each thing to do by or on a date (pay by, appointment, return the form by). Not the date the letter was written.
+  If the year is not printed, use the next time that date comes after today.
+"unreadable_parts": [{{"p": N, "near": printed words next to it, "note": str}}] for parts you cannot read ([] if none).
+"differ": [{{"field": "amount|date|dose|time", "a": str, "a_doc": N, "b": str, "b_doc": N}}] only when two different files
+  say different things about the same amount, date or dose ([] if none)."""
 
 
 def with_technique(facts: dict) -> dict:
@@ -111,7 +123,8 @@ def attach_clips(guide: dict):
 def new_guide(gid: str, language: str) -> dict:
     return {"id": gid, "status": "extracting", "language": language,
             "source": {"kind": "other", "image_urls": [], "is_sample": False},
-            "doc_type": "how_to", "domain": "other", "content": None, "safety_lines": [],
+            "doc_type": "how_to", "domain": "other", "content": None, "safety_lines": [], "sender": None, "dates": [],
+            "unreadable_regions": [],
             "facts": None, "steps": [], "created_at": now()}
 
 
@@ -121,7 +134,7 @@ def build_blocks(docs: list[tuple[bytes, str, str | None]]) -> list[dict]:
     for i, (data, mime, role) in enumerate(docs, 1):
         content.append({"type": "text", "text": f"Document {i} (role: {role or 'detect'}):"})
         content.append(llm.file_block(data, mime))
-    content.append({"type": "text", "text": "Extract the facts."})
+    content.append({"type": "text", "text": f"Today is {dt.date.today().isoformat()}. Extract the facts."})
     return content
 
 
@@ -130,7 +143,7 @@ async def extract(files, device_photo=None) -> dict:
     docs = [(f[0], f[1], f[2] if len(f) > 2 else None) for f in files]
     if device_photo:
         docs.append((device_photo[0], device_photo[1], "device_photo"))
-    raw = await llm.complete_json(EXTRACT_SYSTEM, build_blocks(docs), 2500)
+    raw = await llm.complete_json(EXTRACT_SYSTEM, build_blocks(docs), 3000)
     out = normalise(raw)
     if out["facts"]["device_type"] not in DEVICE_TYPES:
         out["facts"]["device_type"] = "unknown"
@@ -154,29 +167,20 @@ def make_say(step: dict, language: str) -> str:
     return f"{text} {tail}".strip()
 
 
-async def translate_steps(steps: list[dict], language: str):
-    await _translate(steps, language)
+async def translate_steps(steps: list[dict], language: str, dates: list[dict] | None = None):
+    """Steps (and the dated actions' `what`, in the same call) into the guide's language."""
+    extra = [{"text_en": d.get("what_en") or d.get("what") or "", "text": d.get("what") or ""} for d in dates or []]
+    await _translate(steps + extra, language)
+    for d, x in zip(dates or [], extra):
+        d["what"] = x.get("text") or d.get("what_en") or ""
     for s in steps:
         s["say"] = make_say(s, language)
 
 
 async def translate_safety(guide: dict, language: str):
-    """The pharmacist / advice lines must read in the guide's language. The English originals are kept."""
-    en = guide.setdefault("safety_lines_en", list(guide.get("safety_lines") or []))
-    if language == "en" or not en:
-        guide["safety_lines"] = list(en)
-        return
-    if not llm.available():
-        return
-    try:
-        out = await llm.complete_json(
-            f"Translate each safety sentence into {langs.name_of(language)}. Keep it short and simple, keep numbers such as 111 "
-            "as digits, never weaken or change the meaning. Return a JSON array of strings, same order.",
-            json.dumps(en, ensure_ascii=False))
-        if isinstance(out, list) and len(out) == len(en) and all(isinstance(x, str) and x.strip() for x in out):
-            guide["safety_lines"] = out
-    except Exception:
-        log.warning("safety line translation failed")
+    """The app adds no safety or advice lines of its own any more: always an empty list (older guides are cleared)."""
+    guide["safety_lines"] = []
+    guide.pop("safety_lines_en", None)
 
 
 _DIGITS = {"one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8",
@@ -343,6 +347,29 @@ def not_readable(ex: dict) -> str | None:
     return None
 
 
+async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
+    """Highlights, number cards, checked dates and unreadable regions from the OCR of the user's own pages.
+    Never fails the guide: without OCR, steps simply have no highlights."""
+    import time
+    t = time.perf_counter()
+    try:
+        pages = await ocr_task if ocr_task else [None] * len(files)
+    except Exception as e:
+        log.warning("ocr skipped: %s", e)
+        pages = [None] * len(files)
+    wait_ms = int((time.perf_counter() - t) * 1000)
+    try:
+        stats = locate.attach(guide, ex.get("quotes") or [], pages)
+        pdfs = [locate.pdf_text(f[0]) if f[1] == "application/pdf" else "" for f in files]
+        ocr_ok = any(p is not None for p in pages) or any(pdfs)
+        guide["dates"] = locate.check_dates(ex.get("dates") or [], pages, pdfs, ocr_ok)
+        guide["unreadable_regions"] = locate.unreadable_regions(pages, ex.get("unreadable_parts") or [])
+        log.info("located %d/%d quotes; %d/%d dates kept; ocr wait %d ms", stats["located"], stats["quotes"],
+                 len(guide["dates"]), len(ex.get("dates") or []), wait_ms)
+    except Exception:
+        log.exception("placing quotes failed")
+
+
 async def run(store, gid: str, files, device_photo, language: str, image_urls: list[str]):
     guide = store.get(gid)
 
@@ -355,9 +382,12 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
         store.put(guide)
         store.emit(gid, e)
 
+    ocr_task = None
     try:
         status("extracting")
         if llm.available():
+            # OCR the stored pages in worker threads while the model reads them (adds no time when it finishes first).
+            ocr_task = asyncio.create_task(locate.ocr_pages(locate.page_bytes(image_urls[:len(files)], files)))
             ex = await extract(files, device_photo)
             facts, dt, domain = ex["facts"], ex["doc_type"], ex["domain"]
             problem = not_readable(ex)
@@ -375,8 +405,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                 dev = postprocess.device_from_facts(facts)
                 if dev and dev != facts.get("device_type"):
                     facts["device_type"] = dev
-            guide.update(doc_type=dt, domain=domain, content=ex["content"], facts=facts,
-                         safety_lines=safety_lines(dt, domain))
+            guide.update(doc_type=dt, domain=domain, content=ex["content"], facts=facts, safety_lines=[],
+                         sender=ex.get("sender"))
             status("writing")
             if ex["content"] is not None:
                 raw = ensure_content_facts(await write_typed(facts, language, dt, ex["content"]), dt, ex["content"])
@@ -388,7 +418,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,
                                "technique_clip_id": None, "status": "pending", "visual": r.get("visual")} for i, r in enumerate(raw)]
-            await translate_steps(guide["steps"], language)
+            await place_on_paper(guide, ex, files, ocr_task)
+            await translate_steps(guide["steps"], language, guide.get("dates"))
             await translate_safety(guide, language)
             await translate_summary(guide, language)
         elif os.environ.get("EASYREAD_ALLOW_FIXTURE") != "1":
@@ -403,7 +434,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             guide["source"] = {**fx["source"], "image_urls": image_urls}
             guide["facts"], guide["steps"] = fx["facts"], fx["steps"]
             guide["doc_type"], guide["domain"] = fx.get("doc_type", "how_to"), fx.get("domain", "medicine")
-            guide["content"], guide["safety_lines"] = fx.get("content"), fx.get("safety_lines") or safety_lines("how_to", "medicine")
+            guide["content"], guide["safety_lines"] = fx.get("content"), []
             await asyncio.sleep(0.3)
             status("writing")
             await asyncio.sleep(0.3)
@@ -416,6 +447,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
         store.put(guide)
         status("ready")
     except llm.LLMError as e:
+        if ocr_task:
+            ocr_task.cancel()
         log.warning("pipeline failed: %s", e.code)
         guide.update(error_code=e.code, error=e.detail)
         status("failed")

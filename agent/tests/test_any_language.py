@@ -34,46 +34,33 @@ def test_unusual_language_name_reaches_translation_prompt(monkeypatch):
     asyncio.run(pipeline.translate_steps(steps, "Tigrinya"))
     assert "Tigrinya" in calls[0]
     assert steps[0]["text"] == "t0" and steps[0]["say"] == "t0"
-    guide = {"safety_lines": ["In an emergency, call 999."]}
+    guide = {"safety_lines": ["In an emergency, call 999."], "safety_lines_en": ["x"]}
     asyncio.run(pipeline.translate_safety(guide, "so"))
-    assert "Somali" in calls[1] and guide["safety_lines"] == ["t0"] and guide["safety_lines_en"] == ["In an emergency, call 999."]
-    asyncio.run(pipeline.translate_safety(guide, "en"))
-    assert guide["safety_lines"] == ["In an emergency, call 999."]
+    assert guide["safety_lines"] == [] and "safety_lines_en" not in guide  # the app adds no lines of its own
+    assert len(calls) == 1
 
 
-def test_safety_stays_english_when_translation_fails(monkeypatch):
-    async def boom(*a, **k):
+def test_not_on_paper_any_language_is_translated(monkeypatch):
+    async def fake(system, content, max_tokens=4000):
+        assert "Somali" in system and "That's not on your paper." in content and "Fenwick Council" in content
+        return "Kuma jiro warqaddaada. Weydii Fenwick Council."
+    monkeypatch.setattr(llm, "available", lambda: True)
+    monkeypatch.setattr(llm, "complete", fake)
+
+    async def no_json(*a, **k):
         raise RuntimeError("x")
-    monkeypatch.setattr(llm, "available", lambda: True)
-    monkeypatch.setattr(llm, "complete_json", boom)
-    g = {"safety_lines": ["Call 999."]}
-    asyncio.run(pipeline.translate_safety(g, "yo"))
-    assert g["safety_lines"] == ["Call 999."]
-
-
-def test_111_answer_is_translation_only_when_number_kept(monkeypatch):
-    async def fake(system, content, max_tokens=4000):
-        assert "Somali" in system
-        return "Wac 111 hadda."
-    monkeypatch.setattr(llm, "available", lambda: True)
-    monkeypatch.setattr(llm, "complete", fake)
-    r = asyncio.run(qa.ask({"steps": []}, "It is urgent", "so"))
-    assert r["escalate"] == "111" and r["answer"] == "Wac 111 hadda."
-
-
-def test_111_answer_adds_english_when_translation_loses_number(monkeypatch):
-    async def fake(system, content, max_tokens=4000):
-        return "Wac hadda."
-    monkeypatch.setattr(llm, "available", lambda: True)
-    monkeypatch.setattr(llm, "complete", fake)
-    r = asyncio.run(qa.ask({"steps": []}, "It is urgent", "so"))
-    assert r["answer"].startswith("Wac hadda.") and "Call 111 now" in r["answer"]
+    monkeypatch.setattr(llm, "complete_json", no_json)
+    g = {"steps": [], "sender": {"name": "Fenwick Council", "kind": "council"}}
+    r = asyncio.run(qa.ask(g, "It is urgent", "so"))
+    assert r["escalate"] == "none" and r["grounded"] is False
+    assert r["answer"] == "Kuma jiro warqaddaada. Weydii Fenwick Council." and "111" not in r["answer"]
+    assert r["ask_who"] == "Fenwick Council"
 
 
 def test_api_accepts_any_language_and_sanitises(client, monkeypatch):
     seen = []
 
-    async def fake(steps, language):
+    async def fake(steps, language, dates=None):
         seen.append(language)
     monkeypatch.setattr(pipeline, "translate_steps", fake)
     gid = client.post("/api/guides", data={}).json()["guide_id"]

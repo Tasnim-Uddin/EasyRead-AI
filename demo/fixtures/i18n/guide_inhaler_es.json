@@ -17,9 +17,7 @@
     "warnings": [
       "Si lo necesita más de 3 veces por semana, dígaselo a su médico de cabecera o a su enfermera de asma."
     ],
-    "get_help": [
-      "Si su inhalador no le ayuda y le cuesta respirar, llame al 999."
-    ],
+    "get_help": [],
     "unreadable": []
   },
   "steps": [
@@ -122,21 +120,8 @@
       "technique_clip_id": null,
       "status": "ready",
       "visual": null
-    },
-    {
-      "index": 8,
-      "text": "Si no le ayuda y no puede respirar, llame al 999.",
-      "text_en": "If it does not help and you cannot breathe, call 999.",
-      "kind": "get_help",
-      "picture_prompt": "the person looking worried with a hand at their throat, holding a smartphone that shows a big red phone-call symbol",
-      "image_url": "/fixtures/img/step_7.png",
-      "technique_clip_id": null,
-      "status": "ready",
-      "visual": {
-        "kind": "closeup",
-        "id": "phone_call"
-      }
     }
   ],
-  "created_at": "2026-11-14T15:00:00Z"
+  "created_at": "2026-11-14T15:00:00Z",
+  "safety_lines": []
 }
