@@ -19,15 +19,13 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 | Payment must be remitted within 14 days of the date of issue. | Pay by Friday 12 December. |
 | Contact your GP should symptoms persist. | Still not better? Tell your doctor. |
 
-## 1b. Step pictures and the guide (generated, `media/fal.py` STYLE and CHARACTER)
-- Simple flat friendly vector illustration, thick dark brown outlines, plain solid cream background.
-- Palette only: cream #FFF6E9, ink #3A2A20, orange #FF9B3D, sage #C9E2D2, butter #FFE49A.
-- One clear action per picture. Uncluttered: no busy room, no extra objects.
-- One character: the person in every picture is the live guide, the same woman as the Anam avatar (warm brown skin, black hair in a top bun, round orange earrings, sage green top). The guide portrait goes with every picture request as a reference image (`media/guide_ref.jpg`, model `fal-ai/nano-banana/edit`). Other people (a pharmacist, a doctor) may appear, but the main person is always the guide. Steps with no person stay without one.
-- No text, letters or numbers anywhere, including clock faces, phone screens and labels on objects. Captions come from the app.
-- Name objects in the step's picture prompt, not in the shared CHARACTER line, or the model puts them in every picture.
-- The live guide (Anam avatar) and the step pictures are one character in one style, so they look like one product:
-  `design/guide-cartoon/chosen.png` (made with `fal-ai/flux/dev`, 1152x1152, cream background, sage top).
+## 1b. Step pictures (generated, `media/fal.py` CLOSEUP, NO_TEXT and STYLE)
+- Close-ups only: hands + the one object the step is about (the letter, a phone, a pen, the device). No person, no face, no body, no room, no decoration. The live guide avatar is the only person on screen.
+- Hands keep the guide's warm brown skin and a sage green sleeve cuff, so pictures match the animated close-ups in `web/src/closeups/`.
+- Palette as the close-ups: sand #FCEBD6, cream glow #FFF6EA, ink #3A2A20, orange #F5973F, sage #DCEBDF, skin #B5744A, sleeve #93A27A. Flat vector, thick dark brown outlines.
+- No text, letters or numbers anywhere: paper and screens show plain grey lines only. `wordless()` strips senders, dates, names, quotes and digits from the step prompt before it is sent (they made the model write on the paper), and turns a named person into hands.
+- Model: `fal-ai/flux/schnell`, plain text-to-image, 512x512 (about $0.0008 a picture, 1-3 s). No reference image.
+- A step only gets a picture when it has no animated close-up (`step.visual`) and no highlight on the user's photo (`step.highlights`); at most `PICTURE_CAP` (default 4) per guide, the steps naming the most concrete objects first. The rest show the close-up, the photo or the text.
 
 ## 2. UI copy
 - Buttons are verbs, 1 to 3 words: "Take a photo", "Use this", "Make my guide".
