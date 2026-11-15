@@ -7,6 +7,7 @@ import { useAnam, type ToolHandler } from "./useAnam";
 import { audioOwner, claimAudio, onAudioChange, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
 import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
 import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
+import { GuideStage, type AskInfo } from "./stage/GuideStage";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
@@ -27,7 +28,6 @@ import {
   PrintSheet,
   Reading,
   Settings,
-  StepScreen,
   Summary,
   summaryText,
   TalkScreen,
@@ -37,7 +37,9 @@ import {
   type TrayItem,
 } from "./screens";
 
-const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
+const SAFE_FALLBACK = "I can't check that right now. Please ask whoever sent you this paper.";
+/** The guide has this long to join before the steps open in Read mode instead (Figma 19a). */
+const CONNECT_TIMEOUT_MS = 8000;
 type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 /** Screens where the live guide may keep running. Anywhere else ends the session. */
@@ -102,6 +104,12 @@ export default function App() {
   // Guide-led: the live guide is on by default (it still needs one tap to start, browsers block audio before that).
   const [guideOn, setGuideOn] = useState(() => (/[?&]guide=0/.test(location.search) ? false : load("er.guideOn", true)));
   const [moved, setMoved] = useState<number | null>(null); // "Your guide moved you to step N"
+  // v4 guide stage: Read mode (no avatar, no sound), the "can't connect" fall-back, and the last grounded answer.
+  const [readMode, setReadMode] = useState(false);
+  const [cantConnect, setCantConnect] = useState(false);
+  const [askInfo, setAskInfo] = useState<AskInfo | null>(null);
+  const [moveSeq, setMoveSeq] = useState(0); // +1 each time the avatar moves the steps with a tool
+  const askSeq = useRef(0);
   const movedFrom = useRef(0);
   const [paperOpen, setPaperOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(() => import.meta.env.DEV && /[?&]asksheet/.test(location.search)); // screenshot hook
@@ -282,6 +290,7 @@ export default function App() {
     const guideMove = (i: number) => {
       const before = indexRef.current;
       const to = goto(i);
+      setMoveSeq((n) => n + 1);
       if (to !== before) {
         movedFrom.current = before;
         setMoved(to + 1);
@@ -315,8 +324,14 @@ export default function App() {
           if (isSample(g())) return SAFE_FALLBACK;
           throw e;
         }
-        const tail = r.escalate === "111" ? " Call 111 for urgent advice." : "";
-        return r.answer + tail;
+        // The app adds no advice of its own: the answer, and who to ask when the paper does not say.
+        askSeq.current += 1;
+        setAskInfo({ seq: askSeq.current, grounded: r.grounded, askWho: r.ask_who ?? null });
+        if (!r.grounded) {
+          const who = r.ask_who || g()?.sender?.name;
+          return `${r.answer} (Not on the paper.${who ? ` Who to ask: ${who}.` : " Tell them to ask whoever sent it."})`;
+        }
+        return r.answer;
       },
       check_understanding: (args) =>
         isSample(g())
@@ -356,6 +371,53 @@ export default function App() {
     if (!GUIDE_FLOW.has(screen) && (anam.state === "live" || anam.state === "connecting")) void anam.stop();
   }, [screen, anam.state, anam.stop]);
   setGuideQuiet(anam.quiet);
+
+  /* ---- v4 guide stage: the live guide runs only on the steps in guide mode ---- */
+  const wantLive = screen === "step" && !readMode && !!guide;
+  const wantLiveRef = useRef(wantLive);
+  wantLiveRef.current = wantLive;
+  // Read mode ends the session (no avatar, no sound).
+  useEffect(() => {
+    if (readMode && (anam.state === "live" || anam.state === "connecting")) void anam.stop();
+  }, [readMode, anam.state, anam.stop]);
+  // Guide mode on the steps: join the guide (it was started on the tap that opened the steps, or start it now).
+  const fakeLiveStage = import.meta.env.DEV && demo && location.search.includes("fakelive");
+  useEffect(() => {
+    if (!wantLive || !guide || fakeLiveStage) return;
+    if (anam.state === "idle") {
+      claimAudio("guide");
+      void anam.start(guide.id, langRef.current, indexRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantLive, guide?.id, anam.state]);
+  // Could not connect (no key, refused, or not live within ~8 s), or the session dropped: calm Read mode (19a).
+  const fallBack = useCallback(() => {
+    if (!wantLiveRef.current) return;
+    setCantConnect(true);
+    setReadMode(true);
+    void anamStopRef.current();
+  }, []);
+  useEffect(() => {
+    if (!wantLive || fakeLiveStage) return;
+    if (anam.state === "error" || anam.state === "standin") {
+      fallBack();
+      return;
+    }
+    if (anam.state !== "connecting") return;
+    const timer = setTimeout(fallBack, CONNECT_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [wantLive, anam.state, fallBack, fakeLiveStage]);
+  const wasLive = useRef(false);
+  useEffect(() => {
+    if (anam.state === "live") wasLive.current = true;
+    else if (anam.state === "idle" && wasLive.current) {
+      wasLive.current = false;
+      // Dropped while the user was on the steps in guide mode (not ended by the app): fall back to Read mode.
+      if (wantLiveRef.current && !stoppingRef.current) fallBack();
+    }
+    stoppingRef.current = false;
+  }, [anam.state, fallBack]);
+  const stoppingRef = useRef(false);
   const fakeLiveEarly = import.meta.env.DEV && demo && location.search.includes("fakelive");
   const isLive = fakeLiveEarly || anam.state === "live";
   const [owner, setOwner] = useState(audioOwner());
@@ -463,7 +525,10 @@ export default function App() {
 
   // Everything that belongs to one guide, cleared whenever another guide opens.
   function resetGuideState() {
+    stoppingRef.current = true;
     void anamStopRef.current(); // a different guide never inherits the old guide's live session
+    setCantConnect(false);
+    setAskInfo(null);
     setGuideSeq((n) => n + 1); // remounts the per-guide screens (check results, typed text)
     setAnswer(null);
     setQuestion("");
@@ -782,30 +847,31 @@ export default function App() {
             onSettings={openSettings}
             onPapers={openPapers}
             onBack={leaveSummary}
-            onStart={() => { setIndex(0); go("step"); }}
-            onStartGuide={guideOn ? () => { setIndex(0); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
+            onStart={() => { setIndex(0); setReadMode(true); setCantConnect(false); go("step"); }}
+            onStartGuide={guideOn ? () => { setIndex(0); setReadMode(false); setCantConnect(false); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
             onListen={() => void speak(summaryText(guide), lang)}
             onSeePaper={paperImages(guide).length ? () => setPaperOpen(true) : undefined}
           />
         )}
         {screen === "step" && guide && (
-          <StepScreen
+          <GuideStage
             key={guideSeq}
             guide={guide}
             index={index}
             lang={lang}
-            clips={clips}
-            onClose={() => go("summary")}
-            onIndex={setStep}
-            onFinish={() => { go("tellback"); }}
-            onShowHow={() => void runTool("play_technique", { step_index: index })}
-            moved={moved}
-            onUndoMove={() => setStep(movedFrom.current)}
-            askOpen={askOpen}
-            onAskOpen={setAskOpen}
-            onAsk={(q) => void askOnStep(q)}
-            answer={answer}
-            busy={busy}
+            anam={anam}
+            live={isLive}
+            readMode={readMode}
+            cantConnect={cantConnect}
+            voice={voice}
+            askInfo={askInfo}
+            moveSeq={moveSeq}
+            onIndex={(i) => { goto(i); setMoved(null); }}
+            onReadMode={(on) => { if (!on) setCantConnect(false); setReadMode(on); }}
+            onTryAgain={() => { setCantConnect(false); setReadMode(false); }}
+            onHome={() => { stoppingRef.current = true; go("home"); }}
+            onPapers={() => { stoppingRef.current = true; openPapers(); }}
+            onCheck={() => go("tellback")}
           />
         )}
         {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}

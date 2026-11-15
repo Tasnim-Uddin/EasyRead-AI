@@ -94,10 +94,28 @@ export function AvatarHost({ live, screen }: { live: boolean; screen: string }) 
         width: `${r.width}px`,
         height: `${r.height}px`,
       });
+      // The guide stage's slot morphs (big picture <-> small circle): the video takes its shape too.
+      if (slot.getAttribute("data-avatar-slot") === "gs") host.style.borderRadius = getComputedStyle(slot).borderRadius;
+      else host.style.removeProperty("border-radius");
+    };
+    // While the slot animates (a CSS transition on its size and position), follow it every frame.
+    let raf = 0;
+    let until = 0;
+    const follow = () => {
+      until = performance.now() + 700;
+      if (raf) return;
+      const tick = () => {
+        place();
+        raf = performance.now() < until ? requestAnimationFrame(tick) : 0;
+      };
+      raf = requestAnimationFrame(tick);
     };
     const find = () => {
       const next = document.querySelector("[data-avatar-slot]");
-      if (next === slot) return place();
+      if (next === slot) {
+        follow();
+        return place();
+      }
       ro?.disconnect();
       slot = next;
       host.dataset.mode = slot ? (slot.getAttribute("data-avatar-slot") ?? "face") : "float";
@@ -113,11 +131,12 @@ export function AvatarHost({ live, screen }: { live: boolean; screen: string }) 
     find();
     // slots can appear a frame after the screen (lists, images): re-check as the page settles
     const mo = new MutationObserver(find);
-    mo.observe(document.body, { childList: true, subtree: true });
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "data-shape"] });
     window.addEventListener("resize", place);
     // the dock slot sits in a sticky bottom bar, so it moves on the page as the user scrolls
     window.addEventListener("scroll", place, { passive: true });
     return () => {
+      if (raf) cancelAnimationFrame(raf);
       mo.disconnect();
       ro?.disconnect();
       window.removeEventListener("resize", place);
