@@ -63,3 +63,9 @@ def test_annotate_numbered_prompt(monkeypatch):
 def test_live_step_picture():
     url = asyncio.run(fal.make_step_picture("a blue asthma inhaler held in an open hand", seed=1))
     assert url.startswith("http")
+
+
+def test_style_is_wordless_and_character_names_no_object():
+    assert "no text" in fal.STYLE and "no numbers" in fal.STYLE
+    # An object named in CHARACTER gets drawn in every picture (e.g. an inhaler on a council letter).
+    assert "inhaler" not in fal.CHARACTER.lower()
