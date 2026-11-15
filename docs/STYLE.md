@@ -19,14 +19,6 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 | Payment must be remitted within 14 days of the date of issue. | Pay by Friday 12 December. |
 | Contact your GP should symptoms persist. | Still not better? Tell your doctor. |
 
-## 1b. Step pictures (generated, `media/fal.py` STYLE and CHARACTER)
-- Soft realistic photo, so pictures match the real-person live guide. Natural light, plain light cream backdrop, shallow depth of field, close on the hands and face doing the action.
-- One clear action per picture. Uncluttered: no busy room, no extra objects.
-- The same person in every picture of a guide (a friendly man in his thirties, short dark hair, short beard, sage green sweater).
-- Warm palette: cream, sage green, small orange accents.
-- No text, letters or numbers anywhere, including clock faces, phone screens and labels on objects. Captions come from the app.
-- Name objects in the step's picture prompt, not in the shared CHARACTER line, or the model puts them in every picture.
-
 ## 2. UI copy
 - Buttons are verbs, 1 to 3 words: "Take a photo", "Use this", "Make my guide".
 - Say what happens next. Say where the user is: "Page 2 of 3".
