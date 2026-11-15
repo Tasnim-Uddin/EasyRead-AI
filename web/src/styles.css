@@ -888,3 +888,19 @@ body { font-size: var(--fs-body); line-height: 1.5; }
   .top:has(.papers-btn) .lang > svg:last-of-type { display: none; }
 }
 @media (max-width: 340px) { .top-right .papers-btn span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
+
+/* ---------- motion tokens (Figma prototype; mirrored in motion.ts). Defined only, not used yet. ---------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur-morph: 400ms;
+  --dur-slide: 350ms;
+  --dur-loop-shake: 700ms;
+  --dur-press: 750ms;
+  --dur-highlight: 900ms;
+  --loop-count: infinite;
+}
+/* Less motion: no loops. Anything that loops uses var(--loop-count) or the .motion-loop class. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --loop-count: 0; }
+  .motion-loop { animation: none !important; }
+}
