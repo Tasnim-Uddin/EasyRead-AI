@@ -217,7 +217,8 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
         def droppable(i, s):
             return i > 0 and not (keep and unique_numbers(s, steps))
         cands = [i for i, s in enumerate(steps) if s["kind"] == "what" and droppable(i, s)] or \
-                [i for i, s in enumerate(steps) if s["kind"] in ("how", "when") and droppable(i, s)]
+                [i for i, s in enumerate(steps) if s["kind"] in ("how", "when") and droppable(i, s)
+                 and not s.get("technique")]  # a checked technique line is never trimmed
         if not cands:
             break
         steps.pop(cands[-1])
@@ -251,11 +252,96 @@ def drop_know(steps: list[dict]) -> list[dict]:
     return out
 
 
-def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None) -> list[dict]:
+# Words on a label or leaflet that name the device type, for when no device photo was given.
+DEVICE_WORDS = [
+    ("inhaler_mdi", re.compile(r"evohaler|pressuri[sz]ed (?:metered[- ]dose )?inhaler|metered[- ]dose inhaler|aerosol inhaler"
+                               r"|\bpmdi\b|\bmdi\b", re.I)),
+    ("inhaler_dry_powder", re.compile(r"dry[- ]powder inhaler|accuhaler|turbohaler|easyhaler|ellipta|\bdpi\b", re.I)),
+    ("eye_drops", re.compile(r"eye drops?", re.I)),
+    ("nasal_spray", re.compile(r"nasal spray", re.I)),
+]
+
+
+def device_from_facts(facts: dict) -> str | None:
+    """The device type the label/leaflet text names, or None. Used when the extractor gave no (or an unknown)
+    device type, so the checked technique still applies without a device photo."""
+    dev = facts.get("device_type")
+    if dev and dev != "unknown" and technique.outline(dev):
+        return dev
+    text = " ".join(str(facts.get(k) or "") for k in ("medicine", "route", "title"))
+    for name, rx in DEVICE_WORDS:
+        if rx.search(text):
+            return name
+    return dev if dev else None
+
+
+def use_checked_technique(steps: list[dict], device_type: str | None) -> list[dict]:
+    """For a known device, the how steps ARE the checked technique outline (one step per line, in order).
+    Model how steps that cover an outline line are replaced; any other model how step is kept after the outline."""
+    items = technique.outline(device_type)
+    if not items:
+        return steps
+    keys = [k for it in items for k in it["keywords"]]
+    first = next((i for i, s in enumerate(steps) if s["kind"] == "how"), None)
+    if first is None:
+        first = next((i for i, s in enumerate(steps) if s["kind"] not in ("what", "when") and not is_conflict(s["text_en"])), len(steps))
+    keep_before = [s for s in steps[:first]]
+    rest = steps[first:]
+    extra_how = [s for s in rest if s["kind"] == "how" and not any(k in s["text_en"].lower() for k in keys)]
+    others = [s for s in rest if s["kind"] != "how"]
+    checked = [{"text_en": it["text"], "kind": "how", "picture_prompt": it["picture_prompt"], "technique": True} for it in items]
+    return keep_before + checked + extra_how + others
+
+
+RESTATES_DOSE = re.compile(r"\b(label|leaflet)\b|how many|how much|usual dose is|may take up to", re.I)
+MAX_WARNINGS = 4
+
+
+def compress_warnings(steps: list[dict], has_conflict: bool) -> list[dict]:
+    """Fewer repeated warnings, no safety fact lost:
+    - with a label/leaflet conflict, the conflict is shown ONCE (the conflict step + the Summary conflict card), so
+      warning steps that restate either dose ('Your label says 2 puffs', 'Ask how many puffs') are dropped;
+    - all dose-limit warnings become one step (at most 2 concrete limits per step); a vague limit ('not more often
+      than advised') is dropped when a concrete one exists;
+    - more than MAX_WARNINGS warnings: the shortest neighbours are joined two to a step (nothing is dropped)."""
+    out = []
+    for s in steps:
+        if s["kind"] == "warning" and not is_conflict(s["text_en"]) and has_conflict and RESTATES_DOSE.search(s["text_en"]) \
+                and not LIMIT.search(s["text_en"]):
+            continue
+        out.append(s)
+    limits = [s for s in out if s["kind"] == "warning" and LIMIT.search(s["text_en"]) and not is_conflict(s["text_en"])]
+    if len(limits) > 1:
+        concrete = [s for s in limits if re.search(r"\d", s["text_en"])]
+        keep = concrete or limits[:1]
+        merged = [{**keep[i], "text_en": " ".join(k["text_en"].strip() for k in keep[i:i + 2])} for i in range(0, len(keep), 2)]
+        pos = out.index(limits[0])
+        out = [s for s in out if s not in limits]
+        out[pos:pos] = merged
+    plain = [i for i, s in enumerate(out) if s["kind"] == "warning" and not is_conflict(s["text_en"])]
+    while len(plain) > MAX_WARNINGS:
+        # join the two adjacent single-sentence warnings with the fewest words
+        pairs = [(len(out[a]["text_en"].split()) + len(out[b]["text_en"].split()), a, b) for a, b in zip(plain, plain[1:])
+                 if len(re.findall(r"[.!?](?:\s|$)", out[a]["text_en"].strip() + " ")) <= 1
+                 and len(re.findall(r"[.!?](?:\s|$)", out[b]["text_en"].strip() + " ")) <= 1]
+        if not pairs:
+            break
+        _, a, b = min(pairs)
+        out[a] = {**out[a], "text_en": out[a]["text_en"].strip() + " " + out[b]["text_en"].strip()}
+        del out[b]
+        plain = [i for i, s in enumerate(out) if s["kind"] == "warning" and not is_conflict(s["text_en"])]
+    return out
+
+
+def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None, has_conflict: bool = False) -> list[dict]:
     steps = drop_know(steps)
     steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
     steps = merge_dose_limits(steps)
     if doc_type == "how_to" and domain == "medicine":
-        steps = dedupe(split_technique(steps, device_type))
-        steps = ensure_technique(steps, device_type)
+        if technique.outline(device_type):
+            steps = use_checked_technique(steps, device_type)
+        else:
+            steps = dedupe(split_technique(steps, device_type))
+            steps = ensure_technique(steps, device_type)
+        steps = compress_warnings(steps, has_conflict or any(is_conflict(s["text_en"]) for s in steps))
     return order(steps, doc_type)

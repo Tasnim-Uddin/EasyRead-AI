@@ -38,7 +38,7 @@ def test_inhaler_one_conflict_first_and_technique():
     assert ranks == sorted(ranks)  # what, how, warning, get_help
     for s in steps:
         if s["kind"] == "warning" and not postprocess.is_conflict(s["text_en"]):
-            assert len([p for p in s["text_en"].split(". ") if p]) == 1  # one fact per warning
+            assert len([p for p in s["text_en"].split(". ") if p]) <= 2  # one fact per warning (dose limits are merged, at most 2 per step)
     assert any("999" in x for x in t)
 
 
@@ -106,7 +106,7 @@ def test_inhaler2_long_conflict_step_collapses_and_technique_split():
     assert no_duplicates(steps)
     assert not any("hold your breath" in x.lower() and "wait" in x.lower() for x in t)
     assert not any("breathe out" in x.lower() and "mouthpiece" in x.lower() for x in t)
-    assert any(x.startswith("Wait about 30 seconds") for x in t)
+    assert any(x.startswith("Wait at least 30 seconds") for x in t)
     assert any("999" in x for x in t)
     print(len(steps), t)
 

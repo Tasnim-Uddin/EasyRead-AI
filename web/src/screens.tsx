@@ -957,9 +957,9 @@ interface StepProps {
   busy?: boolean;
   onCheck?: () => void;
 }
-export function stepHasHow(guide: Guide, step: Step, clips: Clip[]) {
-  const clip = step.technique_clip_id ? clips.find((c) => c.id === step.technique_clip_id) : undefined;
-  return !!clip || (kindOf(guide) !== "letter" && kindOf(guide) !== "form" && step.kind === "how");
+/** "Show me how" only when the step has a clip in the library: never a dead button. */
+export function stepHasHow(_guide: Guide, step: Step, clips: Clip[]) {
+  return !!(step.technique_clip_id && clips.some((c) => c.id === step.technique_clip_id));
 }
 export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFinish, onShowHow, moved, onUndoMove, askOpen, onAskOpen, onAsk, answer, busy, onCheck }: StepProps) {
   const live = useLive();
@@ -971,6 +971,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
   // While the guide is live it is the one voice: no separate Listen button.
   const listen = canSpeak(lang) && !live;
   const how = stepHasHow(guide, step, clips);
+  const noVideo = !how && step.kind === "how" && kindOf(guide) !== "letter" && kindOf(guide) !== "form";
   return (
     <div className={"screen step-screen" + (live ? " is-live" : "")}>
       <TitleBar
@@ -1023,6 +1024,11 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
             </button>
           )}
         </div>
+      )}
+      {noVideo && (
+        <p className="no-video" role="status">
+          {t(lang, "noVideo")}
+        </p>
       )}
       {onAskOpen && (
         <div className="step-more">

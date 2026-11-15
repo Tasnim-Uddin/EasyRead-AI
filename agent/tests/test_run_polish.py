@@ -34,10 +34,10 @@ def test_summary_line_translated_and_english_kept(monkeypatch, client):
     monkeypatch.setattr(llm, "available", lambda: True)
     monkeypatch.setattr(llm, "complete_json", fake)
     r = client.post("/api/guides/g_conf/language", json={"language": "es"}).json()
-    assert r["summary_line"] == "t:2 puffs, When needed for wheeze"
-    assert r["summary_line_en"] == "2 puffs, When needed for wheeze"
+    assert r["summary_line"] == "t:2 puffs, when needed for wheeze"
+    assert r["summary_line_en"] == "2 puffs, when needed for wheeze"
     r = client.post("/api/guides/g_conf/language", json={"language": "en"}).json()
-    assert r["summary_line"] == "2 puffs, When needed for wheeze"
+    assert r["summary_line"] == "2 puffs, when needed for wheeze"
 
 
 def test_sheet_layout(client):
