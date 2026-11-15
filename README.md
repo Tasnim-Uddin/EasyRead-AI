@@ -62,7 +62,7 @@ Built at Imperial AI Hack 2026 for **Track 03: Voice, Vision & Generative Media*
 
 **Made for access.**
 
-- Interface hand-translated into 6 languages: English, Spanish, Arabic, Urdu, Polish and Bengali. The guide's own content can be in any language.
+- Interface translated into 15 languages: English, Spanish, Arabic, Urdu, Polish, Bengali, French, Portuguese, Romanian, Turkish, Lithuanian, Chinese, Punjabi, Gujarati and Persian. The guide's own content can be in any language.
 - Right-to-left languages (Arabic, Urdu, Persian, Pashto, Hebrew and more) flip the whole layout.
 - 5 text sizes, 4 colour themes, voice speed.
 - Native guide voices in English, Spanish, Arabic and Polish. Other languages use a multilingual voice. Changing language restarts the guide in the new language, on the same step.
@@ -170,8 +170,14 @@ The guide is an Anam avatar that runs the guide stage with client tools. Code: `
 
 Figma file: **https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w**
 
-- **01 Final design: v4 Guide stage.** About 68 phone frames (390 x 844): home, camera and edge finding, crop and corners, loading, guide intro, steps with close-ups, a letter step with the highlight on the photo, ask by voice and by typing, Read mode, You did it, My guides, first run and language, permissions, photo check, "couldn't read this part", "can't connect", "not on the paper", and errors.
-- **02 Design journey: how we chose.** Versions 1 to 4 side by side, what we kept from each, and the principles. v3 put the guide in a dock beside the steps. v4 makes the guide the screen.
+One page, **EasyRead — Design story**, tells the whole design process top to bottom:
+
+- **A. Early prototypes.** The first mock-ups and the 8 low-literacy principles we set ourselves.
+- **B. Theme directions.** Three directions (A, B, C) explored side by side.
+- **C. Chosen direction.** The guide-led direction we picked, why, and its flow map.
+- **D. Colour variants.** Original, Calm, Fresh and Warm, each with the built Home and Step screens.
+- **E. Final design (v4 Guide stage).** About 68 phone frames (390 x 844): home, camera and edge finding, crop with draggable corners and a magnifier, loading, guide intro, steps with animated close-ups, a letter step that highlights the printed words on the user's own photo, ask by voice and by typing, Read mode, You did it, My guides, first run and language, permissions, photo check, "couldn't read this part", "can't connect", "not on the paper", errors. Panels explain the animations (close-up loops, the avatar morph from full screen to the corner, highlights on the photo) and list the 9 Smart Animate prototype flows (main path, your own letter, first run, errors, any form, two papers disagree, Arabic and more). Ideas we dropped after testing are kept in their own small area.
+- **F. Built.** Each final design next to a screenshot of the built app, and what changed after user testing.
 
 The app was built from the v4 frames. After phone testing we made a few changes from the file: no check-in after each step, a caption-only stage in guide mode, the mic off by default, and "Check I've got it" hidden for now.
 
