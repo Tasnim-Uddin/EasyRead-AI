@@ -355,17 +355,25 @@ export function LangPill({ lang, onLanguage }: { lang: string; onLanguage: (c: s
 }
 
 export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { lang: string; onLanguage: (c: string) => void; onSettings: () => void; onBrand?: () => void; onPapers?: () => void }) {
+  const nav = useContext(NavContext);
+  const home = onBrand ?? nav.onHome;
   return (
     <div className="top">
-      <button className="brand" onClick={onBrand} disabled={!onBrand}>
+      <button className="brand" onClick={home} disabled={!home} aria-label={home ? `EasyRead, ${t(lang, "home")}` : undefined}>
         <i />
         EasyRead
       </button>
       <div className="top-right">
+        {home && (
+          <button className="round home-btn" onClick={home} aria-label={t(lang, "home")} title={t(lang, "home")}>
+            <Icon name="home" />
+          </button>
+        )}
         <LangPill lang={lang} onLanguage={onLanguage} />
         {onPapers && (
-          <button className="round" onClick={onPapers} aria-label={t(lang, "myPapers")}>
+          <button className="papers-btn" onClick={onPapers}>
             <Icon name="history" />
+            <span>{t(lang, "myPapers")}</span>
           </button>
         )}
         <button className="round" onClick={onSettings} aria-label={t(lang, "settings")}>
@@ -428,7 +436,7 @@ interface HomeProps {
   lastPaper?: PaperRow | null;
   onOpenPaper?: (id: string) => void;
 }
-export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers, hasPapers, lastPaper, onOpenPaper }: HomeProps) {
+export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers }: HomeProps) {
   return (
     <div className="screen">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
@@ -452,19 +460,7 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           <Icon name="upload" />
           {t(lang, "upload")}
         </button>
-        {hasPapers && lastPaper && onOpenPaper ? (
-          <section className="last" aria-label={t(lang, "lastPaper")}>
-            <h2 className="group">{t(lang, "lastPaper")}</h2>
-            <PaperCard lang={lang} row={lastPaper} onOpen={onOpenPaper} />
-          </section>
-        ) : (
-          hasPapers && (
-            <button className="btn soft papers-link" onClick={onPapers}>
-              <Icon name="history" />
-              {t(lang, "myPapers")}
-            </button>
-          )
-        )}
+        {/* History lives behind the labelled "My papers" button in the top bar, never on the main page. */}
         <p className="help">
           <Icon name="lock" />
           {t(lang, "privateHere")}
@@ -597,15 +593,31 @@ export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onPap
 }
 
 /* ---------- 3. reading ---------- */
+/** Each stage fills its own part of the one bar; [floor, cap] in percent. */
+const READING_STAGES: Record<string, [number, number, string]> = {
+  uploading: [2, 12, "rowRead"],
+  extracting: [12, 40, "rowRead"],
+  writing: [40, 70, "rowSimple"],
+  illustrating: [70, 96, "gettingReady"],
+  ready: [100, 100, "gettingReady"],
+  failed: [100, 100, "gettingReady"],
+};
 export function Reading({ lang, status, onCancel, onRetry }: { lang: string; status: GuideStatus | "uploading"; onCancel?: () => void; onRetry?: () => void }) {
-  const stage = status === "uploading" || status === "extracting" ? 0 : status === "writing" ? 1 : 2;
+  const [floor, cap, line] = READING_STAGES[status] ?? READING_STAGES.uploading;
   const [slow, setSlow] = useState(false);
+  const [pct, setPct] = useState(floor);
   useEffect(() => {
     setSlow(false);
     const timer = setTimeout(() => setSlow(true), 90000);
     return () => clearTimeout(timer);
   }, [status]);
-  const rows = ["rowRead", "rowSimple", "rowPictures"];
+  // One smooth bar: it jumps to the stage's start, then creeps towards the stage's end (never past it) until the next stage.
+  useEffect(() => {
+    setPct((p) => Math.max(p, floor));
+    if (cap <= floor) return;
+    const timer = setInterval(() => setPct((p) => Math.min(cap, p + Math.max(0.15, (cap - p) * 0.05))), 400);
+    return () => clearInterval(timer);
+  }, [floor, cap]);
   return (
     <div className="screen" role="status" aria-live="polite">
       <div className="top">
@@ -623,16 +635,13 @@ export function Reading({ lang, status, onCancel, onRetry }: { lang: string; sta
             <div key={top} className={"ln" + (i < 2 ? " on" : "")} style={{ top, width: [92, 110, 80, 104, 60][i] }} />
           ))}
         </div>
-        <h2>{t(lang, "readingTitle")}…</h2>
-        <p>{t(lang, "readingHint")}</p>
-        <div className="list">
-          {rows.map((r, i) => (
-            <div key={r} className={i < stage ? "done" : i === stage ? "now" : "wait"}>
-              <span className="dot">{i < stage && <Icon name="check" />}</span>
-              {t(lang, r)}
-            </div>
-          ))}
+        <div className="load-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(pct)} aria-label={t(lang, line)}>
+          <i style={{ width: `${pct}%` }} />
         </div>
+        <h2 className="load-line" key={line}>
+          {t(lang, line)}…
+        </h2>
+        <p>{t(lang, "readingHint")}</p>
         {slow && <p role="alert">{t(lang, "readingSlow")}</p>}
       </div>
       <div className="foot">
@@ -859,11 +868,6 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
         </div>
       )}
 
-      {guide.status === "illustrating" && guide.steps.some(pictureComing) && (
-        <p className="safe" role="status">
-          {t(lang, "rowPictures")}…
-        </p>
-      )}
       {guide.source.is_sample && k === "medicine" && <p className="safe">{t(lang, "sampleNote")}</p>}
       <p className="safe" dir="auto">
         {safetyLines(guide, lang).map((l, i) => (
@@ -1039,6 +1043,8 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
 
         </div>
       )}
+      {/* The 999 link is a small footer link in the page, never inside the guide dock. */}
+      {kindOf(guide) === "medicine" && <EmergencyLink small lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />}
       {askOpen && onAskOpen && onAsk && (
         <AskSheet lang={lang} n={index + 1} live={!!live} answer={answer ?? null} busy={!!busy} onAsk={onAsk} onClose={() => onAskOpen(false)} />
       )}
@@ -1064,7 +1070,6 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
             <Icon name="chevRight" />
           </button>
         </div>
-        {kindOf(guide) === "medicine" && <EmergencyLink small lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />}
       </div>
     </div>
   );
@@ -1107,7 +1112,6 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
           </button>
         </div>
         <p className="sub">{tf(lang, "stillOnStep", { n })}</p>
-        <EmergencyLink lang={lang} small />
         <textarea
           dir="auto"
           value={q}
@@ -1134,6 +1138,8 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
           <div className="answer" dir="auto" aria-live="polite">
             {live && <b>{t(lang, "guideSays")}: </b>}
             {answer}
+            {/* Emergency answers only: the call link sits with the answer that told the user to call. */}
+            {/\b999\b/.test(answer) && <EmergencyLink lang={lang} small warn />}
           </div>
         ) : sent && busy ? (
           <p className="sub" role="status">{live ? t(lang, "guideSays") : ""}…</p>
@@ -1254,6 +1260,7 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
           {t(lang, "slower")}
         </button>
       </div>
+      {kindOf(guide) === "medicine" && <EmergencyLink small lang={lang} />}
       <div className={dock ? "bottombar" : undefined} style={dock ? undefined : { display: "contents" }}>
         <GuideDock text={step.say || step.text} lang={lang} />
         <div className="nav">
@@ -1261,7 +1268,6 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
             {t(lang, "close")}
           </button>
         </div>
-        {kindOf(guide) === "medicine" && <EmergencyLink lang={lang} />}
       </div>
     </div>
   );
@@ -1432,6 +1438,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           <b>{t(lang, "notSure")}</b> {safetyLines(guide, lang).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
         </span>
       </p>
+      {k === "medicine" && <EmergencyLink small lang={lang} />}
       <div className={dock ? "bottombar" : "foot"}>
         {dock && live ? (
           <GuideDock text={answer ?? t(lang, "allDoneSub")} lang={lang} />
@@ -1443,7 +1450,6 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
             </button>
           </div>
         )}
-        <EmergencyLink lang={lang} />
       </div>
     </div>
   );
@@ -1538,7 +1544,6 @@ export function TalkScreen({ lang, state, error, sttMissing, caption, onLanguage
             {t(lang, "typeInstead")}
           </button>
         )}
-        <EmergencyLink lang={lang} />
       </div>
     </div>
   );
@@ -1670,14 +1675,10 @@ export function TellBack({ guide, lang, onCheck, onClose, onBack, backLabel }: {
 }
 
 /* ---------- 10. couldn't read it ---------- */
-export function ErrorScreen({ lang, title, detail, canRetry, onRetry, onNewPhoto, onUpload, onBack }: { lang: string; title: string; detail: string | null; canRetry: boolean; onRetry: () => void; onNewPhoto: () => void; onUpload: () => void; onBack: () => void }) {
+export function ErrorScreen({ lang, title, detail, canRetry, onRetry, onNewPhoto, onUpload, onBack, onSample }: { lang: string; title: string; detail: string | null; canRetry: boolean; onRetry: () => void; onNewPhoto: () => void; onUpload: () => void; onBack: () => void; onSample?: () => void }) {
   return (
     <div className="screen" role="alert">
-      <div className="top">
-        <button className="round" onClick={onBack} aria-label={t(lang, "back2")}>
-          <Icon name="back" />
-        </button>
-      </div>
+      <TitleBar title="" lang={lang} onBack={onBack} />
       <div className="center">
         <div className="sorry">
           <Icon name="camera" />
@@ -1701,7 +1702,12 @@ export function ErrorScreen({ lang, title, detail, canRetry, onRetry, onNewPhoto
         </div>
       </div>
       <div className="foot">
-        {canRetry && (
+        {onSample && (
+          <button className="btn" onClick={onSample}>
+            {t(lang, "sampleInhaler")}
+          </button>
+        )}
+        {canRetry && !onSample && (
           <button className="btn" onClick={onRetry}>
             {t(lang, "retry")}
           </button>

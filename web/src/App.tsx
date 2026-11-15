@@ -40,6 +40,8 @@ import {
 const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
 type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
+/** Screens where the live guide may keep running. Anywhere else ends the session. */
+const GUIDE_FLOW = new Set<Screen>(["step", "clip", "ask", "talk", "tellback"]);
 
 function load<T>(key: string, fallback: T): T {
   try {
@@ -83,13 +85,17 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [langBusy, setLangBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<{ title: string; detail: string | null } | null>(null);
+  const [error, setError] = useState<{ title: string; detail: string | null; code?: string | null } | null>(null);
   const [log, setLog] = useState<ToolLogEntry[]>([]);
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [items, setItems] = useState<TrayItem[]>([]);
   const [tooMany, setTooMany] = useState(false);
-  const [checking, setChecking] = useState<{ file: File; url: string | null } | null>(null);
+  // Photos waiting for "Can you read all of it?": every photo (camera or added) is checked one at a time.
+  const [checkQueue, setCheckQueue] = useState<{ file: File; url: string | null }[]>([]);
+  const checking = checkQueue[0] ?? null;
+  const [guideSeq, setGuideSeq] = useState(0);
+  const retakingRef = useRef(false); // the next picked file replaces the photo being checked
   const [scale, setScale] = useState(() => load("er.scale", 1));
   const [rate, setRate] = useState(() => load("er.rate", 1));
   const [voice, setVoice] = useState(() => load("er.voice", true));
@@ -154,6 +160,13 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, []);
   useEffect(() => save("er.guideOn", guideOn), [guideOn]);
+  // Browser Back/Forward can land on a screen whose data is gone (a checked photo, a deleted guide): never a blank page.
+  useEffect(() => {
+    if (screen === "check" && !checking) go(items.length ? "tray" : "home", true);
+    else if (!guide && ["summary", "step", "clip", "ask", "talk", "tellback"].includes(screen)) go("home", true);
+    else if (screen === "tray" && items.length === 0) go("home", true);
+    else if (screen === "reading" && !guide && !uploading) go(items.length ? "tray" : "home", true);
+  }, [screen, checking, guide, items.length, uploading, go]);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -218,12 +231,14 @@ export default function App() {
   }, [guide?.id, guide?.status]);
 
   // Open the guide as soon as its steps are written; step pictures fill in live.
-  const textDone = !!guide && guide.steps.length > 0 && (guide.status === "illustrating" || guide.status === "ready");
+  // The guide opens once everything (text and pictures) is ready: one smooth loading bar until then.
+  const textDone = !!guide && guide.steps.length > 0 && guide.status === "ready";
   useEffect(() => {
     if (screen !== "reading" || !guide) return;
     if (textDone) {
-      // Let "Drawing the pictures" show as in progress for a moment, then open the summary.
-      const timer = setTimeout(() => go("summary"), guide.status === "ready" ? 0 : 900);
+      // Let the bar reach the end for a moment, then open the summary.
+      // Replace the progress entry, so Back from the summary never lands on a finished progress screen.
+      const timer = setTimeout(() => go("summary", true), 400);
       return () => clearTimeout(timer);
     }
     if (guide.status === "failed") {
@@ -231,6 +246,7 @@ export default function App() {
       const L = langRef.current;
       // Photo tips only for photo problems; server faults get a plain, translated line.
       setError({
+        code,
         title: t(L, code === "not_a_document" ? "notAPaper" : code === "ai_timeout" ? "errTimeout" : code === "demo_mode_no_key" ? "errDemoKey" : code === "image_unreadable" ? "errImage" : "couldNotRead"),
         detail: code === "unreadable" || code === "image_unreadable" ? t(L, "clearerPhoto") : null,
       });
@@ -249,6 +265,7 @@ export default function App() {
   }, []);
 
   const anamLangRef = useRef<(code: string) => void>(() => {});
+  const anamStopRef = useRef<() => Promise<void>>(async () => {});
   const handlers = useMemo<Record<string, ToolHandler>>(() => {
     const stepSay = (i: number) => {
       const s = guideRef.current?.steps[i];
@@ -332,6 +349,12 @@ export default function App() {
 
   const anam = useAnam(AVATAR_VIDEO_ID, handlers, addLog);
   anamLangRef.current = anam.setLanguage;
+  anamStopRef.current = anam.stop;
+  // Leaving the steps / questions / check (Home, My papers, Settings, Summary, a new paper, browser Back)
+  // ends the live session: stream stopped, mic released, audio off. It never keeps talking off-screen.
+  useEffect(() => {
+    if (!GUIDE_FLOW.has(screen) && (anam.state === "live" || anam.state === "connecting")) void anam.stop();
+  }, [screen, anam.state, anam.stop]);
   setGuideQuiet(anam.quiet);
   const fakeLiveEarly = import.meta.env.DEV && demo && location.search.includes("fakelive");
   const isLive = fakeLiveEarly || anam.state === "live";
@@ -378,27 +401,76 @@ export default function App() {
     });
   }, []);
 
+  // Photos join the check queue; a PDF has nothing to look at, so it goes straight onto the tray.
+  function queueFiles(files: File[]) {
+    if (files.length === 0) return;
+    const retake = retakingRef.current;
+    retakingRef.current = false;
+    const photos = files.filter((f) => f.type.startsWith("image/")).map((file) => ({ file, url: fileUrl(file) }));
+    const other = files.filter((f) => !f.type.startsWith("image/"));
+    if (other.length) addFiles(other);
+    if (photos.length === 0) {
+      if (!retake) go("tray");
+      return;
+    }
+    setCheckQueue((q) => {
+      if (retake && q.length) {
+        if (q[0].url) URL.revokeObjectURL(q[0].url);
+        return [...photos, ...q.slice(1)];
+      }
+      return [...q, ...photos];
+    });
+    go("check", screenRef.current === "check");
+  }
   function onCamera(list: FileList | null) {
     const file = list?.[0];
-    if (!file) return;
-    setChecking({ file, url: fileUrl(file) });
-    go("check");
+    if (file) queueFiles([file]);
+    else retakingRef.current = false;
   }
   function onUpload(list: FileList | null) {
-    if (!list || list.length === 0) return;
-    addFiles(Array.from(list));
-    go("tray");
+    if (!list || list.length === 0) {
+      retakingRef.current = false;
+      return;
+    }
+    queueFiles(Array.from(list));
   }
+  function retake() {
+    retakingRef.current = true;
+    // A photo from the camera is retaken with the camera; an added picture is picked again.
+    (checkSource.current === "upload" ? uploadRef : cameraRef).current?.click();
+  }
+  const checkSource = useRef<"camera" | "upload">("camera");
   function useChecked() {
-    if (checking) addFiles([checking.file]);
-    setChecking(null);
-    go("tray");
+    if (!checking) return;
+    retakingRef.current = false;
+    addFiles([checking.file]);
+    const rest = checkQueue.slice(1);
+    setCheckQueue(rest);
+    if (rest.length === 0) go("tray", true);
+  }
+  function dropChecking() {
+    retakingRef.current = false;
+    for (const c of checkQueue) if (c.url) URL.revokeObjectURL(c.url);
+    setCheckQueue([]);
+    go(items.length ? "tray" : "home", true);
   }
 
   // Summary back keeps the paper and the guide: back to where the user came from.
   function leaveSummary() {
     if (window.history.state?.screen && window.history.length > 1) window.history.back();
     else go("home");
+  }
+
+  // Everything that belongs to one guide, cleared whenever another guide opens.
+  function resetGuideState() {
+    void anamStopRef.current(); // a different guide never inherits the old guide's live session
+    setGuideSeq((n) => n + 1); // remounts the per-guide screens (check results, typed text)
+    setAnswer(null);
+    setQuestion("");
+    setMoved(null);
+    setAskOpen(false);
+    setPaperOpen(false);
+    setLog([]);
   }
 
   function startOver() {
@@ -423,9 +495,9 @@ export default function App() {
       rememberGuide(guide_id); // "My papers" on this device only
       setMine(myGuideIds());
       const g = await api.getGuide(guide_id);
+      resetGuideState();
       setGuide(g);
       setIndex(0);
-      setAnswer(null);
     } catch (e) {
       setError({ title: t(lang, "couldNotRead"), detail: api.errorText(lang, e) });
       go("error");
@@ -451,11 +523,6 @@ export default function App() {
       .catch(() => setPapersFailed(true));
   }, []);
 
-  // Home shows the newest paper as "Last paper": the same list call My papers makes, only when there are papers.
-  useEffect(() => {
-    if (screen === "home" && mine.length > 0 && !papers?.some((p) => p.id === mine[0])) loadPapers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, mine.length]);
 
   function openPapers() {
     loadPapers();
@@ -465,12 +532,11 @@ export default function App() {
   async function openPaper(id: string) {
     try {
       const g = await api.getGuide(id);
+      resetGuideState();
       setGuide(g);
       setIndex(0);
-      setAnswer(null);
-      setLog([]);
-      // No steps yet (still being read, or it failed): the progress screen opens the summary or the error when it can.
-      go(g.steps.length ? "summary" : "reading");
+      // Not ready yet (still being made, or it failed): the progress screen opens the summary or the error when it can.
+      go(g.status === "ready" && g.steps.length ? "summary" : "reading");
     } catch (e) {
       if (e instanceof api.ApiError && e.code !== "server") {
         forgetGuide(id);
@@ -503,10 +569,9 @@ export default function App() {
   function openSample(name: string, to: Screen = "summary", at = 0) {
     const g = api.sampleFor(name, langRef.current);
     if (!g) return;
+    resetGuideState();
     setGuide(g);
     setIndex(at);
-    setAnswer(null);
-    setLog([]);
     go(to);
   }
 
@@ -524,7 +589,7 @@ export default function App() {
     } else if (parts[0] === "tray" || parts[0] === "check") {
       void Promise.all([0, 1, 2].map(async (i) => new File([await (await fetch(`/fixtures/img/step_${i}.png`)).blob()], `page-${i + 1}.png`, { type: "image/png" }))).then((fs) => {
         if (parts[0] === "check") {
-          setChecking({ file: fs[0], url: URL.createObjectURL(fs[0]) });
+          setCheckQueue([{ file: fs[0], url: URL.createObjectURL(fs[0]) }]);
           go("check");
           return;
         }
@@ -652,8 +717,8 @@ export default function App() {
     <LiveContext.Provider value={liveInfo}>
       <NavContext.Provider value={{ onHome: screen === "home" ? undefined : toHome, onSummary: screen === "summary" || screen === "step" ? undefined : toSummary }}>
       <div className="phone">
-        <input ref={cameraRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { onCamera(e.target.files); e.target.value = ""; }} />
-        <input ref={uploadRef} hidden multiple type="file" accept="application/pdf,image/*" onChange={(e) => { onUpload(e.target.files); e.target.value = ""; }} />
+        <input ref={cameraRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { checkSource.current = "camera"; onCamera(e.target.files); e.target.value = ""; }} />
+        <input ref={uploadRef} hidden multiple type="file" accept="application/pdf,image/*" onChange={(e) => { if (!retakingRef.current) checkSource.current = "upload"; onUpload(e.target.files); e.target.value = ""; }} />
 
         {screen === "home" && (
           <Home
@@ -665,12 +730,10 @@ export default function App() {
             onSample={demo ? (n) => openSample(n) : undefined}
             onPapers={openPapers}
             hasPapers={mine.length > 0}
-            lastPaper={papers?.find((p) => p.id === mine[0]) ?? null}
-            onOpenPaper={(id) => void openPaper(id)}
           />
         )}
         {screen === "check" && checking && (
-          <CheckPhoto lang={lang} url={checking.url} name={checking.file.name} onBack={() => { setChecking(null); go(items.length ? "tray" : "home"); }} onRetake={() => cameraRef.current?.click()} onUse={useChecked} />
+          <CheckPhoto key={checking.url ?? checking.file.name} lang={lang} url={checking.url} name={checking.file.name} onBack={dropChecking} onRetake={retake} onUse={useChecked} />
         )}
         {screen === "tray" && (
           <Tray
@@ -680,8 +743,7 @@ export default function App() {
             tooMany={tooMany}
             onLanguage={changeLanguage}
             onSettings={openSettings}
-            onPapers={openPapers}
-            onAdd={() => uploadRef.current?.click()}
+            onAdd={() => { checkSource.current = "upload"; uploadRef.current?.click(); }}
             onRole={(id, r) => setItems((c) => c.map((i) => (i.id === id ? { ...i, role: r } : i)))}
             onRemove={(id) => {
               setTooMany(false);
@@ -728,6 +790,7 @@ export default function App() {
         )}
         {screen === "step" && guide && (
           <StepScreen
+            key={guideSeq}
             guide={guide}
             index={index}
             lang={lang}
@@ -748,6 +811,7 @@ export default function App() {
         {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}
         {screen === "ask" && guide && (
           <AskScreen
+            key={guideSeq}
             guide={guide}
             lang={lang}
             question={question}
@@ -782,6 +846,7 @@ export default function App() {
         )}
         {screen === "tellback" && guide && (
           <TellBack
+            key={guideSeq}
             guide={guide}
             lang={lang}
             onCheck={(a, correct) => void runTool("check_understanding", { answer: a, correct })}
@@ -800,6 +865,7 @@ export default function App() {
             onNewPhoto={() => cameraRef.current?.click()}
             onUpload={() => uploadRef.current?.click()}
             onBack={() => go(items.length ? "tray" : "home")}
+            onSample={error?.code === "demo_mode_no_key" ? () => openSample("inhaler") : undefined}
           />
         )}
         {screen === "settings" && (
@@ -824,7 +890,7 @@ export default function App() {
             lang={lang}
             rows={papers}
             failed={papersFailed}
-            onBack={() => go(items.length ? "tray" : "home")}
+            onBack={() => go("home")}
             onOpen={(id) => void openPaper(id)}
             onDelete={(id) => void deletePaper(id)}
             onRetry={loadPapers}
