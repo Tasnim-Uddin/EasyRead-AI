@@ -3,6 +3,8 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import { installAccess, setAccessCode } from "./access";
 import { initialDemo } from "./mode";
+import { t } from "./i18n";
+import { RTL_CODES } from "./languages";
 import "./styles.css";
 
 installAccess();
@@ -13,6 +15,16 @@ window.addEventListener("hashchange", () => {
   if (location.hash.startsWith("#/")) location.reload();
 });
 
+/** The language chosen before (App saves it as JSON under er.lang), so the access gate speaks it too. */
+function savedLang(): string {
+  try {
+    const v = localStorage.getItem("er.lang");
+    return v ? String(JSON.parse(v)) : "en";
+  } catch {
+    return "en";
+  }
+}
+
 function AccessGate({ children }: { children: React.ReactNode }) {
   const [needed, setNeeded] = useState(false);
   const [code, setCode] = useState("");
@@ -22,8 +34,9 @@ function AccessGate({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("er-access-needed", on);
   }, []);
   if (!needed) return <>{children}</>;
+  const lang = savedLang();
   return (
-    <div className="phone">
+    <div className="phone" dir={RTL_CODES.has(lang) ? "rtl" : "ltr"} lang={lang}>
       <form
         className="gate"
         onSubmit={(e) => {
@@ -32,18 +45,18 @@ function AccessGate({ children }: { children: React.ReactNode }) {
           location.reload();
         }}
       >
-        <h1>Enter access code</h1>
-        <p className="sub">This test version is private. Type the code you were given.</p>
+        <h1>{t(lang, "gateTitle")}</h1>
+        <p className="sub">{t(lang, "gateSub")}</p>
         <input
           className="gate-input"
           inputMode="numeric"
           autoComplete="off"
           autoFocus
-          aria-label="Access code"
+          aria-label={t(lang, "gateLabel")}
           value={code}
           onChange={(e) => setCode(e.target.value)}
         />
-        <button className="btn" type="submit" disabled={!code.trim()}>Continue</button>
+        <button className="btn" type="submit" disabled={!code.trim()}>{t(lang, "gateGo")}</button>
       </form>
     </div>
   );
