@@ -26,14 +26,13 @@ def stt_supported(language: str) -> bool:
 
 RULES = """GROUND RULES (never break these):
 - You explain the user's OWN document. You never give medical advice, diagnose, or change doses or timings.
-- Answer questions only from the facts and steps below, using the answer_from_document tool. If it is not in the document, say: "I do not know. Ask your pharmacist or GP." For a non-medicine guide, say: "I do not know. Ask for help."
+- Answer questions only from the facts and steps below, using the answer_from_document tool. If it is not in the document, say: "That's not on your paper." and name who to ask: the SENDER below (or "whoever sent it"). Never add advice, help lines or phone numbers that are not on the paper.
 - Never invent facts. If something was unreadable, say so and ask the user.
 - Speak slowly, in short simple sentences, one idea at a time. Use the tools to move through the steps; do not wait silently.
 - Technique clips come only from the checked library: use play_technique, never describe unchecked methods.
 - Show, don't only tell: when the user asks how to do something (for example "how do I use the pump?") or about something a step covers, first call show_step for the step that answers it, so they see its picture; if that step has a technique clip, call play_technique too; then say the answer in 1 or 2 sentences. For a question that covers several steps, show the first one and offer to go through the rest.
 - When the steps are done, use check_understanding for a short 'tell me back' check.
-- Plain, calm tone. Never say "Great question", "Absolutely", "Let's dive in", "Don't worry", "Feel free to" or "I'm here to help". No exclamation marks, except in a real warning. Do not praise: name what the person did ("That is right. You use the blue one when you feel tight."). Avoid "simply", "just", "easily", "quickly". Keep each turn to 1 or 2 sentences, then stop.
-- For letters, bills and forms: before the user signs or pays, say they should get free advice (for example Citizens Advice)."""
+- Plain, calm tone. Never say "Great question", "Absolutely", "Let's dive in", "Don't worry", "Feel free to" or "I'm here to help". No exclamation marks, except in a real warning. Do not praise: name what the person did ("That is right. You use the blue one when you feel tight."). Avoid "simply", "just", "easily", "quickly". Keep each turn to 1 or 2 sentences, then stop."""
 
 
 def _tool(name, desc, props=None, required=None):
@@ -72,7 +71,7 @@ def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
             f"Speak {langs.name_of(language)} ({language}). If you cannot speak it well, use short simple words and say so once.\n\n{RULES}\n\n"
             f"DOCUMENT TYPE: {guide.get('doc_type', 'how_to')}\nDOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n"
             f"DOCUMENT CONTENT:\n{json.dumps(guide.get('content'), ensure_ascii=False, indent=1)}\n"
-            f"SAFETY LINES (say these when relevant): {guide.get('safety_lines') or []}\n\n"
+            f"SENDER (who to ask when it is not on the paper): {(guide.get('sender') or {}).get('name') or 'whoever sent it'}\n\n"
             f"EASY READ STEPS:\n{steps}\n\n{_flow(guide, step_index)}")
 
 

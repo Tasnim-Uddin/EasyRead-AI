@@ -49,7 +49,8 @@ export interface Facts {
   warnings: string[];
   get_help: string[];
   unreadable: string[];
-  conflicts?: { field: string; label: string; leaflet: string }[];
+  /** label vs leaflet ({label, leaflet} plus a/b), or any two papers ({a, b, a_page, b_page}). */
+  conflicts?: { field: string; label?: string; leaflet?: string; a?: string; b?: string; a_page?: number; b_page?: number }[];
   title?: string;
   source_steps?: string[];
 }
@@ -123,7 +124,16 @@ export interface AskResult {
 export interface ScanResult {
   quad: [number, number][];      // normalised corners; full photo when found=false
   found: boolean;
-  quality: { ok: boolean; issues: ("small" | "blurry" | "dark" | "low_contrast" | "glare" | "cut_off")[]; block: boolean };
+  quality: {
+    ok: boolean;
+    issues: ("small" | "blurry" | "dark" | "low_contrast" | "glare" | "cut_off")[];
+    block: boolean;
+    /** Where the problem is, [x, y, w, h] normalised (glare), when known. */
+    region?: [number, number, number, number];
+    metrics?: { sharpness: number; brightness: number; contrast: number };
+  };
+  /** Photo size in px after EXIF rotation. */
+  size?: [number, number];
 }
 
 export type ServerEvent =
