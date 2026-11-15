@@ -6,9 +6,8 @@ DOC_TYPES = ["how_to", "letter", "bill", "form", "other"]
 DOMAINS = ["medicine", "money", "legal", "school", "council", "other"]
 
 CONFLICT_TEXT = postprocess.CONFLICT_TEXT
-SAFETY_MEDICINE = "For advice, call 111 or ask your pharmacist or GP."
-SAFETY_HOWTO = "If something breaks or feels unsafe, stop and ask for help."
-SAFETY_ADVICE = "Get free advice before you sign or pay. For example, Citizens Advice."
+PAPERS_DIFFER_TEXT = "Your papers say different things. Check which one is right before you act."
+SENDER_KINDS = ["pharmacy", "gp", "hospital", "council", "school", "company", "government", "other"]
 
 STYLE_RULES = """STYLE (Easy Read):
 - One idea per sentence. At most 15 words. Everyday words. Active voice, present tense.
@@ -64,13 +63,65 @@ def merge_medicine(facts: dict, label: dict | None, leaflet: dict | None) -> dic
 
 
 def safety_lines(doc_type: str, domain: str) -> list[str]:
-    if domain == "medicine":
-        return [SAFETY_MEDICINE]
-    if doc_type == "how_to":
-        return [SAFETY_HOWTO]
-    if doc_type in ("letter", "bill", "form", "other") or domain in ("money", "legal", "council", "school"):
-        return [SAFETY_ADVICE]
+    """The app adds no advice or safety lines of its own (no 999, no 111, no Citizens Advice). Lines printed on the
+    paper itself are kept as steps by the writer. Kept as a function (always []) for older callers."""
     return []
+
+
+def _quotes(v) -> list[dict]:
+    """[{"t": exact printed words, "page": 0-based page}] from the model's [{"t", "p"}] (p counts from 1)."""
+    out = []
+    for x in v if isinstance(v, list) else []:
+        if isinstance(x, dict) and _s(x.get("t")) and len(x["t"]) <= 80:
+            p = x.get("p")
+            out.append({"t": x["t"].strip(), "page": int(p) - 1 if isinstance(p, int) and p >= 1 else None})
+    return out[:16]
+
+
+def _sender(v) -> dict | None:
+    if not isinstance(v, dict) or not _s(v.get("name")):
+        return None
+    kind = v.get("kind") if v.get("kind") in SENDER_KINDS else "other"
+    return {"name": _s(v["name"]), "kind": kind, "contact": _s(v.get("contact"))}
+
+
+def _dates(v) -> list[dict]:
+    out = []
+    for x in v if isinstance(v, list) else []:
+        if not isinstance(x, dict) or not _s(x.get("date")) or not _s(x.get("quote")):
+            continue
+        what = _s(x.get("what")) or ""
+        time = _s(x.get("time"))
+        out.append({"what": what, "what_en": what, "date": x["date"].strip()[:10],
+                    "time": time if time and re.fullmatch(r"\d{2}:\d{2}", time) else None,
+                    "quote": x["quote"].strip(), "amount": _s(x.get("amount"))})
+    return out[:8]
+
+
+def _unreadable_parts(v) -> list[dict]:
+    out = []
+    for x in v if isinstance(v, list) else []:
+        if isinstance(x, dict):
+            p = x.get("p")
+            out.append({"page": int(p) - 1 if isinstance(p, int) and p >= 1 else None,
+                        "quote": _s(x.get("near")) or "", "note": _s(x.get("note")) or ""})
+    return out[:4]
+
+
+def papers_differ(v) -> list[dict]:
+    """Two papers disagree on an amount, a date or a dose: [{field, a, b, a_page, b_page}] (pages 0-based)."""
+    out = []
+    for x in v if isinstance(v, list) else []:
+        if not isinstance(x, dict):
+            continue
+        a, b = _s(x.get("a")), _s(x.get("b"))
+        pa, pb = x.get("a_doc"), x.get("b_doc")
+        if not a or not b or not isinstance(pa, int) or not isinstance(pb, int) or pa == pb:
+            continue
+        if not _differs(a, b):
+            continue
+        out.append({"field": _s(x.get("field")) or "detail", "a": a, "b": b, "a_page": pa - 1, "b_page": pb - 1})
+    return out[:3]
 
 
 def normalise(raw: dict) -> dict:
@@ -101,8 +152,15 @@ def normalise(raw: dict) -> dict:
                        raw.get("leaflet") if isinstance(raw.get("leaflet"), dict) else None)
     docs = [{"index": int(d["index"]), "role": d.get("role")} for d in raw.get("documents") or []
             if isinstance(d, dict) and str(d.get("index", "")).isdigit()]
+    if domain == "medicine" and facts["conflicts"]:
+        for c in facts["conflicts"]:  # the same shape as two papers that disagree, for one conflicts card
+            c.update(a=c["label"], b=c["leaflet"])
+    elif not facts["conflicts"] and raw.get("differ"):
+        facts["conflicts"] = papers_differ(raw.get("differ"))
     return {"doc_type": dt, "domain": domain, "source_kind": raw.get("kind") or "other",
-            "documents": docs, "facts": facts, "content": content, "is_document": raw.get("is_document") is not False}
+            "documents": docs, "facts": facts, "content": content, "is_document": raw.get("is_document") is not False,
+            "quotes": _quotes(raw.get("quotes")), "sender": _sender(raw.get("sender")), "dates": _dates(raw.get("dates")),
+            "unreadable_parts": _unreadable_parts(raw.get("unreadable_parts"))}
 
 
 def nothing_read(facts: dict, content: dict | None) -> bool:
@@ -262,12 +320,11 @@ def finish_steps(steps: list[dict], doc_type: str, domain: str, conflicts: list,
     """Tidy the steps (split, dedupe, technique check, STYLE.md order), make sure the conflict flag and the
     safety line are present, then cap the length."""
     steps = postprocess.tidy(steps, doc_type, domain, device_type, bool(conflicts))
-    if conflicts and not any(postprocess.is_conflict(s["text_en"]) for s in steps):
+    label_vs_leaflet = [c for c in conflicts if c.get("label") or c.get("leaflet")]
+    if label_vs_leaflet and not any(postprocess.is_conflict(s["text_en"]) for s in steps):
         steps.insert(0, _step("warning", CONFLICT_TEXT, "a person holding a medicine box and a leaflet, looking unsure"))
-    for line in safety_lines(doc_type, domain):
-        key = "pharmacist" if domain == "medicine" else "ask for help" if doc_type == "how_to" else "free advice"
-        if not any(key in s["text_en"] for s in steps):
-            steps.append(_step("get_help", line, "a person on the phone talking to a helper"))
+    elif conflicts and not label_vs_leaflet and not any(s["text_en"] == PAPERS_DIFFER_TEXT for s in steps):
+        steps.insert(0, _step("warning", PAPERS_DIFFER_TEXT, "a person holding two papers side by side, looking unsure"))
     if doc_type == "how_to":
         steps = postprocess.fit_warnings(steps)
     return postprocess.cap(steps, doc_type, domain)

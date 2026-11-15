@@ -49,7 +49,8 @@ export interface Facts {
   warnings: string[];
   get_help: string[];
   unreadable: string[];
-  conflicts?: { field: string; label: string; leaflet: string }[];
+  /** label vs leaflet ({label, leaflet} plus a/b), or any two papers ({a, b, a_page, b_page}). */
+  conflicts?: { field: string; label?: string; leaflet?: string; a?: string; b?: string; a_page?: number; b_page?: number }[];
   title?: string;
   source_steps?: string[];
 }

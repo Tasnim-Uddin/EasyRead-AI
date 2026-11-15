@@ -17,7 +17,7 @@ def summary(g: dict) -> dict:
     facts = g.get("facts") or {}
     content = g.get("content") or {}
     steps = g.get("steps") or []
-    title = (facts.get("medicine") or (content.get("what_this_is") if isinstance(content, dict) else None)
+    title = (g.get("title_override") or facts.get("medicine") or (content.get("what_this_is") if isinstance(content, dict) else None)
              or facts.get("title") or (steps[0].get("text") if steps else None) or "")
     thumb = next((s.get("image_url") for s in steps if s.get("image_url")), None)
     return {"id": g["id"], "title": title, "language": g.get("language", "en"), "doc_type": g.get("doc_type", "how_to"),
@@ -127,6 +127,18 @@ class Store:
                 out.append(summary(g))
         out.sort(key=lambda r: r.get("created_at") or "", reverse=True)
         return out
+
+    def rename(self, gid: str, title: str | None) -> dict | None:
+        """Sets the user's own name for a guide (title_override); an empty title clears it. None for unknown ids and samples."""
+        if is_sample(gid):
+            return None
+        g = self.get(gid)
+        if g is None:
+            return None
+        t = " ".join((title or "").split())[:120]
+        g["title_override"] = t or None
+        self.put(g)
+        return g
 
     def delete(self, gid: str) -> bool:
         if is_sample(gid) or self.get(gid) is None:

@@ -100,7 +100,7 @@ def test_label_wins_and_conflict_is_flagged(mocked):
     g = post(mocked, [("document", ("l.jpg", JPEG, "image/jpeg")), ("document", ("f.jpg", JPEG, "image/jpeg"))],
              roles="label,leaflet")
     assert g["facts"]["dose"] == "1 tablet"  # label wins
-    assert g["facts"]["conflicts"] == [{"field": "dose", "label": "1 tablet", "leaflet": "2 tablets"}]
+    assert g["facts"]["conflicts"] == [{"field": "dose", "label": "1 tablet", "leaflet": "2 tablets", "a": "1 tablet", "b": "2 tablets"}]
     assert doctypes.CONFLICT_TEXT in g["facts"]["warnings"]
     assert doctypes.CONFLICT_TEXT in mocked["facts"]["warnings"]  # the rewriter is told too
     assert sum(doctypes.CONFLICT_TEXT in s["text_en"] for s in g["steps"]) == 1
@@ -128,14 +128,14 @@ def test_letter_output(mocked):
     c = g["content"]
     assert set(c) == {"what_this_is", "what_to_do", "by_when", "amounts"}
     assert c["by_when"] == [{"date": "1 December", "what": "pay"}] and c["amounts"][0]["amount"] == "£112"
-    assert g["steps"] and g["steps"][-1]["kind"] == "get_help" and "Citizens Advice" in g["steps"][-1]["text_en"]
+    assert g["steps"] and g["steps"][-1]["kind"] != "get_help" and not any(k in s["text_en"] for s in g["steps"] for k in ("Citizens Advice", "111", "free advice", "ask for help"))
     assert "facts" not in mocked  # the rewriter is not used for letters
 
 
 def test_bill_output(mocked):
     mocked["raw"] = BILL
     g = post(mocked, [("document", ("b.pdf", pdf(1), "application/pdf"))])
-    assert g["doc_type"] == "bill" and g["safety_lines"] == [doctypes.SAFETY_ADVICE]
+    assert g["doc_type"] == "bill" and g["safety_lines"] == []
     assert any("£112" in s["text_en"] for s in g["steps"])
 
 
@@ -144,14 +144,13 @@ def test_form_output(mocked):
     g = post(mocked, [("document", ("f.jpg", JPEG, "image/jpeg"))], roles="form")
     assert g["doc_type"] == "form" and g["content"] == {"fields": FORM["fields"]}
     assert any("Write your full name." in s["text_en"] for s in g["steps"])
-    assert "free advice" in g["steps"][-1]["text_en"]
+    assert "free advice" not in g["steps"][-1]["text_en"]
 
 
 def test_medicine_safety_line(mocked):
     g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
-    assert g["safety_lines"] == [doctypes.SAFETY_MEDICINE]
-    assert "111" in doctypes.SAFETY_MEDICINE and "pharmacist" in doctypes.SAFETY_MEDICINE
-    assert any("pharmacist" in s["text_en"] for s in g["steps"])
+    assert g["safety_lines"] == []
+    assert not any(k in s["text_en"] for s in g["steps"] for k in ("Citizens Advice", "111", "free advice", "ask for help"))
 
 
 def test_no_999_guard(mocked, monkeypatch):
@@ -164,7 +163,8 @@ def test_letter_guide_ask_uses_content(mocked):
     mocked["raw"] = LETTER
     g = post(mocked, [("document", ("l.jpg", JPEG, "image/jpeg"))])
     r = mocked["client"].post("/api/anam/session", json={"guide_id": g["id"], "language": "en"}).json()
-    assert "Citizens Advice" in r["personaConfig"]["systemPrompt"] and "DOCUMENT TYPE: letter" in r["personaConfig"]["systemPrompt"]
+    assert "Citizens Advice" not in r["personaConfig"]["systemPrompt"] and "DOCUMENT TYPE: letter" in r["personaConfig"]["systemPrompt"]
+    assert "111" not in r["personaConfig"]["systemPrompt"]
 
 
 # ---- limits and validation (no model involved) ----
@@ -210,7 +210,7 @@ def test_fixtures_validate():
     assert set(g["content"]) == {"what_this_is", "what_to_do", "by_when", "amounts"}
     assert all(s["text_en"] and s["kind"] in ("what", "when", "how", "warning", "get_help") for s in g["steps"])
     assert [s["index"] for s in g["steps"]] == list(range(len(g["steps"])))
-    assert g["safety_lines"] == [doctypes.SAFETY_ADVICE]
+    assert g["safety_lines"] == []
 
 
 def test_extraction_prompt_style_rules():
@@ -243,8 +243,8 @@ def test_generic_howto_uses_own_path(mocked, monkeypatch):
     g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
     assert g["status"] == "ready" and g["domain"] == "other"
     assert seen["facts"]["title"] == "How to build your bookshelf" and seen["facts"]["source_steps"]
-    assert g["safety_lines"] == [doctypes.SAFETY_HOWTO]
-    assert g["steps"][-1]["text_en"] == doctypes.SAFETY_HOWTO and g["steps"][-1]["kind"] == "get_help"
+    assert g["safety_lines"] == []
+    assert not any(k in s["text_en"] for s in g["steps"] for k in ("Citizens Advice", "111", "free advice", "ask for help"))
     assert not any("999" in s["text_en"] or "pharmacist" in s["text_en"] for s in g["steps"])
 
 
@@ -264,8 +264,9 @@ def test_generic_rewrite_prompt_and_kinds(monkeypatch):
 
 
 def test_medicine_safety_unchanged():
-    assert doctypes.safety_lines("how_to", "medicine") == [doctypes.SAFETY_MEDICINE]
-    assert doctypes.safety_lines("how_to", "other") == [doctypes.SAFETY_HOWTO]
+    for dt_ in ("how_to", "letter", "bill", "form", "other"):
+        for dom in ("medicine", "money", "council", "other"):
+            assert doctypes.safety_lines(dt_, dom) == []
 
 
 def test_flatpack_fixture():
@@ -273,7 +274,7 @@ def test_flatpack_fixture():
     assert fx["doc_type"] == "how_to" and fx["domain"] == "other"
     assert all(s["image_url"] and s["status"] == "ready" and s["picture_prompt"] for s in fx["steps"])
     assert {s["kind"] for s in fx["steps"]} <= {"what", "how", "warning", "get_help"}
-    assert fx["steps"][-1]["text_en"] == doctypes.SAFETY_HOWTO
+    assert fx["safety_lines"] == [] and fx["steps"][-1]["text_en"] != "If something breaks or feels unsafe, stop and ask for help."
     assert "medicine" not in json.dumps(fx["steps"]).lower()
 
 
@@ -298,7 +299,7 @@ def test_letter_uses_tuned_rewriter_with_doc_type_and_content(mocked, monkeypatc
     g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
     assert g["status"] == "ready" and seen["doc_type"] == "letter" and seen["content"] == g["content"]
     assert g["steps"][0]["text_en"] == "This letter is about your council tax."
-    assert g["steps"][-1]["kind"] == "get_help"
+    assert g["steps"][-1]["kind"] != "get_help"
 
 
 def test_form_falls_back_when_rewriter_fails(mocked, monkeypatch):

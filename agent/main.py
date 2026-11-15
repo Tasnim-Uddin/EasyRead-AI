@@ -92,6 +92,10 @@ class AskReq(_Lang):
     question: str
 
 
+class RenameReq(BaseModel):
+    title: str | None = None
+
+
 class TTSReq(_Lang):
     text: str
 
@@ -244,6 +248,15 @@ def delete_guide(gid: str):
     return {"deleted": gid}
 
 
+@app.patch("/api/guides/{gid}")
+def rename_guide(gid: str, req: RenameReq):
+    """Rename in My guides: {title} is saved as title_override (empty or null clears it). Samples cannot be renamed."""
+    g = store.rename(gid, req.title)
+    if g is None:
+        raise HTTPException(404, "guide not found")
+    return g
+
+
 @app.get("/api/guides/{gid}/events")
 async def events(gid: str, once: bool = False):
     """SSE. `once=1` closes after the guide reaches ready/failed (handy for tests and curl)."""
@@ -271,7 +284,7 @@ async def events(gid: str, once: bool = False):
 async def set_language(gid: str, req: LangReq):
     g = _guide(gid)
     try:
-        await pipeline.translate_steps(g["steps"], req.language)
+        await pipeline.translate_steps(g["steps"], req.language, g.get("dates"))
     except Exception:
         pass  # keep existing text if translation fails
     await pipeline.translate_safety(g, req.language)

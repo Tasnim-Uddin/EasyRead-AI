@@ -10,3 +10,6 @@ pypdf
 Pillow
 adaption
 opencv-python-headless
+rapidocr
+onnxruntime
+rapidfuzz
