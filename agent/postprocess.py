@@ -4,14 +4,14 @@ All pure functions over [{text_en, kind, picture_prompt}], so they are testable 
 """
 import difflib
 import re
-from . import technique, visuals
+from . import appstrings, technique, visuals
 
 STOP = {"a", "an", "the", "your", "you", "to", "of", "is", "are", "and", "this", "that", "it", "for", "on", "in", "if"}
 MONEY = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?")
 # Step caps by guide shape. Easy Read guides aim for 6-12 steps; a letter's facts (every action, date, amount)
 # matter more than brevity, so letters get 10 (plus a few more only when every extra step holds its own date, time or amount). How-to steps are one action each, so they get more room.
 CAPS = {"letter": 10, "bill": 10, "other": 10, "form": 14, "medicine": 16, "how_to": 12}
-CONFLICT_TEXT = "Your label and leaflet say different things. Ask your pharmacist."
+CONFLICT_TEXT = appstrings.CONFLICT["en"]  # no app-added pharmacist: "check with whoever gave it to you"
 RANK = {"what": 0, "how": 1, "when": 2, "warning": 3, "get_help": 4}
 # Template placeholders printed on a blank or sample paper: «PCN_Amount», <<Name>>, {{date}}, [date], DD/MM/CCYY,
 # £XX.XX, ______. They are not values: a step must never read one out as if it were the amount or the date.
@@ -53,7 +53,7 @@ def normalise_conflict(steps: list[dict]) -> list[dict]:
             out.append(s)
             continue
         parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s["text_en"].strip()) if p.strip()]
-        extra = [p for p in parts if not re.search(r"label|leaflet|pharmacist|\bsays?\b", p, re.I)]
+        extra = [p for p in parts if not re.search(r"label|leaflet|pharmacist|whoever gave|\bsays?\b", p, re.I)]
         out.append({**s, "text_en": CONFLICT_TEXT})
         out += [{**s, "text_en": p, "kind": "warning"} for p in extra]
     return out

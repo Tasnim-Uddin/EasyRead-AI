@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avatarBig, initialStage, narrationTimeoutMs, stageReducer as r, tailCaption, whoToAsk, type StageState } from "./machine";
+import { avatarBig, initialStage, stageReducer as r, tailCaption, whoToAsk, type StageState } from "./machine";
 import { chooseVisual, conflictStepIndex, dateIndexFor, PAPER_ACTION_CLOSEUPS, maxScaleFor, overlaps, quadTextHeight, planHighlight, primaryHighlight, quadsBox } from "./visual";
 import type { Step } from "../types";
 
@@ -12,17 +12,16 @@ describe("stage machine", () => {
     expect(s.index).toBe(0);
   });
 
-  it("turns a narrated step into a check-in, and only a step", () => {
-    let s = r(r(s0(), { type: "start" }), { type: "narrated" });
-    expect(s.phase).toBe("checkin");
-    expect(r(s0(), { type: "narrated" }).phase).toBe("intro");
-    s = r(s, { type: "ask", mode: "type" });
-    expect(r(s, { type: "narrated" }).phase).toBe("ask");
+  it("there is no check-in phase: a step stays a step until the user moves", () => {
+    const s = r(s0(), { type: "start" });
+    // an unknown or old "narrated" event changes nothing
+    expect(r(s, { type: "narrated" } as never)).toBe(s);
+    expect(s.phase).toBe("step");
   });
 
-  it("next from check-in goes forward, and finishes after the last step", () => {
+  it("next from a step goes forward, and finishes after the last step", () => {
     let s = r(s0(), { type: "start" });
-    s = r(r(s, { type: "narrated" }), { type: "next" });
+    s = r(s, { type: "next" });
     expect([s.phase, s.index, s.dir]).toEqual(["step", 1, "fwd"]);
     s = r(r(s, { type: "next" }), { type: "next" });
     expect(s.phase).toBe("finish");
@@ -52,21 +51,21 @@ describe("stage machine", () => {
   });
 
   it("sync from the avatar ignores the same step but follows a move", () => {
-    const s = r(r(s0(), { type: "start" }), { type: "narrated" });
+    const s = r(s0(), { type: "start" });
     expect(r(s, { type: "sync", index: 0 })).toBe(s);
     expect(r(s, { type: "sync", index: 1 }).phase).toBe("step");
   });
 
   it("ask, answer, and back to the step it came from", () => {
-    let s = r(r(s0(), { type: "start" }), { type: "narrated" });
+    let s = r(s0(), { type: "start" });
     s = r(s, { type: "ask", mode: "voice" });
-    expect([s.phase, s.askMode, s.askFrom]).toEqual(["ask", "voice", "checkin"]);
+    expect([s.phase, s.askMode, s.askFrom]).toEqual(["ask", "voice", "step"]);
     s = r(s, { type: "asked", question: " Can I drive? " });
     expect([s.phase, s.question, s.answer]).toEqual(["answer", "Can I drive?", null]);
     s = r(s, { type: "answered", answer: "That is not on your paper.", grounded: false, askWho: "the pharmacy" });
     expect([s.answer, s.grounded, s.askWho]).toEqual(["That is not on your paper.", false, "the pharmacy"]);
     // asking again keeps where we came from
-    expect(r(s, { type: "ask", mode: "type" }).askFrom).toBe("checkin");
+    expect(r(s, { type: "ask", mode: "type" }).askFrom).toBe("step");
     s = r(s, { type: "backToStep" });
     expect([s.phase, s.index, s.answer]).toEqual(["step", 0, null]);
   });
@@ -81,8 +80,8 @@ describe("stage machine", () => {
     expect(r(s, { type: "answered", answer: "x" })).toBe(s);
   });
 
-  it("the avatar is big on intro, check-in, answer, finish", () => {
-    expect(["intro", "step", "checkin", "ask", "answer", "finish"].map((p) => avatarBig(p as never))).toEqual([true, false, true, false, true, true]);
+  it("the avatar is big only on intro and finish (a circle through steps, questions and answers)", () => {
+    expect(["intro", "step", "ask", "answer", "finish"].map((p) => avatarBig(p as never))).toEqual([true, false, false, false, true]);
   });
 
   it("restart goes to step 1", () => {
@@ -109,10 +108,6 @@ describe("helpers", () => {
     expect(whoToAsk(hmrc, "HM Revenue & Customs")).toBe("HM Revenue & Customs");
     expect(whoToAsk({ name: "Boots" }, "nadawcę")).toBe("Boots");
     expect(whoToAsk(null, "whoever sent it")).toBeNull();
-  });
-  it("narration timeout is bounded", () => {
-    expect(narrationTimeoutMs("")).toBe(9000);
-    expect(narrationTimeoutMs("a ".repeat(500))).toBe(30000);
   });
 });
 

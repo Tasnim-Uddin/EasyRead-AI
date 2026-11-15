@@ -312,26 +312,35 @@ async def check_understanding(gid: str, req: CheckReq):
     lang = req.language if "language" in req.model_fields_set else g.get("language", "en")
     t = tellback.strings(lang)
     conflict = bool(f.get("conflicts"))
+    # Who to check with comes only from the paper (its sender); else the line says "whoever gave it to you".
+    code = tellback.code(lang)
+    who = qa.ask_who(g, code) if code in qa.WHO else None
+    who = None if who == (qa.WHO.get(code) or {}).get("unknown") else who
+    dose_line = ", ".join(str(f[k]) for k in ("dose", "frequency") if f.get(k))
+    if g.get("summary_line") and g.get("language", "en") == lang:
+        dose_line = g["summary_line"]  # already in the guide language
+
+    async def out(key: str, correct):
+        say = t[key] if key in ("ok", "conflict_ask", "ask_inhaler", "ask_other") else tellback.line(lang, key, who, line=dose_line)
+        return {"say": await tellback.localise(say, lang), "correct": correct}
+
     if req.correct is not None:
         # The screen already graded the user's choice: speak that verdict, never re-grade it here.
         if conflict:
-            return {"say": t["conflict_ok"] if req.correct else t["conflict_bad"], "correct": req.correct}
-        return {"say": t["ok"] if req.correct else t["nearly"].format(dose=f.get("dose"), frequency=f.get("frequency")),
-                "correct": req.correct}
+            return await out("conflict_ok" if req.correct else "conflict_bad", req.correct)
+        return await out("ok" if req.correct else "nearly", req.correct)
     if conflict:
         # The label and the leaflet disagree: never quiz a dose as if one of them were right.
         if not req.answer:
-            return {"say": t["conflict_ask"], "correct": None}
-        ok = tellback.mentions_pharmacist(lang, req.answer)
-        return {"say": t["conflict_ok"] if ok else t["conflict_bad"], "correct": ok}
+            return await out("conflict_ask", None)
+        ok = tellback.mentions_who_to_ask(lang, req.answer, who)
+        return await out("conflict_ok" if ok else "conflict_bad", ok)
     if not req.answer:
-        say = t["ask_inhaler"] if f.get("device_type", "").startswith("inhaler") else t["ask_other"]
-        return {"say": say, "correct": None}
+        return await out("ask_inhaler" if f.get("device_type", "").startswith("inhaler") else "ask_other", None)
     words = qa._words(req.answer)
     key = qa._words(" ".join(str(f.get(k) or "") for k in ("dose", "frequency")))
     ok = bool(key) and len(words & key) >= max(1, len(key) // 2)
-    say = t["ok"] if ok else t["nearly"].format(dose=f.get("dose"), frequency=f.get("frequency"))
-    return {"say": say, "correct": ok}
+    return await out("ok" if ok else "nearly", ok)
 
 
 @app.post("/api/tools/{name}")

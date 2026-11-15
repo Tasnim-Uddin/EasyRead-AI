@@ -1,12 +1,12 @@
-"""v4 guide stage: the persona narrates one step at a time, checks in, and names who to ask."""
+"""v4 guide stage: the persona narrates one step at a time, then waits (no check-in), and names who to ask."""
 from agent import persona
 
 STEPS = [{"index": 0, "kind": "how", "text_en": "Pay the bill."}, {"index": 1, "kind": "when", "text_en": "Pay by 17 Nov."}]
 
 
-def test_one_step_then_check_in():
+def test_one_step_then_wait():
     p = persona.system_prompt({"steps": STEPS}, "en", 1)
-    assert "ONE STEP AT A TIME" in p and persona.CHECKIN in p
+    assert "ONE STEP AT A TIME" in p and "Ready to move on, or any questions?" not in p and "stop and wait" in p
     assert "read step with index 1 aloud" in p and "do NOT call show_step" in p
 
 

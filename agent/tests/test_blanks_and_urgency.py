@@ -207,7 +207,7 @@ def test_form_step_highlights_only_its_own_box():
 
 @pytest.mark.parametrize("guide,who", [
     ({"doc_type": "how_to", "domain": "medicine", "sender": {"name": "Flamingo Pharma (UK) Ltd", "kind": "company"}},
-     "the pharmacy"),
+     "whoever sent it"),  # a leaflet names its maker: the app adds no pharmacist of its own
     ({"doc_type": "letter", "domain": "medicine",
       "sender": {"name": "Community Nutrition and Dietetics Department, Adobe Health Centre (Susan Blight)", "kind": "other"}},
      "Community Nutrition and Dietetics Department"),
