@@ -8,6 +8,7 @@ import type { Guide, Highlight, Step } from "../types";
 export const PAPER_ACTION_CLOSEUPS: ReadonlySet<string> = new Set([
   "write_in_box", "sign_here", "tick_box", "pay_card", "pay_bank", "phone_call",
   "go_online", "calendar_date", "post_letter", "bring_document", "keep_safe", "clock_wait",
+  "letter_open", "read_letter", "check_amount", "deadline_clock", "id_number_find", "appointment_go", "building_visit", "bring_id", "email_send", "online_form", "bank_transfer", "instalments", "decide", "ask_help", "warning_attention", "meter_reading", "letter_arrive",
 ]);
 
 type Callout = { value: string; sub?: string } | null;
