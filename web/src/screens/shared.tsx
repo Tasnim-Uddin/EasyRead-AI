@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { LANGUAGES, t } from "../i18n";
-import { T } from "../bidi";
 import { languageLabel, languageValue, searchLanguages } from "../languages";
 import Icon from "../icons";
 import type { AnamState } from "../useAnam";
@@ -196,15 +195,5 @@ export function TitleBar({ title, lang, onBack, right, backLabel }: { title: Rea
         )}
       </div>
     </div>
-  );
-}
-
-/* Persistent 999 link: shown at the foot of every guide screen (same rule as the home screen: all document kinds). */
-export function EmergencyLink({ lang, warn, small }: { lang: string; warn?: boolean; small?: boolean }) {
-  return (
-    <a className={"sos" + (warn ? " warn" : "") + (small ? " sos-small" : "")} href="tel:999">
-      <Icon name="phone" />
-      <T lang={lang} k="emergencyLink" />
-    </a>
   );
 }

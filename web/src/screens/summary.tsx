@@ -5,7 +5,7 @@ import { CountThen } from "../bidi";
 import { canSpeak } from "../languages";
 import Icon, { GuideFace } from "../icons";
 import { roleName } from "./capture";
-import { LangPill, TitleBar, EmergencyLink } from "./shared";
+import { LangPill, TitleBar } from "./shared";
 
 export type Kind = "medicine" | "howto" | "letter" | "form";
 export function kindOf(g: Guide): Kind {
@@ -17,7 +17,7 @@ export function kindOf(g: Guide): Kind {
 
 /* ---------- 4. summary first ---------- */
 const FALLBACK_SAFETY: Record<Kind, string> = {
-  medicine: "Not sure? Ask your pharmacist. For advice, call 111. In an emergency, call 999.",
+  medicine: "Not sure? Ask your pharmacist. For advice, call 111.",
   howto: "If something breaks or feels unsafe, stop and ask for help.",
   letter: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
   form: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
@@ -251,7 +251,6 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
             <Icon name="chevRight" />
           </button>
         </div>
-        {kindOf(guide) === "medicine" && <EmergencyLink lang={lang} />}
       </div>
     </div>
   );

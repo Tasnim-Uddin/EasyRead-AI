@@ -5,7 +5,7 @@ import { Counter, T } from "../bidi";
 import { canSpeak, findWorld } from "../languages";
 import Icon, { GuideFace } from "../icons";
 import { claimAudio, releaseAudio, speak } from "../speech";
-import { AVATAR_VIDEO_ID, type LiveInfo, LiveContext, useLive, useDock, TitleBar, EmergencyLink } from "./shared";
+import { AVATAR_VIDEO_ID, type LiveInfo, LiveContext, useLive, useDock, TitleBar } from "./shared";
 import { kindOf } from "./summary";
 
 /**
@@ -331,8 +331,6 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
 
         </div>
       )}
-      {/* The 999 link is a small footer link in the page, never inside the guide dock. */}
-      {kindOf(guide) === "medicine" && <EmergencyLink small lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />}
       {askOpen && onAskOpen && onAsk && (
         <AskSheet lang={lang} n={index + 1} live={!!live} answer={answer ?? null} busy={!!busy} onAsk={onAsk} onClose={() => onAskOpen(false)} />
       )}
@@ -426,8 +424,6 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
           <div className="answer" dir="auto" aria-live="polite">
             {live && <b>{t(lang, "guideSays")}: </b>}
             {answer}
-            {/* Emergency answers only: the call link sits with the answer that told the user to call. */}
-            {/\b999\b/.test(answer) && <EmergencyLink lang={lang} small warn />}
           </div>
         ) : sent && busy ? (
           <p className="sub" role="status">{live ? t(lang, "guideSays") : ""}…</p>
@@ -510,7 +506,6 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
           {t(lang, "slower")}
         </button>
       </div>
-      {kindOf(guide) === "medicine" && <EmergencyLink small lang={lang} />}
       <div className={dock ? "bottombar" : undefined} style={dock ? undefined : { display: "contents" }}>
         <GuideDock text={step.say || step.text} lang={lang} />
         <div className="nav">

@@ -6,7 +6,7 @@ import Icon, { GuideFace } from "../icons";
 import { speak } from "../speech";
 import type { AnamState } from "../useAnam";
 import { GuideDock, GuideOrAvatar, TypeBar, LiveControls } from "./guide";
-import { useLive, useDock, LangPill, TitleBar, EmergencyLink } from "./shared";
+import { useLive, useDock, LangPill, TitleBar } from "./shared";
 import { type Kind, kindOf, safetyLines } from "./summary";
 
 /* ---------- 7. ask / finish ---------- */
@@ -174,7 +174,6 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
           <b>{t(lang, "notSure")}</b> {safetyLines(guide, lang).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
         </span>
       </p>
-      {k === "medicine" && <EmergencyLink small lang={lang} />}
       <div className={dock ? "bottombar" : "foot"}>
         {dock && live ? (
           <GuideDock text={answer ?? t(lang, "allDoneSub")} lang={lang} />

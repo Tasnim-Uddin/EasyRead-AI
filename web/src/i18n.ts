@@ -34,7 +34,6 @@ const en: Dict = {
   closeX: "Close",
   voiceNA: "A voice is not available for this language. You can read the words on the screen.",
   sttTypeNote: "I cannot hear this language yet. Please type your questions instead.",
-  emergency: "Serious problem? Call 999.",
   ask: "Ask a question about your document",
   askGo: "Ask",
   sampleNote: "Sample document. Not a real patient.",
@@ -160,7 +159,6 @@ Object.assign(en, {
   ask: "Ask",
   thinking: "Looking at your paper",
   notSure: "Not sure?",
-  notSureMed: "Ask your pharmacist or doctor. For advice, call 111. In an emergency, call 999.",
   savePrint: "Save or print my guide",
   talkGuide: "Talk to your guide",
   tellBack: "Check I've got it",
@@ -213,7 +211,6 @@ Object.assign(en, {
   devToggle: "Tool calls",
   back2: "Back",
   sheetTitle: "Your Easy Read guide",
-  emergencyLink: "Serious problem? Call 999.",
   printSample: "Sample only. Not a real person.",
   loadingSample: "Opening the sample",
   uploadingFailed: "We could not make your guide.",
@@ -241,7 +238,6 @@ const es: Dict = {
   noClip: "Aún no hay un vídeo revisado para este paso.",
   working: "Creando su guía…",
   language: "Idioma",
-  emergency: "¿Problema grave? Llame al 999.",
   ask: "Haga una pregunta sobre su documento",
   askGo: "Preguntar",
   sampleNote: "Documento de ejemplo. No es un paciente real.",
@@ -271,7 +267,6 @@ const ar: Dict = {
   noClip: "لا يوجد فيديو موثّق لهذه الخطوة بعد.",
   working: "جارٍ إنشاء دليلك…",
   language: "اللغة",
-  emergency: "مشكلة خطيرة؟ اتصل بـ 999.",
   ask: "اسأل عن مستندك",
   askGo: "اسأل",
   sampleNote: "مستند تجريبي. ليس مريضًا حقيقيًا.",
@@ -391,7 +386,6 @@ Object.assign(es, {
   orType: "O escribe arriba.",
   listening: "Escuchando",
   thinking: "Mirando su papel",
-  notSureMed: "Pregunte a su farmacéutico o médico. Para consejo, llame al 111. En una emergencia, llame al 999.",
   savePrint: "Guardar o imprimir mi guía",
   talkGuide: "Hable con su guía",
   yourGuideTitle: "Su guía",
@@ -441,7 +435,6 @@ Object.assign(es, {
   devToggle: "Llamadas de herramientas",
   back2: "Atrás",
   sheetTitle: "Su guía Lectura Fácil",
-  emergencyLink: "¿Problema grave? Llame al 999.",
   printSample: "Solo de ejemplo. No es una persona real.",
   loadingSample: "Abriendo el ejemplo",
   uploadingFailed: "No pudimos crear su guía.",
@@ -570,7 +563,6 @@ Object.assign(ar, {
   orType: "أو اكتب في الأعلى.",
   listening: "نستمع",
   thinking: "ننظر في ورقتك",
-  notSureMed: "اسأل الصيدلي أو الطبيب. للنصيحة اتصل بـ 111. في الطوارئ اتصل بـ 999.",
   savePrint: "احفظ دليلي أو اطبعه",
   talkGuide: "تحدّث مع دليلك",
   yourGuideTitle: "دليلك",
@@ -618,7 +610,6 @@ Object.assign(ar, {
   devToggle: "استدعاءات الأدوات",
   back2: "السابق",
   sheetTitle: "دليلك بلغة سهلة",
-  emergencyLink: "مشكلة خطيرة؟ اتصل بـ 999.",
   printSample: "للمثال فقط. ليس شخصًا حقيقيًا.",
   loadingSample: "نفتح المثال",
   uploadingFailed: "لم نتمكن من إنشاء دليلك.",
@@ -647,7 +638,6 @@ const ur: Dict = {
   noClip: "اس مرحلے کی جانچی ہوئی ویڈیو ابھی موجود نہیں۔",
   working: "آپ کی گائیڈ بن رہی ہے…",
   language: "زبان",
-  emergency: "سنگین مسئلہ؟ 999 پر کال کریں۔",
   ask: "پوچھیں",
   askGo: "پوچھیں",
   sampleNote: "نمونے کا کاغذ۔ یہ کوئی اصلی مریض نہیں۔",
@@ -767,7 +757,6 @@ const ur: Dict = {
   orType: "یا اوپر لکھیں۔",
   listening: "سن رہے ہیں",
   thinking: "آپ کا کاغذ دیکھ رہے ہیں",
-  notSureMed: "اپنے فارماسسٹ یا ڈاکٹر سے پوچھیں۔ مشورے کے لیے 111 پر کال کریں۔ ایمرجنسی میں 999 پر کال کریں۔",
   savePrint: "میری گائیڈ محفوظ یا پرنٹ کریں",
   talkGuide: "اپنی گائیڈ سے بات کریں",
   yourGuideTitle: "آپ کی گائیڈ",
@@ -815,7 +804,6 @@ const ur: Dict = {
   devToggle: "ٹول کالز",
   back2: "پیچھے",
   sheetTitle: "آپ کی آسان گائیڈ",
-  emergencyLink: "سنگین مسئلہ؟ 999 پر کال کریں۔",
   printSample: "صرف نمونہ۔ کوئی اصلی شخص نہیں۔",
   loadingSample: "نمونہ کھل رہا ہے",
   uploadingFailed: "ہم آپ کی گائیڈ نہیں بنا سکے۔",
@@ -844,7 +832,6 @@ const pl: Dict = {
   noClip: "Sprawdzony film do tego kroku jest jeszcze niedostępny.",
   working: "Robimy Twój przewodnik…",
   language: "Język",
-  emergency: "Poważny problem? Zadzwoń pod 999.",
   ask: "Zapytaj",
   askGo: "Zapytaj",
   sampleNote: "Przykładowy dokument. To nie jest prawdziwy pacjent.",
@@ -964,7 +951,6 @@ const pl: Dict = {
   orType: "Albo wpisz wyżej.",
   listening: "Słucham",
   thinking: "Patrzę na Twój papier",
-  notSureMed: "Zapytaj farmaceutę lub lekarza. Po poradę zadzwoń pod 111. W nagłym wypadku zadzwoń pod 999.",
   savePrint: "Zapisz lub wydrukuj mój przewodnik",
   talkGuide: "Porozmawiaj z przewodnikiem",
   yourGuideTitle: "Twój przewodnik",
@@ -1012,7 +998,6 @@ const pl: Dict = {
   devToggle: "Wywołania narzędzi",
   back2: "Wstecz",
   sheetTitle: "Twój przewodnik w prostym języku",
-  emergencyLink: "Poważny problem? Zadzwoń pod 999.",
   printSample: "Tylko przykład. To nie jest prawdziwa osoba.",
   loadingSample: "Otwieramy przykład",
   uploadingFailed: "Nie udało się zrobić Twojego przewodnika.",
@@ -1040,7 +1025,6 @@ const bn: Dict = {
   noClip: "এই ধাপের জন্য যাচাই করা ভিডিও এখনো নেই।",
   working: "আপনার গাইড বানানো হচ্ছে…",
   language: "ভাষা",
-  emergency: "গুরুতর সমস্যা? ৯৯৯ নম্বরে ফোন করুন।",
   sampleNote: "এটি নমুনা কাগজ। এটি কোনো সত্যিকারের রোগীর নয়।",
   noMedical: "এই গাইড আপনার নিজের কাগজ বুঝিয়ে দেয়। এটি চিকিৎসার পরামর্শ নয়। আপনার ফার্মাসিস্ট বা ডাক্তারকে জিজ্ঞাসা করুন।",
   print: "প্রিন্ট",
@@ -1158,7 +1142,6 @@ const bn: Dict = {
   ask: "জিজ্ঞাসা করুন",
   thinking: "আপনার কাগজ দেখছি",
   notSure: "নিশ্চিত নন?",
-  notSureMed: "আপনার ফার্মাসিস্ট বা ডাক্তারকে জিজ্ঞাসা করুন। পরামর্শের জন্য ১১১ নম্বরে ফোন করুন। জরুরি হলে ৯৯৯ নম্বরে ফোন করুন।",
   savePrint: "আমার গাইড সেভ বা প্রিন্ট করুন",
   talkGuide: "আপনার গাইডের সঙ্গে কথা বলুন",
   tellBack: "বুঝেছি কিনা দেখুন",
@@ -1208,7 +1191,6 @@ const bn: Dict = {
   devToggle: "টুল কল",
   back2: "পেছনে",
   sheetTitle: "আপনার Easy Read গাইড",
-  emergencyLink: "গুরুতর সমস্যা? ৯৯৯ নম্বরে ফোন করুন।",
   printSample: "শুধু নমুনা। কোনো সত্যিকারের মানুষ নয়।",
   loadingSample: "নমুনা খোলা হচ্ছে",
   uploadingFailed: "আমরা আপনার গাইড বানাতে পারিনি।",
@@ -1794,11 +1776,11 @@ Object.assign(ur, { seePaper: "میرا کاغذ دیکھیں" });
 Object.assign(pl, { seePaper: "Zobacz mój dokument" });
 Object.assign(bn, { seePaper: "আমার কাগজ দেখুন" });
 Object.assign(en, { stepN: "Step {n}" }); Object.assign(es, { stepN: "Paso {n}" }); Object.assign(ar, { stepN: "الخطوة {n}" }); Object.assign(ur, { stepN: "مرحلہ {n}" }); Object.assign(pl, { stepN: "Krok {n}" }); Object.assign(bn, { stepN: "ধাপ {n}" });
-Object.assign(es, { safe_medicine: "Pregunte a su farmacéutico. Para consejo, llame al 111. En una emergencia, llame al 999.", safe_howto: "Si algo se rompe o no parece seguro, pare y pida ayuda.", safe_letter: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848.", safe_form: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848." });
-Object.assign(ar, { safe_medicine: "اسأل الصيدلي. للنصيحة اتصل بـ ⁨111⁩. في حالة الطوارئ اتصل بـ ⁨999⁩.", safe_howto: "إذا انكسر شيء أو شعرت بأنه غير آمن، توقّف واطلب المساعدة.", safe_letter: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩.", safe_form: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩." });
-Object.assign(ur, { safe_medicine: "اپنے فارماسسٹ سے پوچھیں۔ مشورے کے لیے ⁨111⁩ پر کال کریں۔ ایمرجنسی میں ⁨999⁩ پر کال کریں۔", safe_howto: "اگر کچھ ٹوٹ جائے یا غیر محفوظ لگے تو رک جائیں اور مدد مانگیں۔", safe_letter: "دستخط یا ادائیگی سے پہلے مفت مشورہ لیں۔ Citizens Advice مدد کر سکتا ہے: ⁨0800 144 8848⁩۔", safe_form: "دستخط یا ادائیگی سے پہلے مفت مشورہ لیں۔ Citizens Advice مدد کر سکتا ہے: ⁨0800 144 8848⁩۔" });
-Object.assign(pl, { safe_medicine: "Zapytaj farmaceutę. Po poradę zadzwoń pod 111. W nagłym wypadku dzwoń pod 999.", safe_howto: "Jeśli coś się zepsuje lub wydaje się niebezpieczne, przerwij i poproś o pomoc.", safe_letter: "Zanim podpiszesz lub zapłacisz, skorzystaj z bezpłatnej porady. Citizens Advice może pomóc: 0800 144 8848.", safe_form: "Zanim podpiszesz lub zapłacisz, skorzystaj z bezpłatnej porady. Citizens Advice może pomóc: 0800 144 8848." });
-Object.assign(bn, { safe_medicine: "আপনার ফার্মাসিস্টকে জিজ্ঞেস করুন। পরামর্শের জন্য 111-এ কল করুন। জরুরি অবস্থায় 999-এ কল করুন।", safe_howto: "কিছু ভেঙে গেলে বা অনিরাপদ মনে হলে থামুন এবং সাহায্য চান।", safe_letter: "সই বা টাকা দেওয়ার আগে বিনামূল্যে পরামর্শ নিন। Citizens Advice সাহায্য করতে পারে: 0800 144 8848।", safe_form: "সই বা টাকা দেওয়ার আগে বিনামূল্যে পরামর্শ নিন। Citizens Advice সাহায্য করতে পারে: 0800 144 8848।" });
+Object.assign(es, { safe_medicine: "Pregunte a su farmacéutico. Para consejo, llame al 111.", safe_howto: "Si algo se rompe o no parece seguro, pare y pida ayuda.", safe_letter: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848.", safe_form: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848." });
+Object.assign(ar, { safe_medicine: "اسأل الصيدلي. للنصيحة اتصل بـ ⁨111⁩.", safe_howto: "إذا انكسر شيء أو شعرت بأنه غير آمن، توقّف واطلب المساعدة.", safe_letter: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩.", safe_form: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩." });
+Object.assign(ur, { safe_medicine: "اپنے فارماسسٹ سے پوچھیں۔ مشورے کے لیے ⁨111⁩ پر کال کریں۔", safe_howto: "اگر کچھ ٹوٹ جائے یا غیر محفوظ لگے تو رک جائیں اور مدد مانگیں۔", safe_letter: "دستخط یا ادائیگی سے پہلے مفت مشورہ لیں۔ Citizens Advice مدد کر سکتا ہے: ⁨0800 144 8848⁩۔", safe_form: "دستخط یا ادائیگی سے پہلے مفت مشورہ لیں۔ Citizens Advice مدد کر سکتا ہے: ⁨0800 144 8848⁩۔" });
+Object.assign(pl, { safe_medicine: "Zapytaj farmaceutę. Po poradę zadzwoń pod 111.", safe_howto: "Jeśli coś się zepsuje lub wydaje się niebezpieczne, przerwij i poproś o pomoc.", safe_letter: "Zanim podpiszesz lub zapłacisz, skorzystaj z bezpłatnej porady. Citizens Advice może pomóc: 0800 144 8848.", safe_form: "Zanim podpiszesz lub zapłacisz, skorzystaj z bezpłatnej porady. Citizens Advice może pomóc: 0800 144 8848." });
+Object.assign(bn, { safe_medicine: "আপনার ফার্মাসিস্টকে জিজ্ঞেস করুন। পরামর্শের জন্য 111-এ কল করুন।", safe_howto: "কিছু ভেঙে গেলে বা অনিরাপদ মনে হলে থামুন এবং সাহায্য চান।", safe_letter: "সই বা টাকা দেওয়ার আগে বিনামূল্যে পরামর্শ নিন। Citizens Advice সাহায্য করতে পারে: 0800 144 8848।", safe_form: "সই বা টাকা দেওয়ার আগে বিনামূল্যে পরামর্শ নিন। Citizens Advice সাহায্য করতে পারে: 0800 144 8848।" });
 Object.assign(en, { stTalking: "Guide is talking", stListening: "Listening to you", stPaused: "Paused", stReading: "Reading aloud", stClip: "Quiet while clip plays", stSoundOff: "Sound off", stReady: "Your guide" });
 Object.assign(es, { stTalking: "La guía está hablando", stListening: "Le escucho", stPaused: "En pausa", stReading: "Leyendo en voz alta", stClip: "En silencio durante el vídeo", stSoundOff: "Sin sonido", stReady: "Su guía" });
 Object.assign(ar, { stTalking: "المرشد يتحدث", stListening: "أستمع إليك", stPaused: "متوقف مؤقتًا", stReading: "قراءة بصوت عالٍ", stClip: "صامت أثناء الفيديو", stSoundOff: "الصوت مغلق", stReady: "مرشدك" });
