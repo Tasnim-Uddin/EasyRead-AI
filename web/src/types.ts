@@ -53,6 +53,10 @@ export interface Facts {
   conflicts?: { field: string; label?: string; leaflet?: string; a?: string; b?: string; a_page?: number; b_page?: number }[];
   title?: string;
   source_steps?: string[];
+  /** How long to take it, as printed ("5 days"). */
+  duration?: string | null;
+  /** How much was supplied, as printed ("100ml"). */
+  quantity?: string | null;
 }
 
 export interface GuideContent {
@@ -95,6 +99,9 @@ export interface Guide {
   unreadable_regions?: { page: number; quad: [number, number][]; note: string }[];
   /** v4: user's own name for the guide (Rename in My guides). */
   title_override?: string | null;
+  /** Short plain title (<= 6 words) in the guide language, e.g. "Amoxicillin liquid"; English in title_en. */
+  title?: string | null;
+  title_en?: string | null;
 }
 
 export interface Clip {

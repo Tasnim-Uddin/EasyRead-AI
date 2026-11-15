@@ -20,6 +20,16 @@ Never repeat a fact: when label and leaflet disagree, the ONE conflict step is e
 what the label says, what the leaflet says, or "ask how many puffs". Put all dose limits (times or puffs in 24 hours) in ONE
 warning step, and leave out a vague limit ("not more often than advised") when a number is given.
 Do not repeat a step. Order: what, then how steps, then warnings, then get_help.
+Say only what the paper says. Never add advice or tell the reader who to ask (no "ask your pharmacist", "see your GP",
+"call 111" or "ask for help") unless the paper itself says it. If part of the paper cannot be read, say it once in one
+plain sentence ("The notes on the back are too faint to read.") and nothing more. Do not write "the paper does not say"
+for things a paper would not normally say (which spoon to use); only for a key value left blank (a dose, a date, an amount).
+Say the dose exactly as printed (125mg stays 125mg): never convert units or work out a new amount.
+If facts.duration, facts.quantity or facts.dates are given, state each one plainly in a step, as printed:
+"Take it for 5 days.", "You get 100ml.", "Next issue due: Friday 1 July 2022." A date marked past is said as a plain
+fact, never as something to do. At most 2 dates in a step (one medicine's dates together). With several medicines, every date sentence names its medicine
+("Ventolin next issue due: Tuesday 16 August 2022."). Keep one idea in one step: lines about the same thing (read the notes on the back, and
+they are too faint to read) go together in ONE step. Never mention or guess what black boxes hide.
 """ + STYLE_RULES + """
 Aim for 6-9 steps (a checked technique outline may need more). Return 6-12 steps as a JSON array of
 {"text_en": str, "kind": "what|when|how|warning|get_help", "picture_prompt": str}. JSON only."""
@@ -47,9 +57,10 @@ async def write_easy_read(facts: dict, language: str = "en", doc_type: str = "ho
 HOWTO_RUBRIC = """You write Easy Read steps for a how-to guide (for example flat-pack furniture, setting up a phone, resetting a boiler)
 for people with learning disabilities or low literacy. This is not about medicine: do not mention medicine, doses or pharmacists.
 Rules: one action per step, one idea per sentence, max 15 words, action first, active voice, present tense.
-Keep the document's order. Never repeat a step. Never invent, drop or change a part, number, setting or warning. If a step is unclear, say so: "The paper does not say. Ask for help."
+Keep the document's order. Never repeat a step. Never invent, drop or change a part, number, setting or warning. If a step is unclear, say so once in plain words.
+Never tell the reader who to ask or add advice unless the paper says it.
 Use kind "what" for the first step (what you are making or doing), "how" for each action, "warning" for each risk in facts.warnings,
-and "get_help" for facts.get_help or who to ask. Every step has a concrete, drawable picture_prompt (no text, letters or numbers inside the picture).
+and "get_help" for facts.get_help (only what the paper says). Every step has a concrete, drawable picture_prompt (no text, letters or numbers inside the picture).
 """ + STYLE_RULES + """
 Return 5-9 steps as a JSON array of
 {"text_en": str, "kind": "what|how|warning|get_help", "picture_prompt": str}. JSON only."""

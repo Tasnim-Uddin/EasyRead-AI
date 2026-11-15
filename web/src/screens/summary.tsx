@@ -91,7 +91,7 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
   const sources = docs.length ? docs.map((d) => roleName(lang, d.role)) : [];
   const conflicts = f?.conflicts ?? [];
   const warnings = (f?.warnings ?? []).filter((w) => !w.startsWith("Your label and leaflet say different"));
-  const title = guide.title_override ||
+  const title = guide.title_override || guide.title ||
     (k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper"));
   const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   const thumb = guide.steps.find((s) => s.image_url)?.image_url;
