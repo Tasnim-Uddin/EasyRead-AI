@@ -76,3 +76,9 @@
 .gs-top .gs-toggle { margin-inline-start: auto; }
 .home-intro .who { flex-wrap: wrap; }
 .home-intro .who .bubble { flex: 1 1 9rem; min-width: 0; }
+
+/* Narrow phones: the brand keeps its logo (and its "EasyRead, Home" label) but drops the word, so language,
+   My guides and Settings stay on one row instead of wrapping under it. */
+@media (max-width: 420px) {
+  .top > .brand { font-size: 0; gap: 0; }
+}
