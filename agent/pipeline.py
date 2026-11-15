@@ -51,7 +51,7 @@ Then, by doc_type:
   "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
 - how_to (not medicine, for example furniture, a phone, a boiler): "title", "source_steps": [the document's own steps, in order,
   one action each, copied faithfully], "warnings": [str], "get_help": [str]. Leave the medicine fields null.
-- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 5 short action sentences, action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts;
+- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 8 short action sentences (if the paper has more, keep the 8 that matter most), action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts;
   keep any exception the paper gives, for example "You can drink water"; for a list of medicine changes (stop, start, change a dose)
   give one sentence per medicine with its name and dose, up to 10];
   "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}] (at most 3, the total to pay first, then fees; leave out line items)
@@ -425,7 +425,11 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             else:
                 raw = await write_easy_read(with_technique(facts), language)
             raw = finish_steps(raw, dt, domain, facts["conflicts"], facts.get("device_type"))
+            # What the reader noted as blank, in its notes or in the content lines it wrote (the writer may drop the
+            # "this paper does not show the date" sentence, or the step cap may trim it).
             notes = [u.get("note") or "" for u in ex.get("unreadable_parts") or []] + list(facts.get("unreadable") or [])
+            notes += [str(t) for t in ((ex["content"] or {}).get("what_to_do") or [])]
+            notes += [str(b.get("what") or "") for b in ((ex["content"] or {}).get("by_when") or []) if isinstance(b, dict)]
             raw = ensure_blank_date_step(raw, notes, ex.get("sender"))
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,

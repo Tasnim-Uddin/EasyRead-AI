@@ -410,7 +410,9 @@ def honest_blanks(steps: list[dict]) -> list[dict]:
 
 def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None, has_conflict: bool = False) -> list[dict]:
     steps = drop_know(honest_blanks(steps))
-    steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
+    # A form's steps are one box each ("Find the box called Signed. Sign your name."): never split into several.
+    split = (lambda x: x) if doc_type == "form" else split_warnings
+    steps = dedupe(drop_restated(split(dedupe(normalise_conflict(steps))), doc_type))
     steps = merge_dose_limits(steps)
     if doc_type == "how_to" and domain == "medicine":
         if technique.outline(device_type):

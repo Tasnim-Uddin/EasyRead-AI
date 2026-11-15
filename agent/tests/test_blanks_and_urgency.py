@@ -229,3 +229,37 @@ def test_form_phone_box_is_writing_not_a_call():
 ])
 def test_spoon_closeup_only_for_a_spoon_dose(text, want):
     assert choose_closeup({"text_en": text, "kind": "how"}, MED) == want
+
+
+def test_blank_date_from_a_content_line_goes_into_the_step_that_points_at_it():
+    # The writer kept "by the date on your letter" but dropped "This paper does not show the date."
+    steps = [{"text_en": "The total you owe is £98.27.", "kind": "what"},
+             {"text_en": "Pay HMRC by the date on your letter.", "kind": "how"}]
+    notes = ["Pay HMRC by the date on your letter. This paper does not show the date."]
+    out = doctypes.ensure_blank_date_step(steps, notes, {"name": "HM Revenue & Customs, Accounts Office Cumbernauld"})
+    assert len(out) == 2
+    assert out[1]["text_en"] == "Pay HMRC by the date on your letter. This paper does not show the date."
+
+
+def test_blank_date_step_names_a_long_sender_by_its_first_part():
+    steps = [{"text_en": "Pay the fine.", "kind": "how"}]
+    out = doctypes.ensure_blank_date_step(steps, ["The date is a placeholder."],
+                                          {"name": "HM Revenue & Customs, Accounts Office Cumbernauld"})
+    assert out[-1]["text_en"] == "Your paper does not show the date. Check with HM Revenue & Customs."
+
+
+def test_form_box_step_is_not_split():
+    steps = [{"text_en": "Find the box called Signed. Sign your name. Your signature also agrees to medical treatment.",
+              "kind": "warning", "picture_prompt": "x"}]
+    assert len(postprocess.tidy(steps, "form", "school")) == 1
+    assert len(postprocess.tidy(steps, "letter", "school")) == 3
+
+
+@pytest.mark.parametrize("text,want", [
+    ("Think about switching to a cheaper tariff. A tariff is the price plan you pay for your gas.", None),
+    ("Have your National Insurance number and payment reference ready when you phone.", None),
+    ("Phone HMRC even if you cannot pay in full.", "phone_call"),
+    ("Pay the bill. The bill is due on 5 May.", "pay_card"),
+])
+def test_closeup_ignores_definitions_and_when_you_phone(text, want):
+    assert choose_closeup({"text_en": text, "kind": "how"}, BILL) == want
