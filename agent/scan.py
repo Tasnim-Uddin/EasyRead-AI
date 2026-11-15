@@ -191,7 +191,9 @@ def quality(img: np.ndarray, quad_px, found: bool = True) -> dict:
                 x, y, bw, bh = (int(v) for v in st[k, :4])
                 region = [round(x / ww, 4), round(y / hh, 4), round(bw / ww, 4), round(bh / hh, 4)]
         touch = sum(1 for x, y in q * s if x < 4 or y < 4 or x > ww - 5 or y > hh - 5)
-        if touch >= 1:
+        # All 4 corners on the border = a flat scan or screenshot whose paper IS the image (nothing is missing);
+        # 1-3 corners on the border = the paper runs off the photo.
+        if 1 <= touch <= 3:
             issues.append("cut_off")
     block = "small" in issues or ("blurry" in issues and lap_var < BLUR_BLOCK and contrast < BLOCK_CONTRAST)
     out = {"ok": not issues, "issues": issues, "block": bool(block),

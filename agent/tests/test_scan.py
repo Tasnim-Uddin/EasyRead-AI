@@ -255,3 +255,12 @@ def test_bright_white_page_is_not_glare():
     r = scan.scan(jpeg(img, 98), quad=(np.float32(SKEWS[2]) / [W, H]).tolist())
     assert "glare" not in r["quality"]["issues"]
     assert r["quality"]["ok"] is True
+
+
+def test_flat_scan_filling_the_image_is_not_cut_off():
+    # A saved scan or screenshot: the paper IS the whole image, so all 4 corners sit on the border.
+    img = np.full((1400, 1000, 3), 245, np.uint8)
+    for y in range(120, 1300, 60):
+        cv2.putText(img, "Take 125mg three times daily", (60, y), cv2.FONT_HERSHEY_SIMPLEX, 1.1, (20, 20, 20), 2)
+    r = scan.scan(jpeg(img), quad=[[0, 0], [1, 0], [1, 1], [0, 1]])
+    assert "cut_off" not in r["quality"]["issues"]
