@@ -10,7 +10,7 @@ export const LANGUAGES = [
 
 export { RTL_CODES as RTL } from "./languages";
 
-type Dict = Record<string, string>;
+export type Dict = Record<string, string>;
 const en: Dict = {
   title: "EasyRead AI",
   tagline: "Turn a confusing letter or medicine label into simple steps with pictures.",
@@ -1814,6 +1814,11 @@ Object.assign(pl, { gettingReady: "Przygotowujemy twój przewodnik" });
 Object.assign(bn, { gettingReady: "আপনার গাইড তৈরি হচ্ছে" });
 
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
+
+/** v4: each area adds its own strings from its own file (avoids edit clashes): extendStrings({ en: {...}, es: {...} }). */
+export function extendStrings(add: Record<string, Dict>): void {
+  for (const [code, strings] of Object.entries(add)) Object.assign(dicts[code] ?? (dicts[code] = {} as Dict), strings);
+}
 
 export function t(lang: string, key: string): string {
   // A language without UI strings (any other language the user typed) shows the English interface.
