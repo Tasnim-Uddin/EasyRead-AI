@@ -404,9 +404,9 @@ export function TitleBar({ title, lang, onBack, right, backLabel }: { title: Rea
 }
 
 /* Persistent 999 link: shown at the foot of every guide screen (same rule as the home screen: all document kinds). */
-export function EmergencyLink({ lang, warn }: { lang: string; warn?: boolean }) {
+export function EmergencyLink({ lang, warn, small }: { lang: string; warn?: boolean; small?: boolean }) {
   return (
-    <a className={"sos" + (warn ? " warn" : "")} href="tel:999">
+    <a className={"sos" + (warn ? " warn" : "") + (small ? " sos-small" : "")} href="tel:999">
       <Icon name="phone" />
       <T lang={lang} k="emergencyLink" />
     </a>
@@ -477,7 +477,6 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
             <button onClick={() => onSample("flatpack")}>{t(lang, "sampleFlatpack")}</button>
           </div>
         )}
-        <EmergencyLink lang={lang} />
       </div>
     </div>
   );
@@ -713,8 +712,9 @@ interface SummaryProps {
   onListen: () => void;
   /** The one audio tap: start the live guide, which then explains step 1. */
   onStartGuide?: () => void;
+  onSeePaper?: () => void;
 }
-export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, onStartGuide }: SummaryProps) {
+export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, onStartGuide, onSeePaper }: SummaryProps) {
   const k = kindOf(guide);
   const f = guide.facts;
   const c = guide.content;
@@ -740,6 +740,12 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
         {subline && <p dir="auto">{subline}</p>}
       </div>
 
+      {onSeePaper && (
+        <button className="btn quiet see-paper" onClick={onSeePaper}>
+          <Icon name="doc" />
+          {t(lang, "seePaper")}
+        </button>
+      )}
       <DeviceCard guide={guide} lang={lang} />
 
       {conflicts.length > 0 && (
@@ -886,7 +892,7 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
             <Icon name="chevRight" />
           </button>
         </div>
-        <EmergencyLink lang={lang} />
+        {kindOf(guide) === "medicine" && <EmergencyLink lang={lang} />}
       </div>
     </div>
   );
@@ -1024,12 +1030,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
             <Icon name="chat" />
             {t(lang, "askQ")}
           </button>
-          {onCheck && (
-            <button className="btn quiet" onClick={onCheck}>
-              <Icon name="swap" />
-              {t(lang, "tellBack")}
-            </button>
-          )}
+
         </div>
       )}
       {askOpen && onAskOpen && onAsk && (
@@ -1057,7 +1058,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
             <Icon name="chevRight" />
           </button>
         </div>
-        <EmergencyLink lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />
+        {kindOf(guide) === "medicine" && <EmergencyLink small lang={lang} warn={step.kind === "warning" || step.kind === "get_help"} />}
       </div>
     </div>
   );
@@ -1100,6 +1101,7 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
           </button>
         </div>
         <p className="sub">{tf(lang, "stillOnStep", { n })}</p>
+        <EmergencyLink lang={lang} small />
         <textarea
           dir="auto"
           value={q}
@@ -1133,6 +1135,44 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
         <button className="btn quiet" onClick={onClose}>
           {tf(lang, "backToStep", { n })}
         </button>
+      </div>
+    </div>
+  );
+}
+
+/** The pictures of the user's own paper: uploads from the server, or the sample's input images. */
+const SAMPLE_INPUTS: Record<string, string[]> = {
+  inhaler: ["/samples/inhaler_label.png", "/samples/inhaler_leaflet.png", "/samples/inhaler_device.png"],
+  council_letter: ["/samples/council_letter.png"],
+  flatpack: ["/samples/flatpack.png"],
+};
+export function paperImages(g: Guide): string[] {
+  const src = g.source;
+  const urls = [...(src.documents ?? []).map((d) => d.image_url), ...(src.image_urls ?? []), src.device_photo_url ?? null].filter(
+    (u): u is string => !!u,
+  );
+  if (urls.length) return Array.from(new Set(urls));
+  const m = g.id.match(/^g_sample_(inhaler|council_letter|flatpack)/);
+  return m ? SAMPLE_INPUTS[m[1]] : [];
+}
+export function PaperViewer({ lang, urls, onClose }: { lang: string; urls: string[]; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+  return (
+    <div className="paper-viewer" role="dialog" aria-modal="true" aria-label={t(lang, "seePaper")}>
+      <div className="pv-head">
+        <b>{t(lang, "seePaper")}</b>
+        <button className="round" onClick={onClose} aria-label={t(lang, "close")}>
+          <Icon name="x" />
+        </button>
+      </div>
+      <div className="pv-body">
+        {urls.map((u) => (
+          <img key={u} src={u} alt="" />
+        ))}
       </div>
     </div>
   );
@@ -1215,7 +1255,7 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
             {t(lang, "close")}
           </button>
         </div>
-        <EmergencyLink lang={lang} />
+        {kindOf(guide) === "medicine" && <EmergencyLink lang={lang} />}
       </div>
     </div>
   );
@@ -1530,7 +1570,7 @@ export function buildQuestions(g: Guide, lang = "en"): Question[] {
   return out.slice(0, 3);
 }
 
-export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang: string; onCheck: (answer: string, correct: boolean) => void; onClose: () => void }) {
+export function TellBack({ guide, lang, onCheck, onClose, onBack, backLabel }: { guide: Guide; lang: string; onCheck: (answer: string, correct: boolean) => void; onClose: () => void; onBack?: () => void; backLabel?: string }) {
   const qs = useMemo(() => buildQuestions(guide, lang), [guide, lang]);
   const [qi, setQi] = useState(0);
   const [pick, setPick] = useState<number | null>(null);
@@ -1539,7 +1579,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
   if (!q) {
     return (
       <div className="screen">
-        <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onClose} />
+        <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onBack ?? onClose} backLabel={backLabel} />
         <p className="sub">{t(lang, "askExample")}</p>
         <div className="foot">
           <button className="btn" onClick={onClose}>{t(lang, "tbDone")}</button>
@@ -1550,7 +1590,7 @@ export function TellBack({ guide, lang, onCheck, onClose }: { guide: Guide; lang
   const right = pick === q.correct;
   return (
     <div className="screen">
-      <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onClose} />
+      <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onBack ?? onClose} backLabel={backLabel} />
       <div className="prog">
         <div className="bars">
           {qs.map((_, i) => (
@@ -1940,7 +1980,6 @@ export function MyPapers({ lang, rows, failed, onBack, onOpen, onDelete, onRetry
           <Icon name="camera" />
           {t(lang, empty ? "takePhoto" : "newPaper")}
         </button>
-        <EmergencyLink lang={lang} />
       </div>
     </div>
   );

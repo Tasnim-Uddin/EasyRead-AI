@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as api from "./api";
 import type { Clip, Guide, ToolLogEntry } from "./types";
-import { LANGUAGES, t } from "./i18n";
+import { LANGUAGES, t, tf } from "./i18n";
 import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
 import { useAnam, type ToolHandler } from "./useAnam";
 import { audioOwner, claimAudio, onAudioChange, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
@@ -12,6 +12,8 @@ import {
   AVATAR_VIDEO_ID,
   AvatarHost,
   LiveContext,
+  PaperViewer,
+  paperImages,
   NavContext,
   type LiveInfo,
   CheckPhoto,
@@ -95,6 +97,7 @@ export default function App() {
   const [guideOn, setGuideOn] = useState(() => (/[?&]guide=0/.test(location.search) ? false : load("er.guideOn", true)));
   const [moved, setMoved] = useState<number | null>(null); // "Your guide moved you to step N"
   const movedFrom = useRef(0);
+  const [paperOpen, setPaperOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(() => import.meta.env.DEV && /[?&]asksheet/.test(location.search)); // screenshot hook
   // Customer mode by default; demo mode (?demo=1, the Settings switch, or a #/sample link) shows samples and dev tools.
   const [demo, setDemo] = useState(initialDemo);
@@ -341,7 +344,7 @@ export default function App() {
   }, [anam.state]);
   useEffect(() => {
     if (moved === null) return;
-    const timer = setTimeout(() => setMoved(null), 3500);
+    const timer = setTimeout(() => setMoved(null), 5000);
     return () => clearTimeout(timer);
   }, [moved]);
 
@@ -720,6 +723,7 @@ export default function App() {
             onStart={() => { setIndex(0); go("step"); }}
             onStartGuide={guideOn ? () => { setIndex(0); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
             onListen={() => void speak(summaryText(guide), lang)}
+            onSeePaper={paperImages(guide).length ? () => setPaperOpen(true) : undefined}
           />
         )}
         {screen === "step" && guide && (
@@ -739,7 +743,6 @@ export default function App() {
             onAsk={(q) => void askOnStep(q)}
             answer={answer}
             busy={busy}
-            onCheck={() => { go("tellback"); }}
           />
         )}
         {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}
@@ -783,6 +786,8 @@ export default function App() {
             lang={lang}
             onCheck={(a, correct) => void runTool("check_understanding", { answer: a, correct })}
             onClose={() => go("ask")}
+            onBack={() => go("step")}
+            backLabel={tf(lang, "stepN", { n: index + 1 })}
           />
         )}
         {screen === "error" && (
@@ -835,6 +840,7 @@ export default function App() {
         {debug && <DevPanel log={log} lang={lang} />}
       </div>
       </NavContext.Provider>
+      {paperOpen && guide && <PaperViewer lang={lang} urls={paperImages(guide)} onClose={() => setPaperOpen(false)} />}
       {guide && <PrintSheet guide={guide} lang={lang} />}
       <AvatarHost live={liveInfo.live} screen={screen} />
     </LiveContext.Provider>

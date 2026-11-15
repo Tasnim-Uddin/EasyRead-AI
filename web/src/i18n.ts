@@ -1787,6 +1787,12 @@ Object.assign(bn, {
 });
 
 // v3 guide-led
+Object.assign(en, { seePaper: "See my paper" });
+Object.assign(es, { seePaper: "Ver mi papel" });
+Object.assign(ar, { seePaper: "عرض ورقتي" });
+Object.assign(ur, { seePaper: "میرا کاغذ دیکھیں" });
+Object.assign(pl, { seePaper: "Zobacz mój dokument" });
+Object.assign(bn, { seePaper: "আমার কাগজ দেখুন" });
 Object.assign(en, { stepN: "Step {n}" }); Object.assign(es, { stepN: "Paso {n}" }); Object.assign(ar, { stepN: "الخطوة {n}" }); Object.assign(ur, { stepN: "مرحلہ {n}" }); Object.assign(pl, { stepN: "Krok {n}" }); Object.assign(bn, { stepN: "ধাপ {n}" });
 Object.assign(es, { safe_medicine: "Pregunte a su farmacéutico. Para consejo, llame al 111. En una emergencia, llame al 999.", safe_howto: "Si algo se rompe o no parece seguro, pare y pida ayuda.", safe_letter: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848.", safe_form: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848." });
 Object.assign(ar, { safe_medicine: "اسأل الصيدلي. للنصيحة اتصل بـ ⁨111⁩. في حالة الطوارئ اتصل بـ ⁨999⁩.", safe_howto: "إذا انكسر شيء أو شعرت بأنه غير آمن، توقّف واطلب المساعدة.", safe_letter: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩.", safe_form: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩." });
