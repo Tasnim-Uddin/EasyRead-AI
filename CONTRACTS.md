@@ -82,7 +82,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 **Label vs leaflet (medicine).** When both are uploaded, dose and frequency come from the label. If the leaflet says something different, `facts.conflicts` is `[{ "field": "dose|frequency", "label": str, "leaflet": str }]`, `facts.warnings` starts with "Your label and leaflet say different things. Ask your pharmacist.", and one `warning` step with that exact text is included. Neither value is dropped silently.
 
 ### v4 additions (all optional; old clients ignore them; mirrored in web/src/types.ts)
-- `step.visual`: `{ "kind": "closeup", "id": str }` — an animated close-up from the built-in library (`web/src/closeups/`, ids listed in `agent/visuals.py`). Missing/null = no close-up; then use highlights on the user's photo, else the picture.
+- `step.visual`: `{ "kind": "closeup", "id": str }` — an animated close-up from the built-in library (`web/src/closeups/`; the id list is `web/src/closeups/ids.json`, read by both `agent/visuals.py` and the web). Missing/null = no close-up; then use highlights on the user's photo, else the picture.
 - `step.highlights`: `[{ "page": int, "text": str, "quad": [[x,y]×4] }]` — exact printed words for this step, located on the user's photo by OCR (normalised 0-1, clockwise from top-left). Never guessed by the model: if OCR can't find the quote, no highlight.
 - `step.callout`: `{ "value": str, "sub": str? }` — big number/date card, e.g. `{"value":"£212.50","sub":"by 17 Nov"}`.
 - `guide.sender`: `{ "name": str, "kind": "pharmacy|gp|hospital|council|school|company|government|other", "contact": str? }` — who sent it; used for "ask X" when a question is not answered by the paper.

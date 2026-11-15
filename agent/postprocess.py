@@ -4,7 +4,7 @@ All pure functions over [{text_en, kind, picture_prompt}], so they are testable 
 """
 import difflib
 import re
-from . import technique
+from . import technique, visuals
 
 STOP = {"a", "an", "the", "your", "you", "to", "of", "is", "are", "and", "this", "that", "it", "for", "on", "in", "if"}
 MONEY = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?")
@@ -385,4 +385,6 @@ def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None 
             steps = dedupe(split_technique(steps, device_type))
             steps = ensure_technique(steps, device_type)
         steps = compress_warnings(steps, has_conflict or any(is_conflict(s["text_en"]) for s in steps))
-    return order(steps, doc_type)
+    # Each step gets `visual`: an animated close-up from the web library, or None (agent/visuals.py).
+    guide = {"doc_type": doc_type, "domain": domain, "facts": {"device_type": device_type}}
+    return visuals.attach_visuals(order(steps, doc_type), guide)
