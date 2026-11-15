@@ -79,12 +79,11 @@ def test_discharge_medicine_changes_kept():
     text = " ".join(s["text_en"] for s in out)
     for x in ("75mg", "apixaban 5mg", "bisoprolol 2.5mg", "ramipril 5mg", "amoxicillin 500mg"):
         assert x in text
-    assert "pharmacist" in text and "999" not in text  # health letter: the medicine safety line, not Citizens Advice
+    assert "111" not in text and "999" not in text and "Citizens Advice" not in text  # the app adds no advice lines
 
 
-def test_health_letter_gets_medicine_line():
-    line = doctypes.safety_lines("letter", "medicine")[0]
-    assert "111" in line and "999" not in line
+def test_health_letter_gets_no_app_line():
+    assert doctypes.safety_lines("letter", "medicine") == []
     assert "health paper" in pipeline.EXTRACT_SYSTEM and "GP or hospital letter" in pipeline.EXTRACT_SYSTEM
 
 

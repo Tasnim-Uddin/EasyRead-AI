@@ -536,6 +536,16 @@ export function GuideStage(p: GuideStageProps) {
     recRef.current = null;
   }, [s.phase]);
   useEffect(() => () => stopSpeaking(), []);
+  // The stage can open straight from the loading screen (no tap): if the phone blocked the guide's sound,
+  // the first tap anywhere starts her video and voice.
+  useEffect(() => {
+    const unblock = () => {
+      const v = document.getElementById("anam-video") as HTMLVideoElement | null;
+      if (v && v.srcObject && v.paused) void v.play().catch(() => undefined);
+    };
+    document.addEventListener("pointerdown", unblock, { capture: true });
+    return () => document.removeEventListener("pointerdown", unblock, { capture: true });
+  }, []);
 
   /* ---- read mode / pause ---- */
   useEffect(() => {

@@ -3,6 +3,7 @@ import { extendStrings } from "../i18n";
 // Guide stage strings (prefix gs_). {n} {m} {who} are filled with tf().
 extendStrings({
   en: {
+    gs_qaFailed: "Sorry, I couldn't answer that. Try again.",
     gs_readMode: "Read mode",
     gs_guide: "Guide",
     gs_home: "Home",
@@ -70,6 +71,7 @@ extendStrings({
     gs_seeAllSteps: "See all steps",
   },
   es: {
+    gs_qaFailed: "Lo siento, no he podido responder. Inténtalo otra vez.",
     gs_readMode: "Modo lectura",
     gs_guide: "Guía",
     gs_home: "Inicio",
@@ -137,6 +139,7 @@ extendStrings({
     gs_seeAllSteps: "Ver todos los pasos",
   },
   ar: {
+    gs_qaFailed: "عذرًا، لم أستطع الإجابة. حاول مرة أخرى.",
     gs_readMode: "وضع القراءة",
     gs_guide: "المرشدة",
     gs_home: "الرئيسية",
@@ -204,6 +207,7 @@ extendStrings({
     gs_seeAllSteps: "عرض كل الخطوات",
   },
   ur: {
+    gs_qaFailed: "معاف کیجیے، میں اس کا جواب نہیں دے سکی۔ دوبارہ کوشش کریں۔",
     gs_readMode: "پڑھنے کا موڈ",
     gs_guide: "گائیڈ",
     gs_home: "ہوم",
@@ -271,6 +275,7 @@ extendStrings({
     gs_seeAllSteps: "تمام مراحل دیکھیں",
   },
   pl: {
+    gs_qaFailed: "Przepraszam, nie udało mi się odpowiedzieć. Spróbuj jeszcze raz.",
     gs_readMode: "Tryb czytania",
     gs_guide: "Przewodniczka",
     gs_home: "Start",
@@ -338,6 +343,7 @@ extendStrings({
     gs_seeAllSteps: "Zobacz wszystkie kroki",
   },
   bn: {
+    gs_qaFailed: "দুঃখিত, আমি এর উত্তর দিতে পারিনি। আবার চেষ্টা করুন।",
     gs_readMode: "পড়ার মোড",
     gs_guide: "গাইড",
     gs_home: "হোম",

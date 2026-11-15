@@ -17,9 +17,7 @@
     "warnings": [
       "If you need it more than 3 times a week, tell your GP or asthma nurse."
     ],
-    "get_help": [
-      "If your inhaler does not help and you are struggling to breathe, call 999."
-    ],
+    "get_help": [],
     "unreadable": []
   },
   "steps": [
@@ -122,21 +120,8 @@
       "technique_clip_id": null,
       "status": "ready",
       "visual": null
-    },
-    {
-      "index": 8,
-      "text": "If it does not help and you cannot breathe, call 999.",
-      "text_en": "If it does not help and you cannot breathe, call 999.",
-      "kind": "get_help",
-      "picture_prompt": "the person looking worried with a hand at their throat, holding a smartphone that shows a big red phone-call symbol",
-      "image_url": "/fixtures/img/step_7.png",
-      "technique_clip_id": null,
-      "status": "ready",
-      "visual": {
-        "kind": "closeup",
-        "id": "phone_call"
-      }
     }
   ],
-  "created_at": "2026-11-14T15:00:00Z"
+  "created_at": "2026-11-14T15:00:00Z",
+  "safety_lines": []
 }

@@ -40,10 +40,10 @@ Owner: `@Tasnim-Uddin`. Change only through a PR, and post on the board when it 
     "device_confidence": 0.86,                 // from the device photo or the text
     "warnings": ["…"], "get_help": ["…"],      // copied faithfully from the document
     "unreadable": ["…"],                       // parts we couldn't read: the avatar must say so
-    "conflicts": []                            // medicine: label vs leaflet disagreements, see below. [] when none
+    "conflicts": []                            // two papers that disagree (label vs leaflet, or any two papers), see below. [] when none
   },
   "content": null,                             // null for how_to; the letter/bill/form shape below otherwise
-  "safety_lines": ["…"],                       // fixed lines for this doc type (shown as the last step too)
+  "safety_lines": [],                          // always [] now: the app adds no advice/safety lines of its own (kept for old clients)
   "steps": [ Step ],
   "created_at": "ISO-8601"
 }
@@ -69,28 +69,25 @@ The extraction step classifies the whole upload set into `doc_type`. **`steps` i
 | `doc_type` | `content` | Steps |
 |---|---|---|
 | `how_to` (medicine = `domain: "medicine"`) | `null`; use `facts` | Easy Read rewriter output (unchanged), pictures, technique clips |
-| `letter`, `bill`, `other` | `{ "what_this_is": str, "what_to_do": [str], "by_when": [{ "date": str, "what": str }], "amounts": [{ "what": str, "amount": str }] }` | what, then one `how` per action, one `when` per deadline, one `what` per amount, then the safety step |
-| `form` | `{ "fields": [{ "label": str, "what_to_write": str }] }` | one `how` step per field, then the safety step |
+| `letter`, `bill`, `other` | `{ "what_this_is": str, "what_to_do": [str], "by_when": [{ "date": str, "what": str }], "amounts": [{ "what": str, "amount": str }] }` | what, then one `how` per action, one `when` per deadline, one `what` per amount |
+| `form` | `{ "fields": [{ "label": str, "what_to_write": str }] }` | one `how` step per field |
 
 For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields `null` and empty lists.
 
-**Safety lines** (`guide.safety_lines`, also added as a final `get_help` step if not already there):
-- medicine: "For advice, call 111 or ask your pharmacist or GP." (the app adds no 999 line or link; a 999 line printed on the paper itself is kept)
-- how_to, not medicine (furniture, a phone, a boiler; `domain` "other"): "If something breaks or feels unsafe, stop and ask for help." Facts carry `title` and `source_steps`; steps use kinds `what|how|warning|get_help`.
-- everything else: "Get free advice before you sign or pay. For example, Citizens Advice."
+**Safety lines: none.** The app adds no advice or safety lines and no final `get_help` step of its own (no 999, no 111, no pharmacist/GP line, no Citizens Advice). `guide.safety_lines` is always `[]`. Help lines printed on the paper itself (for example "If you feel very unwell, call 111") stay as steps. When a question is not answered by the paper, the ask result says "That's not on your paper." and names who to ask (`ask_who`, from `guide.sender`). How-to guides that are not medicine (furniture, a phone, a boiler; `domain` "other") carry `title` and `source_steps` in facts; steps use kinds `what|how|warning|get_help`.
 
-**Label vs leaflet (medicine).** When both are uploaded, dose and frequency come from the label. If the leaflet says something different, `facts.conflicts` is `[{ "field": "dose|frequency", "label": str, "leaflet": str }]`, `facts.warnings` starts with "Your label and leaflet say different things. Ask your pharmacist.", and one `warning` step with that exact text is included. Neither value is dropped silently.
+**Two papers disagree.** Medicine label vs leaflet: dose and frequency come from the label. If the leaflet says something different, `facts.conflicts` is `[{ "field": "dose|frequency", "label": str, "leaflet": str, "a": str, "b": str }]` (`a` = label, `b` = leaflet), `facts.warnings` starts with "Your label and leaflet say different things. Ask your pharmacist.", and one `warning` step with that exact text is included. Any other two papers that disagree on an amount, date, time or dose: `facts.conflicts` is `[{ "field": "amount|date|time|dose", "a": str, "b": str, "a_page": int, "b_page": int }]` (pages are 0-based indexes into `source.image_urls`) and one `warning` step "Your papers say different things. Check which one is right before you act." is included. Neither value is dropped silently.
 
 ### v4 additions (all optional; old clients ignore them; mirrored in web/src/types.ts)
 - `step.visual`: `{ "kind": "closeup", "id": str }` — an animated close-up from the built-in library (`web/src/closeups/`; the id list is `web/src/closeups/ids.json`, read by both `agent/visuals.py` and the web). Missing/null = no close-up; then use highlights on the user's photo, else the picture.
-- `step.highlights`: `[{ "page": int, "text": str, "quad": [[x,y]×4] }]` — exact printed words for this step, located on the user's photo by OCR (normalised 0-1, clockwise from top-left). Never guessed by the model: if OCR can't find the quote, no highlight.
+- `step.highlights`: `[{ "page": int, "text": str, "quad": [[x,y]×4] }]` — exact printed words for this step, located on the user's photo by OCR (normalised 0-1, clockwise from top-left). Never guessed by the model: if OCR can't find the quote, no highlight. The extraction call returns short printed quotes; the server matches them to steps by their numbers/dates/words, then finds them with RapidOCR (run in parallel with the model call, fuzzy match >= 85, digits exact, padded ~1 character; for a form box the quad runs on to the end of the blank line). PDFs get no highlights.
 - `step.callout`: `{ "value": str, "sub": str? }` — big number/date card, e.g. `{"value":"£212.50","sub":"by 17 Nov"}`.
 - `guide.sender`: `{ "name": str, "kind": "pharmacy|gp|hospital|council|school|company|government|other", "contact": str? }` — who sent it; used for "ask X" when a question is not answered by the paper.
-- `guide.dates`: `[{ "what", "what_en", "date": "YYYY-MM-DD", "time": "HH:MM"?, "quote", "amount"? }]` — dated actions for Remind me / Add to calendar (calendar file built in the browser).
-- `guide.unreadable_regions`: `[{ "page", "quad", "note" }]` — parts of a photo that could not be read.
-- `guide.title_override`: user's own name for the guide (`PATCH /api/guides/{id}` `{ "title": str }`).
+- `guide.dates`: `[{ "what", "what_en", "date": "YYYY-MM-DD", "time": "HH:MM"?, "quote", "amount"? }]` — dated actions for Remind me / Add to calendar (calendar file built in the browser). Only dates whose `quote` is found on the paper are kept (OCR on photos, the text layer on PDFs). A date printed without a year is the next time it comes round. `what` is translated with the steps.
+- `guide.unreadable_regions`: `[{ "page", "quad", "note" }]` — parts of a photo that could not be read: model-reported parts placed by the printed words next to them, plus OCR lines read with low confidence (`note` "hard to read"). At most 4.
+- `guide.title_override`: user's own name for the guide (`PATCH /api/guides/{id}` `{ "title": str }` → Guide; empty title clears it; 404 for unknown ids and samples). The My guides list uses it as `title` when set.
 - Ask result `ask_who`: when `grounded` is false, who to ask instead (from `sender`).
-- `POST /api/scan` (multipart `image`) → `{ "quad", "found", "quality": { "ok", "issues": [...], "block" } }`; no AI, no cost.
+- `POST /api/scan` (multipart `image`, optional `quad` JSON = the user's own corners, normalised) → `{ "quad", "found", "quality": { "ok", "issues": [...], "block", "region"?, "metrics"? }, "size"? }`; no AI, no cost. `issues` ⊂ `small | blurry | dark | low_contrast | glare | cut_off`; `block` only for `small` or very blurry + flat (the UI then has no "Use it anyway"). Optional `region` `[x, y, w, h]` (normalised) marks where the problem is (glare), `metrics` `{ sharpness, brightness, contrast }` are for the dev panel, `size` `[w, h]` is the photo in px after EXIF rotation. Corners are measured on the photo as the phone shows it (EXIF orientation applied).
 - The app adds **no** advice/safety lines of its own (no 999, no 111). Lines printed on the paper itself are kept as steps.
 
 **Sample:** `demo/fixtures/guide_council_letter.json` (fictional, labelled sample; no images, `image_url: null`, `status: "skipped"`).
@@ -99,6 +96,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 - `POST /api/guides` (multipart: `document` (repeat the field for several files), optional `roles`, optional `device_photo`, `language`) → `{ guide_id }`. Processing continues in the background.
   - Files may be JPEG, PNG, WebP, GIF or PDF (type is sniffed from the bytes). A single `document` works exactly as before.
   - `roles`: optional, aligned with the `document` order. A JSON array (`["label","leaflet"]`) or a comma list (`label,leaflet`). Each is `label | leaflet | device_photo | letter | form | other`; an empty or `auto` entry means "detect it". `device_photo` keeps its own field and always has role `device_photo`. The roles used (client-given or detected) come back in `source.documents`.
+  - `quads` (v4): optional JSON array aligned with `document`; each entry is the paper's 4 corners `[[x,y]×4]` (normalised 0-1, clockwise from top-left, on the photo as shown) or `null`. A photo with a quad is **flattened** (perspective-warped to an upright page) before the vision call; the flat page is the one in `source.image_urls` / `source.documents[].image_url` (so OCR highlights line up), and the original photo is kept on the server too. A quad equal to the whole photo means "no crop". `400 bad_quads` if it is not a JSON array or has more entries than files.
   - All files go to the vision model in **one** extraction call.
   - Limits: at most **8 files** (device photo included), **20 pages** in total (a PDF counts its pages), 15 MB per file. Errors are JSON `{ error, detail }`: `413 too_many_files`, `413 too_many_pages`, `413 file_too_large`, `400 unsupported_file_type`, `400 bad_role`, `400 bad_roles` (more roles than files, or not a list), `400 document_required` (when the server has a model key and no file was sent).
 - `GET /api/guides/{id}` → Guide.
@@ -112,7 +110,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
   { "type": "tool_log", "tool": "next_step", "args": {…}, "ms": 12 }   // dev panel
   ```
 - `POST /api/guides/{id}/language` `{ language }` → re-translates the step texts (pictures are reused) → Guide.
-- `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none"|"pharmacist"|"111" }`. Answers come only from `facts` + the library.
+- `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none", ask_who? }`. Answers come only from the paper (`facts`, `content`, steps) + the library. Not grounded → `answer` is "That's not on your paper. Ask <who>." in the user's language and `ask_who` is who (`escalate` is kept for old clients and is always "none").
 - `POST /api/anam/session` `{ guide_id, language, step_index? }` → `{ sessionToken }` (502 `{detail}` if Anam refuses; web/ then keeps the stand-in). Creates an Anam session token server-side; the persona's system prompt includes the guide's facts and steps plus the ground rules.
 - `POST /api/tools/{name}` `{ guide_id, ...args }` → `{ say, ... }` for the server-handled tools `answer_from_document`, `check_understanding`, `set_language` (`set_language` also returns the updated `guide`). `POST /api/guides/{id}/check_understanding` `{ answer? }` → `{ say, correct }` is the same logic.
 - `POST /api/anam/session` without `ANAM_API_KEY` returns `{ sessionToken: "dev-mock-token", mock: true, personaConfig }` so the UI can integrate.

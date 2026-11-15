@@ -27,7 +27,7 @@ def stt_supported(language: str) -> bool:
 RULES = """GROUND RULES (never break these):
 - You explain the user's OWN paper. You never give advice of your own: no medical, legal or money advice, no diagnosis, no changing doses, times or amounts.
 - Answer questions only from the paper (the facts, content and steps below), using the answer_from_document tool. Never invent facts.
-- If the paper does not answer the question, say so plainly: "That is not on your paper." Then say who to ask: {who}. Do not guess, and do not add advice.
+- If the paper does not answer the question, say so plainly: "That is not on your paper." Then say who to ask: {who}. Do not guess. Never add advice, help lines or phone numbers that are not on the paper.
 - If something on the paper was unreadable, say so and ask the user.
 - ONE STEP AT A TIME: say only the step on screen, in 1 or 2 short sentences. Then ask "Ready to move on, or any questions?" (in the user's language) and stop talking. Wait for the user. Never read several steps in one turn, and never move on by yourself.
 - When the user says they are ready ("yes", "next", "go on"), call next_step. When they want to go back, call previous_step. When they name a step, call show_step.

@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, field_validator
 
-from . import docs, langs, llm, persona, pipeline, qa, tellback, tts
+from . import docs, langs, llm, persona, pipeline, qa, scan, tellback, tts
 from . import sheet as sheet_mod
 from .store import Store
 
@@ -92,6 +92,10 @@ class AskReq(_Lang):
     question: str
 
 
+class RenameReq(BaseModel):
+    title: str | None = None
+
+
 class TTSReq(_Lang):
     text: str
 
@@ -113,10 +117,44 @@ def _guide(gid: str) -> dict:
     return g
 
 
-def _store_file(f: UploadFile, data: bytes, gid: str) -> str:
-    name = f"{gid}_{uuid.uuid4().hex[:6]}_{pathlib.Path(f.filename or 'file').name}"
+def _store_file(f: UploadFile, data: bytes, gid: str, prefix: str = "") -> str:
+    name = f"{gid}_{uuid.uuid4().hex[:6]}_{prefix}{pathlib.Path(f.filename or 'file').name}"
     (UPLOADS / name).write_bytes(data)
     return f"/api/uploads/{name}"
+
+
+def _parse_quads(raw: str | None, n: int) -> list:
+    """`quads` form field -> list of n entries (a 4x2 list or None)."""
+    if not raw:
+        return [None] * n
+    try:
+        items = json.loads(raw)
+    except ValueError:
+        raise docs.UploadError(400, "bad_quads", "quads must be a JSON array")
+    if not isinstance(items, list) or len(items) > n:
+        raise docs.UploadError(400, "bad_quads", "quads must be a JSON array with at most one entry per document")
+    items = items + [None] * (n - len(items))
+    return [scan.parse_quad(q) if q is not None else None for q in items]
+
+
+@app.post("/api/scan")
+async def scan_photo(image: UploadFile = File(...), quad: str | None = Form(None)):
+    """Paper corners + photo quality for the crop screen. No AI, no cost. Optional `quad` (JSON, normalised)
+    measures quality inside the user's own corners."""
+    data = await image.read()
+    if len(data) > docs.MAX_FILE_BYTES:
+        return JSONResponse({"error": "file_too_large", "detail": "That photo is too big. Use one under 15 MB."}, status_code=413)
+    mt = docs.sniff(data, image.content_type)
+    if mt is None or mt == "application/pdf":
+        return JSONResponse({"error": "unsupported_file_type", "detail": "Add a photo (JPEG, PNG, WebP or GIF)."}, status_code=400)
+    try:
+        q = json.loads(quad) if quad else None
+    except ValueError:
+        q = None
+    try:
+        return await asyncio.to_thread(scan.scan, data, q)
+    except scan.ScanError:
+        return JSONResponse({"error": "image_unreadable", "detail": "We could not open this photo. Try another one."}, status_code=400)
 
 
 @app.get("/api/health")
@@ -127,8 +165,10 @@ def health():
 
 @app.post("/api/guides")
 async def create_guide(document: list[UploadFile] = File(default=[]), device_photo: UploadFile | None = File(None),
-                       language: str = Form("en"), roles: str | None = Form(None)):
-    """One or several files (images and/or PDFs). `roles`: optional JSON array or comma list aligned with `document`."""
+                       language: str = Form("en"), roles: str | None = Form(None), quads: str | None = Form(None)):
+    """One or several files (images and/or PDFs). `roles`: optional JSON array or comma list aligned with `document`.
+    `quads`: optional JSON array aligned with `document`; each entry is the paper's 4 corners (normalised 0-1) or null.
+    A photo with a quad is flattened (perspective-warped) before the vision call; the original is kept too."""
     gid = "g_" + uuid.uuid4().hex[:10]
     language = langs.clean(language)
     try:
@@ -149,11 +189,26 @@ async def create_guide(document: list[UploadFile] = File(default=[]), device_pho
                 raise docs.UploadError(400, "unsupported_file_type", "We could not use this device photo. Add a JPEG, PNG, WebP or GIF photo.")
             dev = (data, mt)
         docs.check_limits([(f[0], f[1]) for f in files] + ([dev] if dev else []))
+        quad_list = _parse_quads(quads, len(files))
     except docs.UploadError as e:
         return JSONResponse({"error": e.error, "detail": e.detail}, status_code=e.status)
     if not files and llm.available():
         return JSONResponse({"error": "document_required", "detail": "We did not get a paper. Add a photo or PDF and try again."}, status_code=400)
-    urls = [_store_file(d, data, gid) for d, data in raw_files]
+    urls = []
+    for i, (d, data) in enumerate(raw_files):
+        flat = None
+        if quad_list[i] is not None and files[i][1].startswith("image/"):
+            try:
+                flat = await asyncio.to_thread(scan.flatten_bytes, data, quad_list[i])
+            except scan.ScanError:
+                flat = None
+        if flat:
+            # The model (and the OCR that places highlights) sees the flat page, so it is the page's image_url.
+            files[i] = (flat, "image/jpeg", files[i][2])
+            _store_file(d, data, gid, prefix="orig_")
+            urls.append(_store_file(d, flat, gid, prefix="flat_"))
+        else:
+            urls.append(_store_file(d, data, gid))
     if dev:
         urls.append(_store_file(device_photo, dev[0], gid))
     g = pipeline.new_guide(gid, language)
@@ -193,6 +248,15 @@ def delete_guide(gid: str):
     return {"deleted": gid}
 
 
+@app.patch("/api/guides/{gid}")
+def rename_guide(gid: str, req: RenameReq):
+    """Rename in My guides: {title} is saved as title_override (empty or null clears it). Samples cannot be renamed."""
+    g = store.rename(gid, req.title)
+    if g is None:
+        raise HTTPException(404, "guide not found")
+    return g
+
+
 @app.get("/api/guides/{gid}/events")
 async def events(gid: str, once: bool = False):
     """SSE. `once=1` closes after the guide reaches ready/failed (handy for tests and curl)."""
@@ -220,7 +284,7 @@ async def events(gid: str, once: bool = False):
 async def set_language(gid: str, req: LangReq):
     g = _guide(gid)
     try:
-        await pipeline.translate_steps(g["steps"], req.language)
+        await pipeline.translate_steps(g["steps"], req.language, g.get("dates"))
     except Exception:
         pass  # keep existing text if translation fails
     await pipeline.translate_safety(g, req.language)

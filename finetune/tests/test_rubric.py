@@ -21,7 +21,8 @@ def test_invented_dose_fails():
 def test_missing_get_help_and_long_sentence_fail():
     steps = [dict(s) for s in FIX["steps"] if s["kind"] != "get_help"]
     steps[0]["text_en"] = "This is your blue inhaler and it helps you to breathe much more easily when you feel unwell."
-    r = score(FIX["facts"], steps)
+    facts = {**FIX["facts"], "get_help": ["If you feel worse, call the number on your label."]}  # a printed help line the steps dropped
+    r = score(facts, steps)
     assert not r["checks"]["get_help_included"] and not r["checks"]["max_15_words"]
 
 

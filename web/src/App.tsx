@@ -17,7 +17,6 @@ import {
   paperImages,
   NavContext,
   type LiveInfo,
-  CheckPhoto,
   ClipScreen,
   DevPanel,
   ErrorScreen,
@@ -36,11 +35,18 @@ import {
   type Role,
   type TrayItem,
 } from "./screens";
+import { CameraScreen, type Shot } from "./camera/Camera";
+import { CropScreen, type Cropped } from "./camera/Crop";
+import { QualityScreen } from "./camera/Quality";
+import { AddPaperSheet } from "./camera/AddPaper";
+import type { Quad } from "./camera/detect";
 
-const SAFE_FALLBACK = "I can't check that right now. Please ask whoever sent you this paper.";
+/** The Q&A could not answer (server error): a plain line in the user's language, never advice. */
+let fallbackLang = "en";
+const safeFallback = () => t(fallbackLang, "gs_qaFailed");
 /** The guide has this long to join before the steps open in Read mode instead (Figma 19a). */
 const CONNECT_TIMEOUT_MS = 8000;
-type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
+type Screen = "home" | "camera" | "check" | "quality" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 /** Screens where the live guide may keep running. Anywhere else ends the session. */
 const GUIDE_FLOW = new Set<Screen>(["step", "clip", "ask", "talk", "tellback"]);
@@ -94,7 +100,10 @@ export default function App() {
   const [items, setItems] = useState<TrayItem[]>([]);
   const [tooMany, setTooMany] = useState(false);
   // Photos waiting for "Can you read all of it?": every photo (camera or added) is checked one at a time.
-  const [checkQueue, setCheckQueue] = useState<{ file: File; url: string | null }[]>([]);
+  const [checkQueue, setCheckQueue] = useState<{ file: File; url: string | null; guess?: Quad | null }[]>([]);
+  // v4 capture: the "Add a paper" sheet, and a cropped photo waiting on the photo check (17a).
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [pendingQuality, setPendingQuality] = useState<Cropped | null>(null);
   const checking = checkQueue[0] ?? null;
   const [guideSeq, setGuideSeq] = useState(0);
   const retakingRef = useRef(false); // the next picked file replaces the photo being checked
@@ -132,6 +141,7 @@ export default function App() {
   indexRef.current = index;
   guideRef.current = guide;
   langRef.current = lang;
+  fallbackLang = lang;
   voiceSettings.rate = rate;
 
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -171,10 +181,11 @@ export default function App() {
   // Browser Back/Forward can land on a screen whose data is gone (a checked photo, a deleted guide): never a blank page.
   useEffect(() => {
     if (screen === "check" && !checking) go(items.length ? "tray" : "home", true);
+    else if (screen === "quality" && !pendingQuality) go(checking ? "check" : items.length ? "tray" : "home", true);
     else if (!guide && ["summary", "step", "clip", "ask", "talk", "tellback"].includes(screen)) go("home", true);
     else if (screen === "tray" && items.length === 0) go("home", true);
     else if (screen === "reading" && !guide && !uploading) go(items.length ? "tray" : "home", true);
-  }, [screen, checking, guide, items.length, uploading, go]);
+  }, [screen, checking, pendingQuality, guide, items.length, uploading, go]);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -246,7 +257,13 @@ export default function App() {
     if (textDone) {
       // Let the bar reach the end for a moment, then open the summary.
       // Replace the progress entry, so Back from the summary never lands on a finished progress screen.
-      const timer = setTimeout(() => go("summary", true), 400);
+      // Figma: loading -> guide intro. The stage opens on the intro (Read mode when the guide is switched off).
+      const timer = setTimeout(() => {
+        setIndex(0);
+        setCantConnect(false);
+        setReadMode(!guideOn);
+        go("step", true);
+      }, 400);
       return () => clearTimeout(timer);
     }
     if (guide.status === "failed") {
@@ -281,7 +298,7 @@ export default function App() {
     };
     const g = () => guideRef.current;
     const server = async (name: string, args: Record<string, unknown>) => {
-      if (!g() || isSample(g())) return SAFE_FALLBACK;
+      if (!g() || isSample(g())) return safeFallback();
       return (await api.postTool(name, g()!.id, args)).say;
     };
     // The guide may only move the steps while the user is looking at them; elsewhere it is ignored, never yanking the user.
@@ -314,14 +331,14 @@ export default function App() {
           : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
       },
       answer_from_document: async ({ question: q }) => {
-        if (!g()) return SAFE_FALLBACK;
+        if (!g()) return safeFallback();
         // Sample guides are loaded on the server too (g_sample_*), so they answer from their document as well.
         // With no server (offline demo) a sample falls back to the safe line instead of an error.
         let r: Awaited<ReturnType<typeof api.ask>>;
         try {
           r = await api.ask(g()!.id, String(q), langRef.current);
         } catch (e) {
-          if (isSample(g())) return SAFE_FALLBACK;
+          if (isSample(g())) return safeFallback();
           throw e;
         }
         // The app adds no advice of its own: the answer, and who to ask when the paper does not say.
@@ -442,7 +459,7 @@ export default function App() {
       try {
         say = await handlers[name](args);
       } catch {
-        say = SAFE_FALLBACK;
+        say = safeFallback();
       }
       addLog(name, args, Math.round(performance.now() - t0), say);
       // One voice: while the guide is live it speaks; read-aloud stays quiet.
@@ -455,20 +472,20 @@ export default function App() {
   );
 
   /* ---- adding papers ---- */
-  const addFiles = useCallback((files: File[]) => {
+  const addFiles = useCallback((files: File[], quad?: Quad | null, url?: string) => {
     setItems((cur) => {
       const room = MAX_FILES - cur.length;
       setTooMany(files.length > room);
-      return [...cur, ...files.slice(0, Math.max(0, room)).map((file) => ({ id: nextId++, file, role: "auto" as Role, url: fileUrl(file) }))];
+      return [...cur, ...files.slice(0, Math.max(0, room)).map((file) => ({ id: nextId++, file, role: "auto" as Role, url: url ?? fileUrl(file), quad: quad ?? null }))];
     });
   }, []);
 
   // Photos join the check queue; a PDF has nothing to look at, so it goes straight onto the tray.
-  function queueFiles(files: File[]) {
+  function queueFiles(files: File[], guess?: Quad | null, stay = false, shotUrl?: string) {
     if (files.length === 0) return;
     const retake = retakingRef.current;
     retakingRef.current = false;
-    const photos = files.filter((f) => f.type.startsWith("image/")).map((file) => ({ file, url: fileUrl(file) }));
+    const photos = files.filter((f) => f.type.startsWith("image/")).map((file) => ({ file, url: shotUrl ?? fileUrl(file), guess }));
     const other = files.filter((f) => !f.type.startsWith("image/"));
     if (other.length) addFiles(other);
     if (photos.length === 0) {
@@ -482,7 +499,7 @@ export default function App() {
       }
       return [...q, ...photos];
     });
-    go("check", screenRef.current === "check");
+    if (!stay) go("check", screenRef.current === "check" || screenRef.current === "camera");
   }
   function onCamera(list: FileList | null) {
     const file = list?.[0];
@@ -498,18 +515,52 @@ export default function App() {
   }
   function retake() {
     retakingRef.current = true;
+    setPendingQuality(null);
     // A photo from the camera is retaken with the camera; an added picture is picked again.
-    (checkSource.current === "upload" ? uploadRef : cameraRef).current?.click();
+    if (checkSource.current === "upload") uploadRef.current?.click();
+    else go("camera", true);
   }
-  const checkSource = useRef<"camera" | "upload">("camera");
-  function useChecked() {
-    if (!checking) return;
+  function openCamera() {
+    setSheetOpen(false);
+    checkSource.current = "camera";
+    go("camera");
+  }
+  // In-app camera: "Take photo" goes on to the corners; "Add another page" queues it and stays.
+  function onShot(shot: Shot, more: boolean) {
+    checkSource.current = "camera";
+    queueFiles([shot.file], shot.guess, more, shot.url);
+  }
+  function closeCamera() {
     retakingRef.current = false;
-    addFiles([checking.file]);
+    go(checkQueue.length ? "check" : items.length ? "tray" : "home", true);
+  }
+  function pickFiles(files: File[]) {
+    setSheetOpen(false);
+    checkSource.current = "upload";
+    queueFiles(files);
+  }
+  // Corners set: the photo check (17a) comes first when the server found a problem.
+  function onCropped(c: Cropped, more: boolean) {
+    if (c.quality && !c.quality.ok) {
+      setPendingQuality(c);
+      go("quality");
+      return;
+    }
+    acceptCropped(c, more);
+  }
+  function acceptCropped(c: Cropped, more = false) {
+    retakingRef.current = false;
+    setPendingQuality(null);
+    addFiles([c.file], c.quad, c.url);
     const rest = checkQueue.slice(1);
     setCheckQueue(rest);
-    if (rest.length === 0) go("tray", true);
+    if (rest.length) go("check", true);
+    else if (more) {
+      go("tray", true);
+      setSheetOpen(true);
+    } else go("tray", true);
   }
+  const checkSource = useRef<"camera" | "upload">("camera");
   function dropChecking() {
     retakingRef.current = false;
     for (const c of checkQueue) if (c.url) URL.revokeObjectURL(c.url);
@@ -790,15 +841,57 @@ export default function App() {
             lang={lang}
             onLanguage={changeLanguage}
             onSettings={openSettings}
-            onCamera={() => cameraRef.current?.click()}
-            onUpload={() => uploadRef.current?.click()}
+            onCamera={openCamera}
+            onUpload={() => setSheetOpen(true)}
             onSample={demo ? (n) => openSample(n) : undefined}
             onPapers={openPapers}
             hasPapers={mine.length > 0}
           />
         )}
         {screen === "check" && checking && (
-          <CheckPhoto key={checking.url ?? checking.file.name} lang={lang} url={checking.url} name={checking.file.name} onBack={dropChecking} onRetake={retake} onUse={useChecked} />
+          <CropScreen
+            key={checking.url ?? checking.file.name}
+            lang={lang}
+            file={checking.file}
+            url={checking.url ?? ""}
+            guess={checking.guess}
+            pages={items.map((i) => ({ url: i.url }))}
+            onBack={dropChecking}
+            onRetake={retake}
+            onUse={onCropped}
+          />
+        )}
+        {screen === "camera" && (
+          <CameraScreen
+            lang={lang}
+            pages={items.length + checkQueue.length}
+            thumb={checkQueue[checkQueue.length - 1]?.url ?? items[items.length - 1]?.url ?? null}
+            onShot={onShot}
+            onClose={closeCamera}
+            onPages={checkQueue.length ? () => go("check", true) : items.length ? () => go("tray", true) : undefined}
+            onPhotos={() => { checkSource.current = "upload"; uploadRef.current?.click(); }}
+            onSystemCamera={() => { checkSource.current = "camera"; cameraRef.current?.click(); }}
+          />
+        )}
+        {screen === "quality" && pendingQuality?.quality && (
+          <QualityScreen
+            lang={lang}
+            url={pendingQuality.url}
+            quad={pendingQuality.quad}
+            quality={pendingQuality.quality}
+            onRetake={retake}
+            onUseAnyway={() => acceptCropped(pendingQuality)}
+            onHome={() => { setPendingQuality(null); dropChecking(); }}
+          />
+        )}
+        {sheetOpen && (
+          <AddPaperSheet
+            lang={lang}
+            onCamera={openCamera}
+            onPhotos={pickFiles}
+            onFile={pickFiles}
+            onClose={() => setSheetOpen(false)}
+          />
         )}
         {screen === "tray" && (
           <Tray
@@ -808,7 +901,7 @@ export default function App() {
             tooMany={tooMany}
             onLanguage={changeLanguage}
             onSettings={openSettings}
-            onAdd={() => { checkSource.current = "upload"; uploadRef.current?.click(); }}
+            onAdd={() => setSheetOpen(true)}
             onRole={(id, r) => setItems((c) => c.map((i) => (i.id === id ? { ...i, role: r } : i)))}
             onRemove={(id) => {
               setTooMany(false);
@@ -835,8 +928,19 @@ export default function App() {
           <Reading
             lang={lang}
             status={status}
-            onCancel={() => { setGuide(null); go(items.length ? "tray" : "home"); }}
+            onCancel={() => {
+              // "Stop making this guide?" yes: the photo is not used, and the guide leaves My guides.
+              const id = guide?.id;
+              if (id && !isSample(guide)) {
+                forgetGuide(id);
+                setMine(myGuideIds());
+                void api.deleteGuide(id).catch(() => undefined);
+              }
+              setGuide(null);
+              go("home");
+            }}
             onRetry={items.length ? () => void makeGuide() : undefined}
+            onHome={() => { setGuide(null); go("home"); }}
           />
         )}
         {screen === "summary" && guide && (
@@ -928,9 +1032,9 @@ export default function App() {
             detail={error?.detail ?? null}
             canRetry={items.length > 0}
             onRetry={() => void makeGuide()}
-            onNewPhoto={() => cameraRef.current?.click()}
-            onUpload={() => uploadRef.current?.click()}
-            onBack={() => go(items.length ? "tray" : "home")}
+            onNewPhoto={openCamera}
+            onUpload={() => setSheetOpen(true)}
+            onBack={() => go("home")}
             onSample={error?.code === "demo_mode_no_key" ? () => openSample("inhaler") : undefined}
           />
         )}
