@@ -66,7 +66,8 @@ def test_dropped_trip_date_and_total_added_back():
              {"text_en": "Pay £8 at the office by Monday 30 November.", "kind": "when", "picture_prompt": "p"}]
     out = doctypes.ensure_content_facts(steps, "letter", content)
     added = [s["text_en"] for s in out[2:]]
-    assert added == ["By Friday 4 December 2026: Trip day. Leave at 9:15. Back at 15:30."]
+    # "Sign the form." is an action no step carries, so it comes back too.
+    assert added == ["Sign the form.", "By Friday 4 December 2026: Trip day. Leave at 9:15. Back at 15:30."]
 
 
 def test_discharge_medicine_changes_kept():
