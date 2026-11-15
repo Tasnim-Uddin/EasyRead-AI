@@ -272,6 +272,10 @@ def _words(t: str) -> set[str]:
 def quotes_for_step(step_text: str, quotes: list[dict], form: bool = False) -> list[dict]:
     """0-2 quotes this step is about: the quote's money/numbers/dates are in the step, or (no numbers) its words are."""
     sf, sw = _facts(step_text), _words(step_text)
+    # A form step that names its box ("Find the box called Family doctor name and address") only highlights a label
+    # whose words are all in that name: "Family doctor telephone" is the next box, not this one.
+    named = re.search(r"\bbox (?:called|for|that says|marked|labelled|named)\s+(.+?)(?:[.:](?:\s|$)|$)", step_text, re.I) if form else None
+    label_words = _words(named.group(1)) if named else None
     scored = []
     for i, q in enumerate(quotes):
         qt = q.get("t") or ""
@@ -284,6 +288,8 @@ def quotes_for_step(step_text: str, quotes: list[dict], form: bool = False) -> l
         else:
             qw = _words(qt)
             if not qw or len(qw & sw) / len(qw) < (0.6 if form else 0.75):
+                continue
+            if label_words is not None and not qw <= label_words:
                 continue
             # a label written out in the step ("the box called Signature(s)") beats one whose words are just nearby
             # and a label named early in the step ("Find the box called Signature. ...") beats one in a later sentence
@@ -343,6 +349,45 @@ def attach(guide: dict, quotes: list[dict], pages: list[dict | None]) -> dict:
         if c:
             s["callout"] = c
     return {"quotes": n_q, "located": n_hit}
+
+
+# ---------- urgency the paper does not print ----------
+
+# Any way a paper asks for speed. If the OCR finds one, the step's urgency stands.
+URGENT = re.compile(r"\s*,?\s*\b(?:right now|now|today|immediately|straight away|straightaway|at once|as soon as possible|asap|urgently)\b", re.I)
+# The words a writer adds on its own. Only these are ever removed: OCR can miss words (white print on a dark box),
+# so a paper phrase such as "as soon as possible" is never taken out on OCR evidence alone.
+ADDED = re.compile(r"\s*,?\s*\b(?:right now|now|today|straight away|straightaway)\b", re.I)
+
+
+def page_words(pages: list[dict | None], pdf_texts: list[str]) -> str | None:
+    """All printed words (OCR lines and PDF text), lower case; None when nothing could be read (so nothing is judged)."""
+    text = " ".join(l["text"] for p in pages if p for l in p.get("lines") or []) + " " + " ".join(pdf_texts or [])
+    text = text.lower()
+    return text if len(text.strip()) >= 40 else None
+
+
+def ground_urgency(steps: list[dict], printed: str | None) -> int:
+    """'Pay the amount now', 'call today': a time word the paper itself does not print is removed from the step
+    (the writer invents urgency; the reader must not be rushed by us). Returns how many steps changed."""
+    if not printed or URGENT.search(printed):
+        return 0  # the paper itself asks for speed: the writer's own words for it ("as soon as possible") stand
+    changed = 0
+    for s in steps:
+        t = s.get("text_en") or ""
+
+        def keep(m):
+            word = m.group(0).strip(" ,").lower()
+            return m.group(0) if re.search(rf"\b{re.escape(word)}\b", printed) else ""
+        new = ADDED.sub(keep, t)
+        if new != t:
+            new = re.sub(r"\s+([.,!?])", r"\1", new).strip()
+            new = new[:1].upper() + new[1:]
+            s["text_en"] = new
+            if s.get("text") == t:
+                s["text"] = new
+            changed += 1
+    return changed
 
 
 # ---------- dates ----------

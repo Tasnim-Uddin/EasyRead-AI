@@ -13,7 +13,8 @@ W, H = 1600, 1200
 
 
 def page(w=850, h=1100, seed=0):
-    """A white A4-ish page with dark text lines."""
+    """A white A4-ish page with dark text lines. Words are rows of letter-sized strokes (not solid bars: a solid bar
+    is what a line of text looks like after the phone shook sideways)."""
     rng = np.random.default_rng(seed)
     p = np.full((h, w, 3), 245, np.uint8)
     y = 90
@@ -21,7 +22,13 @@ def page(w=850, h=1100, seed=0):
         x = 70
         while x < w - 120:
             ww = int(rng.integers(30, 120))
-            cv2.rectangle(p, (x, y), (min(x + ww, w - 70), y + 14), (40, 35, 30), -1)
+            end = min(x + ww, w - 70)
+            lx = x
+            while lx < end:
+                lw = int(rng.integers(3, 7))
+                top = y - 5 if rng.random() < 0.3 else y  # some ascenders
+                cv2.rectangle(p, (lx, top), (min(lx + lw, end), y + 14), (40, 35, 30), -1)
+                lx += lw + int(rng.integers(3, 6))
             x += ww + 18
         y += 38
     return p
@@ -224,3 +231,27 @@ def test_guide_upload_rejects_bad_quads(client):
     assert r.status_code == 400 and r.json()["error"] == "bad_quads"
     r = client.post("/api/guides", files=[("document", ("a.jpg", a, "image/jpeg"))], data={"quads": json.dumps([None, None])})
     assert r.status_code == 400
+
+
+def test_motion_blur_is_flagged():
+    # A shaken phone: a long straight streak. Sharpness alone stays high (edges across the streak survive).
+    k = np.zeros((25, 25), np.float32)
+    k[12, :] = 1 / 25
+    img = cv2.filter2D(photo(SKEWS[0]), -1, k)
+    r = scan.scan(jpeg(img), quad=(np.float32(SKEWS[0]) / [W, H]).tolist())
+    assert "blurry" in r["quality"]["issues"]
+    assert r["quality"]["block"] is False  # warn, never block
+
+
+def test_bright_white_page_is_not_glare():
+    # Good light makes most of a white page 250+, but the print is all still there: that is not glare.
+    p = page()
+    p[p == 245] = 255
+    ph, pw = p.shape[:2]
+    M = cv2.getPerspectiveTransform(np.float32([[0, 0], [pw, 0], [pw, ph], [0, ph]]), np.float32(SKEWS[2]))
+    img = table()
+    mask = cv2.warpPerspective(np.full((ph, pw), 255, np.uint8), M, (W, H)) > 0
+    img[mask] = cv2.warpPerspective(p, M, (W, H))[mask]
+    r = scan.scan(jpeg(img, 98), quad=(np.float32(SKEWS[2]) / [W, H]).tolist())
+    assert "glare" not in r["quality"]["issues"]
+    assert r["quality"]["ok"] is True

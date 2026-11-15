@@ -87,9 +87,17 @@ def _medicine(step: dict, guide: dict, cl: list[str]) -> str | None:
     if _any(r"\b(?:tablets?|capsules?|pills?)\b", cl) and _any(r"\b(?:take|swallow)\b", cl):
         return "tablet_with_water"
     if _any(r"\b\d+(?:\.\d+)?\s?ml\b|\bspoon(?:ful)?s?\b|\bmeasuring (?:cup|spoon|syringe)\b|\boral syringe\b", cl) \
-            and _any(r"\b(?:take|give|measure|use|swallow)\b", cl):
-        return "liquid_measure_spoon"
+            and _any(r"\b(?:take|give|measure|use|swallow)\b", cl) and not _big_volume(cl) \
+            and not _any(r"\b(?:tube|feed|feeding|flush(?:es)?|drip|pump)\b", cl):
+        return "liquid_measure_spoon"  # a spoon dose; never a 1000 ml tube feed or a water flush
     return None
+
+
+SPOON_MAX_ML = 30
+
+
+def _big_volume(cl: list[str]) -> bool:
+    return any(float(v) > SPOON_MAX_ML for c in cl for v in re.findall(r"\b(\d+(?:\.\d+)?)\s?ml\b", c, re.I))
 
 
 def _paper(step: dict, guide: dict, cl: list[str]) -> str | None:
@@ -102,11 +110,16 @@ def _paper(step: dict, guide: dict, cl: list[str]) -> str | None:
         return "sign_here"
     if _any(r"\btick\b|\b(?:put a )?cross in (?:the|a) box\b|\bmark (?:the|a|one) box\b|\bcheck (?:the|a|one) box\b", cl):
         return "tick_box"
-    if _any(r"\bpay\b|\bpayment\b", cl):
+    # "pay" the verb (not "how to pay", not a name such as "Payment Helpline" or "payment reference").
+    if _any(r"(?<!how to )(?<!ways to )(?<!where to )\bpay\b|\b(?:make|send|set up) (?:a |the |your )?payments?\b", cl):
         if _any(r"\bbank transfer\b|\bdirect debit\b|\bstanding order\b|\bsort code\b|\baccount number\b|\bat your bank\b", cl):
             return "pay_bank"
+        if _any(r"\bby post\b|\bcheque\b|\bpostal order\b", cl):
+            return "post_letter"  # paying by post is not a card payment
         return "pay_card"
-    if _any(r"\b(?:call|phone|ring|telephone)\b(?! (?:number|bill))", cl):
+    if doc_type == "form" and _any(r"\bwrite\b|\bfill (?:in|out)\b|\bthe box\b", cl):
+        return "write_in_box"  # "Find the box called Telephone No. Write your number." is writing, not a call
+    if _any(r"\b(?:call|phone|ring|telephone)\b(?! (?:number|numbers|no\b|bill))", cl):
         return "phone_call"
     if _any(r"\bonline\b|\bwebsite\b|\bwww\.|\.gov\.uk\b|\.nhs\.uk\b|\blog ?in\b|\bsign in\b|\binternet\b|\bon the app\b", step_clauses_raw(step)):
         return "go_online"
@@ -152,7 +165,8 @@ def choose_closeup(step: dict, guide: dict) -> str | None:
     if guide.get("domain") == "medicine" or _device(guide) not in ("", "unknown", "none") or step.get("technique"):
         pick = _medicine(step, guide, cl)
     if pick is None:
-        pick = _paper(step, guide, cl)
+        # The step's first action leads ("Phone the helpline ... to agree how to pay" is a phone call).
+        pick = _paper(step, guide, cl[:1]) or _paper(step, guide, cl)
     if kind == "get_help" and pick not in HELP_OK:
         return None
     return pick if pick in CLOSEUP_IDS else None
