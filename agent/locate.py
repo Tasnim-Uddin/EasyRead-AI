@@ -345,6 +345,41 @@ def attach(guide: dict, quotes: list[dict], pages: list[dict | None]) -> dict:
     return {"quotes": n_q, "located": n_hit}
 
 
+# ---------- urgency the paper does not print ----------
+
+URGENT = re.compile(r"\s*,?\s*\b(?:right now|now|today|immediately|straight away|straightaway|at once|as soon as possible|asap|urgently)\b", re.I)
+
+
+def page_words(pages: list[dict | None], pdf_texts: list[str]) -> str | None:
+    """All printed words (OCR lines and PDF text), lower case; None when nothing could be read (so nothing is judged)."""
+    text = " ".join(l["text"] for p in pages if p for l in p.get("lines") or []) + " " + " ".join(pdf_texts or [])
+    text = text.lower()
+    return text if len(text.strip()) >= 40 else None
+
+
+def ground_urgency(steps: list[dict], printed: str | None) -> int:
+    """'Pay the amount now', 'call today': a time word the paper itself does not print is removed from the step
+    (the writer invents urgency; the reader must not be rushed by us). Returns how many steps changed."""
+    if not printed:
+        return 0
+    changed = 0
+    for s in steps:
+        t = s.get("text_en") or ""
+
+        def keep(m):
+            word = m.group(0).strip(" ,").lower()
+            return m.group(0) if re.search(rf"\b{re.escape(word)}\b", printed) else ""
+        new = URGENT.sub(keep, t)
+        if new != t:
+            new = re.sub(r"\s+([.,!?])", r"\1", new).strip()
+            new = new[:1].upper() + new[1:]
+            s["text_en"] = new
+            if s.get("text") == t:
+                s["text"] = new
+            changed += 1
+    return changed
+
+
 # ---------- dates ----------
 
 def fix_year(date: str, quote: str, today: dt.date | None = None) -> str | None:

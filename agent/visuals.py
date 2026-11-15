@@ -102,9 +102,12 @@ def _paper(step: dict, guide: dict, cl: list[str]) -> str | None:
         return "sign_here"
     if _any(r"\btick\b|\b(?:put a )?cross in (?:the|a) box\b|\bmark (?:the|a|one) box\b|\bcheck (?:the|a|one) box\b", cl):
         return "tick_box"
-    if _any(r"\bpay\b|\bpayment\b", cl):
+    # "pay" the verb (not "how to pay", not a name such as "Payment Helpline" or "payment reference").
+    if _any(r"(?<!how to )(?<!ways to )(?<!where to )\bpay\b|\b(?:make|send|set up) (?:a |the |your )?payments?\b", cl):
         if _any(r"\bbank transfer\b|\bdirect debit\b|\bstanding order\b|\bsort code\b|\baccount number\b|\bat your bank\b", cl):
             return "pay_bank"
+        if _any(r"\bby post\b|\bcheque\b|\bpostal order\b", cl):
+            return "post_letter"  # paying by post is not a card payment
         return "pay_card"
     if _any(r"\b(?:call|phone|ring|telephone)\b(?! (?:number|bill))", cl):
         return "phone_call"
@@ -152,7 +155,8 @@ def choose_closeup(step: dict, guide: dict) -> str | None:
     if guide.get("domain") == "medicine" or _device(guide) not in ("", "unknown", "none") or step.get("technique"):
         pick = _medicine(step, guide, cl)
     if pick is None:
-        pick = _paper(step, guide, cl)
+        # The step's first action leads ("Phone the helpline ... to agree how to pay" is a phone call).
+        pick = _paper(step, guide, cl[:1]) or _paper(step, guide, cl)
     if kind == "get_help" and pick not in HELP_OK:
         return None
     return pick if pick in CLOSEUP_IDS else None

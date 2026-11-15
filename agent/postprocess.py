@@ -13,6 +13,12 @@ MONEY = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?")
 CAPS = {"letter": 10, "bill": 10, "other": 10, "form": 14, "medicine": 16, "how_to": 12}
 CONFLICT_TEXT = "Your label and leaflet say different things. Ask your pharmacist."
 RANK = {"what": 0, "how": 1, "when": 2, "warning": 3, "get_help": 4}
+# Template placeholders printed on a blank or sample paper: «PCN_Amount», <<Name>>, {{date}}, [date], DD/MM/CCYY,
+# £XX.XX, ______. They are not values: a step must never read one out as if it were the amount or the date.
+PLACEHOLDER = re.compile(r"«[^»]{1,60}»|<<[^>]{1,60}>>|\{\{[^}]{1,60}\}\}|\[[A-Za-z_]{2,20}(?: [A-Za-z_]{2,14})?\]"
+                         r"|\b(?:DD|dd)\s?[/.-]?\s?(?:MM|mm|Month|month)\s?[/.-]?\s?(?:CCYY|YYYY|yyyy|YY|yy)\b"
+                         r"|£\s?X+(?:\.X+)?\b|_{3,}")
+BLANK = "(blank on your paper)"
 
 
 def _norm(text: str) -> list[str]:
@@ -118,7 +124,7 @@ def drop_restated(steps: list[dict], doc_type: str) -> list[dict]:
             if money and all(m.replace(" ", "") in before for m in money):
                 continue
             if not money:
-                dates = re.findall(r"\b\d{1,2} [A-Z][a-z]+(?: \d{4})?", s["text_en"])
+                dates = re.findall(r"\b\d{1,2} [A-Z][a-z]+(?: \d{4})?|\b\d+ (?:working )?(?:days?|weeks?|months?)\b", s["text_en"])
                 # Same date is not the same fact: "pay by 30 Nov" does not cover "return the form by 30 Nov".
                 if dates and all(d.replace(" ", "") in before for d in dates) and any(
                         all(d in k["text_en"] for d in dates) and _same_action(s["text_en"], k["text_en"]) for k in out):
@@ -374,8 +380,23 @@ def fit_warnings(steps: list[dict], limit: int = TARGET_STEPS) -> list[dict]:
     return out
 
 
+def honest_blanks(steps: list[dict]) -> list[dict]:
+    """A placeholder copied into a step ("Pay by DD/MM/CCYY", "Fine: «PCN_Amount»") is said as what it is:
+    "(blank on your paper)". Never a made-up value, never the template code."""
+    out = []
+    for s in steps:
+        t = s["text_en"]
+        if PLACEHOLDER.search(t):
+            t = PLACEHOLDER.sub(BLANK, t)
+            t = re.sub(r"\(\s*\(blank on your paper\)\s*\)", BLANK, t)
+            t = re.sub(r"\bnot filled in\s*\(blank on your paper\)", BLANK, t, flags=re.I)
+            t = re.sub(r"\s{2,}", " ", t).strip()
+        out.append({**s, "text_en": t})
+    return out
+
+
 def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None, has_conflict: bool = False) -> list[dict]:
-    steps = drop_know(steps)
+    steps = drop_know(honest_blanks(steps))
     steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
     steps = merge_dose_limits(steps)
     if doc_type == "how_to" and domain == "medicine":

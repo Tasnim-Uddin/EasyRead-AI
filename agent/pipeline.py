@@ -16,6 +16,11 @@ EXTRACT_SYSTEM = f"""You read photos and PDFs the user uploaded (one or several:
 a photo of their own device) and extract facts in ONE pass. Each file is introduced by a line "Document N (role: ...)".
 If the role says "detect", decide it: one of label, leaflet, device_photo, letter, form, other.
 Copy only what is in the documents; never invent. Use null for anything absent. Put anything you cannot read in "unreadable".
+A blank box or a template placeholder (for example «Amount», [date], [time], DD/MM/YYYY, XX.XX, ______) is NOT a value:
+never copy it as one and never guess it. Keep the action and say plainly that the paper does not show the value, for
+example "Pay by the date on your letter. This paper does not show the date." Give no "dates" entry for it, and in
+"amounts" write "not shown on the paper" as the amount. Never add urgency the paper does not print ("now", "today",
+"straight away"): if the paper gives no date, do not make one up.
 
 First decide if this is a paper at all. Set "is_document": false only when NO file is a document, label, leaflet, letter,
 bill, form, instructions or a medicine or device (for example a drawing, a selfie, a pet, a view). Otherwise true.
@@ -359,8 +364,9 @@ async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
         pages = [None] * len(files)
     wait_ms = int((time.perf_counter() - t) * 1000)
     try:
-        stats = locate.attach(guide, ex.get("quotes") or [], pages)
         pdfs = [locate.pdf_text(f[0]) if f[1] == "application/pdf" else "" for f in files]
+        locate.ground_urgency(guide["steps"], locate.page_words(pages, pdfs))
+        stats = locate.attach(guide, ex.get("quotes") or [], pages)
         ocr_ok = any(p is not None for p in pages) or any(pdfs)
         guide["dates"] = locate.check_dates(ex.get("dates") or [], pages, pdfs, ocr_ok)
         guide["unreadable_regions"] = locate.unreadable_regions(pages, ex.get("unreadable_parts") or [])

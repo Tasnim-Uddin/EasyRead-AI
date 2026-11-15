@@ -273,9 +273,21 @@ def ensure_content_facts(steps: list[dict], doc_type: str, content: dict | None)
     for s in content_to_steps(doc_type, content):
         if s["kind"] == "what" and not out:
             out.append(s)
+        elif s.get("blank"):
+            if not _blank_covered(s, out):
+                out.append({k: v for k, v in s.items() if k != "blank"})
         elif s is not None and not _covered(s, out) and not (s["kind"] == "what" and not _facts_in(s["text_en"]) and out):
             out.append(s)
     return out
+
+
+MISSING = re.compile(r"does not (?:show|say|give|tell)|doesn't (?:show|say)|not (?:shown|given|filled in)|\bblank\b|is missing", re.I)
+
+
+def _blank_covered(item: dict, steps: list[dict]) -> bool:
+    """An amount the paper leaves blank is covered by a step that names the same thing and says it is not shown."""
+    what = item["text_en"].split(":")[0]
+    return any(MISSING.search(s.get("text_en") or "") and _overlap(what, s.get("text_en") or "", _COMMON) >= 0.5 for s in steps)
 
 
 _COMMON = {"your", "with", "this", "that", "will", "have", "from", "they", "them", "their", "about", "there", "what",
@@ -312,7 +324,15 @@ def content_to_steps(doc_type: str, content: dict) -> list[dict]:
         text = text if re.search(r"[.!?]$", text.strip()) else text.strip() + "."  # "date to come by letter" -> just the action
         out.append(_step("when", text, "a calendar page with one day circled"))
     for a in content["amounts"][:3]:
-        out.append(_step("what", f"{a['what']}: {a['amount']}".strip(": "), "a hand holding a few coins"))
+        amount = str(a.get("amount") or "")
+        if not re.search(r"\d", amount) or postprocess.PLACEHOLDER.search(amount):
+            # Blank or placeholder on the paper: say so, never read the template code out as the amount.
+            text = f"{a['what']}: your paper does not show the amount." if a.get("what") else "Your paper does not show the amount."
+            step = _step("what", text, "a hand holding a few coins")
+            step["blank"] = True
+            out.append(step)
+            continue
+        out.append(_step("what", f"{a['what']}: {amount}".strip(": "), "a hand holding a few coins"))
     return out
 
 
