@@ -1,11 +1,10 @@
-// Look options: `?theme=default|classic|calm|fresh|warm-modern`, `?density=compact|regular`, `?dock=1|0`.
-// "default" is the v2 design (Figma "v2 redesign", Direction C "Original, next level"); "classic" is the first
-// approved look. The theme is remembered (localStorage). The guide dock is on unless the URL says `?dock=0`.
-export const THEMES = ["default", "classic", "calm", "fresh", "warm-modern"] as const;
+// Look options: `?theme=default|calm|fresh|warm-modern`, `?density=compact|regular`, `?dock=1|0`.
+// "default" is the v2 design (Figma "v2 redesign", Direction C "Original, next level"); the old "classic"
+// look was removed from the choices (a phone that had it stored falls back to Original). The theme is remembered (localStorage). The guide dock is on unless the URL says `?dock=0`.
+export const THEMES = ["default", "calm", "fresh", "warm-modern"] as const;
 export type Theme = (typeof THEMES)[number];
 export const THEME_KEY: Record<Theme, string> = {
   default: "themeDefault",
-  classic: "themeClassic",
   calm: "themeCalm",
   fresh: "themeFresh",
   "warm-modern": "themeWarm",
