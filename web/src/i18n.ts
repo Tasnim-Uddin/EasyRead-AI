@@ -1530,9 +1530,9 @@ Object.assign(ur, {
   errGeneric: "ہم یہ فائلیں استعمال نہیں کر سکے۔ انہیں دیکھیں اور دوبارہ کوشش کریں۔",
 });
 
-// "My papers" (history) and the demo-mode switch.
+// "My guides" (history) and the demo-mode switch.
 Object.assign(en, {
-  myPapers: "My papers",
+  myGuides: "My guides",
   papersPrivate: "Only this phone can see this list.",
   papersLoading: "Getting your papers",
   papersLoadFailed: "We could not get your papers. Check your connection.",
@@ -1550,7 +1550,7 @@ Object.assign(en, {
   demoModeNote: "Shows sample papers and the tool log. For demos only.",
 });
 Object.assign(es, {
-  myPapers: "Mis papeles",
+  myGuides: "Mis guías",
   papersPrivate: "Solo este teléfono puede ver esta lista.",
   papersLoading: "Buscando sus papeles",
   papersLoadFailed: "No pudimos traer sus papeles. Revise su conexión.",
@@ -1568,7 +1568,7 @@ Object.assign(es, {
   demoModeNote: "Muestra papeles de ejemplo y el registro de herramientas. Solo para demostraciones.",
 });
 Object.assign(ar, {
-  myPapers: "أوراقي",
+  myGuides: "أدلتي",
   papersPrivate: "هذا الهاتف فقط يرى هذه القائمة.",
   papersLoading: "نجلب أوراقك",
   papersLoadFailed: "لم نستطع جلب أوراقك. تحقق من الاتصال.",
@@ -1586,7 +1586,7 @@ Object.assign(ar, {
   demoModeNote: "يعرض أوراقًا تجريبية وسجل الأدوات. للعروض فقط.",
 });
 Object.assign(pl, {
-  myPapers: "Moje papiery",
+  myGuides: "Moje przewodniki",
   papersPrivate: "Tylko ten telefon widzi tę listę.",
   papersLoading: "Pobieramy twoje papiery",
   papersLoadFailed: "Nie udało się pobrać papierów. Sprawdź połączenie.",
@@ -1604,7 +1604,7 @@ Object.assign(pl, {
   demoModeNote: "Pokazuje przykładowe papiery i dziennik narzędzi. Tylko do pokazów.",
 });
 Object.assign(bn, {
-  myPapers: "আমার কাগজ",
+  myGuides: "আমার গাইডগুলো",
   papersPrivate: "শুধু এই ফোনই এই তালিকা দেখতে পায়।",
   papersLoading: "আপনার কাগজগুলো আনা হচ্ছে",
   papersLoadFailed: "আপনার কাগজগুলো আনা যায়নি। সংযোগ দেখুন।",
@@ -1622,7 +1622,7 @@ Object.assign(bn, {
   demoModeNote: "নমুনা কাগজ আর টুলের লগ দেখায়। শুধু ডেমোর জন্য।",
 });
 Object.assign(ur, {
-  myPapers: "میرے کاغذ",
+  myGuides: "میری گائیڈز",
   papersPrivate: "یہ فہرست صرف یہ فون دیکھ سکتا ہے۔",
   papersLoading: "آپ کے کاغذ لا رہے ہیں",
   papersLoadFailed: "ہم آپ کے کاغذ نہیں لا سکے۔ اپنا کنکشن دیکھیں۔",
@@ -1640,7 +1640,7 @@ Object.assign(ur, {
   demoModeNote: "نمونے کے کاغذ اور ٹول لاگ دکھاتا ہے۔ صرف ڈیمو کے لیے۔",
 });
 
-// v2 design (Direction C): home card, guide dock row, My papers groups, ask card, talk stage.
+// v2 design (Direction C): home card, guide dock row, My guides groups, ask card, talk stage.
 Object.assign(en, {
   themeClassic: "Classic",
   scanHint: "Letter, label or leaflet",

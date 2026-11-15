@@ -14,7 +14,7 @@ interface HomeProps {
   onSample?: (name: string) => void;
   onPapers: () => void;
   hasPapers: boolean;
-  /** The newest paper made on this phone (from My papers), shown as "Last paper". */
+  /** The newest paper made on this phone (from My guides), shown as "Last paper". */
   lastPaper?: PaperRow | null;
   onOpenPaper?: (id: string) => void;
 }
@@ -42,7 +42,7 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           <Icon name="upload" />
           {t(lang, "upload")}
         </button>
-        {/* History lives behind the labelled "My papers" button in the top bar, never on the main page. */}
+        {/* History lives behind the labelled "My guides" button in the top bar, never on the main page. */}
         <p className="help">
           <Icon name="lock" />
           {t(lang, "privateHere")}

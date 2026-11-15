@@ -160,7 +160,7 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
         {onPapers && (
           <button className="papers-btn" onClick={onPapers}>
             <Icon name="history" />
-            <span>{t(lang, "myPapers")}</span>
+            <span>{t(lang, "myGuides")}</span>
           </button>
         )}
         <button className="round" onClick={onSettings} aria-label={t(lang, "settings")}>

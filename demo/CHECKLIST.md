@@ -48,7 +48,7 @@ Do not run a paid upload while in free mode: uploading needs a model.
 - [ ] With `?debug=1`, screenshot the Tool calls log as backup evidence.
 
 ## 6. Reset between judges
-- Refresh the tab (samples and the cached run reload themselves). Guides now survive a restart (`data/guides`); delete a judge's upload from **My papers** (top bar list button) if you want a clean list. Language back to English, text size back to default in Settings.
+- Refresh the tab (samples and the cached run reload themselves). Guides now survive a restart (`data/guides`); delete a judge's upload from **My guides** (top bar list button) if you want a clean list. Language back to English, text size back to default in Settings.
 - If anything is odd: stop and restart uvicorn, hard refresh the browser.
 - Delete old uploads if you want (`$TMPDIR/easyread_uploads`, or `UPLOAD_DIR`).
 

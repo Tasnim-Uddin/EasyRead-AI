@@ -43,7 +43,7 @@ export function PaperViewer({ lang, urls, onClose }: { lang: string; urls: strin
   );
 }
 
-/* ---------- 12. my papers (this device's guides only) ---------- */
+/* ---------- 12. my guides (this device's guides only) ---------- */
 function paperStatus(st: GuideStatus): { key: string; cls: string } {
   if (st === "ready") return { key: "paperReady", cls: "ok" };
   if (st === "failed") return { key: "paperFailed", cls: "bad" };
@@ -85,7 +85,7 @@ export interface PaperRow {
   thumbnail: string | null;
 }
 
-/** One paper: thumbnail, title, language and date. The trash button only shows on My papers. */
+/** One paper: thumbnail, title, language and date. The trash button only shows on My guides. */
 function PaperCard({ lang, row, onOpen, onDelete }: { lang: string; row: PaperRow; onOpen: (id: string) => void; onDelete?: () => void }) {
   const st = paperStatus(row.status);
   const title = row.title || t(lang, "yourPaper");
@@ -147,7 +147,7 @@ export function MyPapers({ lang, rows, failed, onBack, onOpen, onDelete, onRetry
   const empty = !!rows && rows.length === 0;
   return (
     <div className="screen papers">
-      <TitleBar title={t(lang, "myPapers")} lang={lang} onBack={onBack} />
+      <TitleBar title={t(lang, "myGuides")} lang={lang} onBack={onBack} />
       {!empty && <p className="sub">{t(lang, "papersTap")}</p>}
       {failed && (
         <div className="banner" role="alert">
