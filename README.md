@@ -90,14 +90,14 @@ flowchart TD
       FAL["fal flux/schnell<br/>close-up pictures, max 4"]
       ASK["/ask: answers from the paper only"]
     end
-    CAM -- photo --> SCAN
-    CAM -- "pages + corners" --> FLAT --> EXT --> WRITE --> GUARD --> PLACE --> VIS --> FAL
+    CAM -->|photo| SCAN
+    CAM -->|"pages + corners"| FLAT --> EXT --> WRITE --> GUARD --> PLACE --> VIS --> FAL
     FLAT --> OCR --> PLACE
-    FAL -- "SSE: steps and pictures" --> STAGE
+    FAL -->|"SSE: steps and pictures"| STAGE
     STAGE --> DONE
-    ANAM <-- "session token, guide in prompt" --> Server
-    ANAM -- "answer_from_document" --> ASK
-    ANAM -- "show_step, next_step ..." --> STAGE
+    ANAM <-->|"session token, guide in prompt"| Server
+    ANAM -->|answer_from_document| ASK
+    ANAM -->|"show_step, next_step ..."| STAGE
 ```
 
 1. **Scan.** The browser runs a small edge detector for the live camera outline. The server (`agent/scan.py`, OpenCV) gives more accurate corners and a photo check. Each page is flattened to an upright page before reading.
