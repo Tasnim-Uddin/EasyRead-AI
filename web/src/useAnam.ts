@@ -34,21 +34,39 @@ export function useAnam(
   const logRef = useRef(onLog);
   logRef.current = onLog;
 
+  const cleanupRef = useRef<(() => void)[]>([]); // listener + tool-handler removers of the current client
   const stop = useCallback(async () => {
     sessionRef.current += 1;
     startingRef.current = false;
     const c = clientRef.current;
     clientRef.current = null;
+    for (const off of cleanupRef.current.splice(0)) {
+      try {
+        off();
+      } catch {
+        /* already removed */
+      }
+    }
+    // The UI goes back to the not-live dock straight away, even if the SDK is slow to close.
+    setMicMuted(false);
+    setSoundOff(false);
+    setActivity("idle");
+    setLiveCaption("");
+    msgDone.current = true;
+    setState((s) => (s === "standin" || s === "error" ? s : "idle"));
     try {
-      await c?.stopStreaming();
+      await c?.stopStreaming(); // closes the connection and stops the mic track
     } catch {
       /* already stopped */
     }
     const v = document.getElementById(videoId) as HTMLVideoElement | null;
-    if (v) v.muted = false;
-    setMicMuted(false);
-    setSoundOff(false);
-    setState((s) => (s === "standin" || s === "error" ? s : "idle"));
+    if (v) {
+      // Release anything still attached to the video element (remote audio/video), so nothing keeps playing.
+      const src = v.srcObject as MediaStream | null;
+      src?.getTracks().forEach((tr) => tr.stop());
+      v.srcObject = null;
+      v.muted = false;
+    }
   }, [videoId]);
 
   const start = useCallback(
@@ -68,8 +86,16 @@ export function useAnam(
           return;
         }
         const client = createClient(token);
+        const offs: (() => void)[] = [];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const on = (ev: AnamEvent, cb: (...a: any[]) => void) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          client.addListener(ev, cb as any);
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          offs.push(() => client.removeListener(ev, cb as any));
+        };
         for (const name of Object.keys(handlersRef.current)) {
-          client.registerToolCallHandler(name, {
+          const off = client.registerToolCallHandler(name, {
             onStart: async (payload: { arguments?: Record<string, unknown> }) => {
               const args = payload.arguments ?? {};
               const t0 = performance.now();
@@ -84,8 +110,9 @@ export function useAnam(
               return say;
             },
           });
+          if (typeof off === "function") offs.push(off);
         }
-        client.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (e: { id: string; content: string; role: string; endOfSpeech: boolean; interrupted: boolean }) => {
+        on(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (e: { id: string; content: string; role: string; endOfSpeech: boolean; interrupted: boolean }) => {
           if (e.role !== "persona") return;
           // Chunks of one message share nothing reliable, so a message runs until endOfSpeech/interrupted.
           if (msgDone.current) {
@@ -99,16 +126,17 @@ export function useAnam(
           }
           setActivity(e.endOfSpeech || e.interrupted ? "idle" : "talking");
         });
-        client.addListener(AnamEvent.USER_SPEECH_STARTED, () => setActivity("listening"));
-        client.addListener(AnamEvent.USER_SPEECH_ENDED, () => setActivity("idle"));
-        client.addListener(AnamEvent.TALK_STREAM_INTERRUPTED, () => setActivity((a) => (a === "paused" ? a : "idle")));
-        client.addListener(AnamEvent.CONNECTION_CLOSED, () => {
+        on(AnamEvent.USER_SPEECH_STARTED, () => setActivity("listening"));
+        on(AnamEvent.USER_SPEECH_ENDED, () => setActivity("idle"));
+        on(AnamEvent.TALK_STREAM_INTERRUPTED, () => setActivity((a) => (a === "paused" ? a : "idle")));
+        on(AnamEvent.CONNECTION_CLOSED, () => {
           if (clientRef.current === client) {
-            clientRef.current = null;
-            setState("idle");
+            // Closed from the other side (timeout, network): same clean-up as End.
+            void stop();
           }
         });
         clientRef.current = client;
+        cleanupRef.current = offs;
         await client.streamToVideoElement(videoId);
         startingRef.current = false;
         if (session !== sessionRef.current) {
@@ -125,12 +153,14 @@ export function useAnam(
       } catch (e) {
         startingRef.current = false;
         if (session !== sessionRef.current) return;
+        const c = clientRef.current;
         clientRef.current = null;
+        void c?.stopStreaming().catch(() => undefined); // never leave a half-open session holding the mic
         setError(e instanceof Error ? e.message : String(e));
         setState("error");
       }
     },
-    [videoId],
+    [videoId, stop],
   );
 
   /** The listener mic: the avatar keeps talking, but does not hear you. */
@@ -207,7 +237,15 @@ export function useAnam(
     [videoId, interrupt],
   );
 
-  useEffect(() => () => void stop(), [stop]);
+  useEffect(() => {
+    // Closing or hiding the tab ends the session too, so the mic is never left on.
+    const onHide = () => void stop();
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      void stop();
+    };
+  }, [stop]);
 
   return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, replySeq, replyDone };
 }

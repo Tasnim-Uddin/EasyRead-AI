@@ -1823,6 +1823,13 @@ Object.assign(ar, {"startGuide": "ابدأ مع مرشدك", "startGuideSub": "�
 Object.assign(ur, {"startGuide": "اپنا گائیڈ شروع کریں", "startGuideSub": "ہر مرحلہ سننے کے لیے ایک بار ٹیپ کریں", "hideGuide": "گائیڈ چھپائیں", "showGuide": "گائیڈ دکھائیں", "pauseGuide": "گائیڈ روکیں", "resumeGuide": "جاری رکھیں", "askQ": "سوال پوچھیں", "cancel": "منسوخ کریں", "home": "ہوم", "summaryNav": "خلاصہ", "noVideo": "اس مرحلے کی کوئی ویڈیو نہیں", "readingSlow": "اس میں معمول سے زیادہ وقت لگ رہا ہے۔", "retry": "دوبارہ کوشش کریں", "serverDown": "سرور سے رابطہ نہیں ہو سکا۔ انٹرنیٹ چیک کریں اور دوبارہ کوشش کریں۔"});
 Object.assign(pl, {"startGuide": "Włącz przewodnika", "startGuideSub": "Dotknij raz, aby słyszeć każdy krok", "hideGuide": "Ukryj przewodnika", "showGuide": "Pokaż przewodnika", "pauseGuide": "Wstrzymaj", "resumeGuide": "Wznów", "askQ": "Zadaj pytanie", "cancel": "Anuluj", "home": "Start", "summaryNav": "Podsumowanie", "noVideo": "Brak filmu do tego kroku", "readingSlow": "To trwa dłużej niż zwykle.", "retry": "Spróbuj ponownie", "serverDown": "Nie udało się połączyć z serwerem. Sprawdź internet i spróbuj ponownie."});
 Object.assign(bn, {"startGuide": "আপনার গাইড শুরু করুন", "startGuideSub": "প্রতিটি ধাপ শুনতে একবার ট্যাপ করুন", "hideGuide": "গাইড লুকান", "showGuide": "গাইড দেখান", "pauseGuide": "গাইড থামান", "resumeGuide": "আবার চালান", "askQ": "প্রশ্ন করুন", "cancel": "বাতিল", "home": "হোম", "summaryNav": "সারাংশ", "noVideo": "এই ধাপের কোনো ভিডিও নেই", "readingSlow": "এতে স্বাভাবিকের চেয়ে বেশি সময় লাগছে।", "retry": "আবার চেষ্টা করুন", "serverDown": "সার্ভারে পৌঁছানো যায়নি। ইন্টারনেট দেখে আবার চেষ্টা করুন।"});
+// The making screen's last status line (no mention of pictures).
+Object.assign(en, { gettingReady: "Getting your guide ready" });
+Object.assign(es, { gettingReady: "Preparando su guía" });
+Object.assign(ar, { gettingReady: "نجهّز دليلك" });
+Object.assign(ur, { gettingReady: "آپ کا گائیڈ تیار ہو رہا ہے" });
+Object.assign(pl, { gettingReady: "Przygotowujemy twój przewodnik" });
+Object.assign(bn, { gettingReady: "আপনার গাইড তৈরি হচ্ছে" });
 
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
 
