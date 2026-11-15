@@ -7,6 +7,7 @@ import { useAnam, type ToolHandler } from "./useAnam";
 import { audioOwner, claimAudio, onAudioChange, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
 import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
 import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
+import { GuideStage, type AskInfo } from "./stage/GuideStage";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
@@ -26,7 +27,6 @@ import {
   PrintSheet,
   Reading,
   Settings,
-  StepScreen,
   Summary,
   summaryText,
   TalkScreen,
@@ -42,7 +42,11 @@ import { QualityScreen } from "./camera/Quality";
 import { AddPaperSheet } from "./camera/AddPaper";
 import type { Quad } from "./camera/detect";
 
-const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
+/** The Q&A could not answer (server error): a plain line in the user's language, never advice. */
+let fallbackLang = "en";
+const safeFallback = () => t(fallbackLang, "gs_qaFailed");
+/** The guide has this long to join before the steps open in Read mode instead (Figma 19a). */
+const CONNECT_TIMEOUT_MS = 8000;
 type Screen = "home" | "camera" | "check" | "quality" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers" | Extra;
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 /** Screens where the live guide may keep running. Anywhere else ends the session. */
@@ -110,6 +114,12 @@ export default function App() {
   // Guide-led: the live guide is on by default (it still needs one tap to start, browsers block audio before that).
   const [guideOn, setGuideOn] = useState(() => (/[?&]guide=0/.test(location.search) ? false : load("er.guideOn", true)));
   const [moved, setMoved] = useState<number | null>(null); // "Your guide moved you to step N"
+  // v4 guide stage: Read mode (no avatar, no sound), the "can't connect" fall-back, and the last grounded answer.
+  const [readMode, setReadMode] = useState(false);
+  const [cantConnect, setCantConnect] = useState(false);
+  const [askInfo, setAskInfo] = useState<AskInfo | null>(null);
+  const [moveSeq, setMoveSeq] = useState(0); // +1 each time the avatar moves the steps with a tool
+  const askSeq = useRef(0);
   const movedFrom = useRef(0);
   const [paperOpen, setPaperOpen] = useState(false);
   const [askOpen, setAskOpen] = useState(() => import.meta.env.DEV && /[?&]asksheet/.test(location.search)); // screenshot hook
@@ -132,6 +142,7 @@ export default function App() {
   indexRef.current = index;
   guideRef.current = guide;
   langRef.current = lang;
+  fallbackLang = lang;
   voiceSettings.rate = rate;
 
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -253,7 +264,13 @@ export default function App() {
     if (textDone) {
       // Let the bar reach the end for a moment, then open the summary.
       // Replace the progress entry, so Back from the summary never lands on a finished progress screen.
-      const timer = setTimeout(() => go("summary", true), 400);
+      // Figma: loading -> guide intro. The stage opens on the intro (Read mode when the guide is switched off).
+      const timer = setTimeout(() => {
+        setIndex(0);
+        setCantConnect(false);
+        setReadMode(!guideOn);
+        go("step", true);
+      }, 400);
       return () => clearTimeout(timer);
     }
     if (guide.status === "failed") {
@@ -288,7 +305,7 @@ export default function App() {
     };
     const g = () => guideRef.current;
     const server = async (name: string, args: Record<string, unknown>) => {
-      if (!g() || isSample(g())) return SAFE_FALLBACK;
+      if (!g() || isSample(g())) return safeFallback();
       return (await api.postTool(name, g()!.id, args)).say;
     };
     // The guide may only move the steps while the user is looking at them; elsewhere it is ignored, never yanking the user.
@@ -297,6 +314,7 @@ export default function App() {
     const guideMove = (i: number) => {
       const before = indexRef.current;
       const to = goto(i);
+      setMoveSeq((n) => n + 1);
       if (to !== before) {
         movedFrom.current = before;
         setMoved(to + 1);
@@ -320,18 +338,24 @@ export default function App() {
           : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
       },
       answer_from_document: async ({ question: q }) => {
-        if (!g()) return SAFE_FALLBACK;
+        if (!g()) return safeFallback();
         // Sample guides are loaded on the server too (g_sample_*), so they answer from their document as well.
         // With no server (offline demo) a sample falls back to the safe line instead of an error.
         let r: Awaited<ReturnType<typeof api.ask>>;
         try {
           r = await api.ask(g()!.id, String(q), langRef.current);
         } catch (e) {
-          if (isSample(g())) return SAFE_FALLBACK;
+          if (isSample(g())) return safeFallback();
           throw e;
         }
-        const tail = r.escalate === "111" ? " Call 111 for urgent advice." : "";
-        return r.answer + tail;
+        // The app adds no advice of its own: the answer, and who to ask when the paper does not say.
+        askSeq.current += 1;
+        setAskInfo({ seq: askSeq.current, grounded: r.grounded, askWho: r.ask_who ?? null });
+        if (!r.grounded) {
+          const who = r.ask_who || g()?.sender?.name;
+          return `${r.answer} (Not on the paper.${who ? ` Who to ask: ${who}.` : " Tell them to ask whoever sent it."})`;
+        }
+        return r.answer;
       },
       check_understanding: (args) =>
         isSample(g())
@@ -371,6 +395,53 @@ export default function App() {
     if (!GUIDE_FLOW.has(screen) && (anam.state === "live" || anam.state === "connecting")) void anam.stop();
   }, [screen, anam.state, anam.stop]);
   setGuideQuiet(anam.quiet);
+
+  /* ---- v4 guide stage: the live guide runs only on the steps in guide mode ---- */
+  const wantLive = screen === "step" && !readMode && !!guide;
+  const wantLiveRef = useRef(wantLive);
+  wantLiveRef.current = wantLive;
+  // Read mode ends the session (no avatar, no sound).
+  useEffect(() => {
+    if (readMode && (anam.state === "live" || anam.state === "connecting")) void anam.stop();
+  }, [readMode, anam.state, anam.stop]);
+  // Guide mode on the steps: join the guide (it was started on the tap that opened the steps, or start it now).
+  const fakeLiveStage = import.meta.env.DEV && demo && location.search.includes("fakelive");
+  useEffect(() => {
+    if (!wantLive || !guide || fakeLiveStage) return;
+    if (anam.state === "idle") {
+      claimAudio("guide");
+      void anam.start(guide.id, langRef.current, indexRef.current);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantLive, guide?.id, anam.state]);
+  // Could not connect (no key, refused, or not live within ~8 s), or the session dropped: calm Read mode (19a).
+  const fallBack = useCallback(() => {
+    if (!wantLiveRef.current) return;
+    setCantConnect(true);
+    setReadMode(true);
+    void anamStopRef.current();
+  }, []);
+  useEffect(() => {
+    if (!wantLive || fakeLiveStage) return;
+    if (anam.state === "error" || anam.state === "standin") {
+      fallBack();
+      return;
+    }
+    if (anam.state !== "connecting") return;
+    const timer = setTimeout(fallBack, CONNECT_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [wantLive, anam.state, fallBack, fakeLiveStage]);
+  const wasLive = useRef(false);
+  useEffect(() => {
+    if (anam.state === "live") wasLive.current = true;
+    else if (anam.state === "idle" && wasLive.current) {
+      wasLive.current = false;
+      // Dropped while the user was on the steps in guide mode (not ended by the app): fall back to Read mode.
+      if (wantLiveRef.current && !stoppingRef.current) fallBack();
+    }
+    stoppingRef.current = false;
+  }, [anam.state, fallBack]);
+  const stoppingRef = useRef(false);
   const fakeLiveEarly = import.meta.env.DEV && demo && location.search.includes("fakelive");
   const isLive = fakeLiveEarly || anam.state === "live";
   const [owner, setOwner] = useState(audioOwner());
@@ -395,7 +466,7 @@ export default function App() {
       try {
         say = await handlers[name](args);
       } catch {
-        say = SAFE_FALLBACK;
+        say = safeFallback();
       }
       addLog(name, args, Math.round(performance.now() - t0), say);
       // One voice: while the guide is live it speaks; read-aloud stays quiet.
@@ -512,7 +583,10 @@ export default function App() {
 
   // Everything that belongs to one guide, cleared whenever another guide opens.
   function resetGuideState() {
+    stoppingRef.current = true;
     void anamStopRef.current(); // a different guide never inherits the old guide's live session
+    setCantConnect(false);
+    setAskInfo(null);
     setGuideSeq((n) => n + 1); // remounts the per-guide screens (check results, typed text)
     setAnswer(null);
     setQuestion("");
@@ -588,7 +662,9 @@ export default function App() {
       setGuide(g);
       setIndex(at !== undefined ? Math.min(at, Math.max(0, g.steps.length - 1)) : 0);
       // Not ready yet (still being made, or it failed): the progress screen opens the summary or the error when it can.
-      go(g.status === "ready" && g.steps.length ? (at !== undefined ? "step" : "summary") : "reading");
+      // v4: a ready guide opens on the guide intro (or the step to continue from); the summary is no longer in the main path.
+      setReadMode(!guideOn);
+      go(g.status === "ready" && g.steps.length ? "step" : "reading");
     } catch (e) {
       if (e instanceof api.ApiError && e.code !== "server") {
         forgetGuide(id);
@@ -888,30 +964,33 @@ export default function App() {
             onSettings={openSettings}
             onPapers={openPapers}
             onBack={leaveSummary}
-            onStart={() => { setIndex(0); go("step"); }}
-            onStartGuide={guideOn ? () => { setIndex(0); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
+            onStart={() => { setIndex(0); setReadMode(true); setCantConnect(false); go("step"); }}
+            onStartGuide={guideOn ? () => { setIndex(0); setReadMode(false); setCantConnect(false); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
             onListen={() => void speak(summaryText(guide), lang)}
             onSeePaper={paperImages(guide).length ? () => setPaperOpen(true) : undefined}
           />
         )}
         {screen === "step" && guide && (
-          <StepScreen
+          <GuideStage
             key={guideSeq}
             guide={guide}
             index={index}
             lang={lang}
-            clips={clips}
-            onClose={() => go("summary")}
-            onIndex={setStep}
-            onFinish={() => { go("tellback"); }}
-            onShowHow={() => void runTool("play_technique", { step_index: index })}
-            moved={moved}
-            onUndoMove={() => setStep(movedFrom.current)}
-            askOpen={askOpen}
-            onAskOpen={setAskOpen}
-            onAsk={(q) => void askOnStep(q)}
-            answer={answer}
-            busy={busy}
+            anam={anam}
+            live={isLive}
+            readMode={readMode}
+            cantConnect={cantConnect}
+            voice={voice}
+            askInfo={askInfo}
+            moveSeq={moveSeq}
+            onIndex={(i) => { goto(i); setMoved(null); }}
+            onReadMode={(on) => { if (!on) { setCantConnect(false); anam.resetError(); } setReadMode(on); }}
+            onTryAgain={() => { anam.resetError(); setCantConnect(false); setReadMode(false); }}
+            onHome={() => { stoppingRef.current = true; go("home"); }}
+            onPapers={() => { stoppingRef.current = true; openPapers(); }}
+            onCheck={() => go("tellback")}
+            scale={scale}
+            onScale={setScale}
           />
         )}
         {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}
