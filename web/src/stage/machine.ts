@@ -2,13 +2,13 @@
  * The guide stage as a small pure state machine (no React, no audio), so every move is testable.
  *
  * intro    big avatar, "Yes, let's start"
- * step     the step's visual fills the stage, the avatar is a small circle, she narrates the step
- * checkin  she grows back: "Ready to move on, or any questions?" (the app shows the buttons itself)
+ * step     the step's visual fills the stage, the avatar stays a small circle in the corner the whole time;
+ *          she narrates the step and stops (no check-in). Back / Next / Speak / Type are always on screen.
  * ask      the user is asking (by voice or by typing)
- * answer   her answer, with "From your paper" (or who to ask), and Back to the step
+ * answer   her answer, with "From your paper" (or who to ask), and Back to the step (she stays the circle)
  * finish   "You did it"
  */
-export type Phase = "intro" | "step" | "checkin" | "ask" | "answer" | "finish";
+export type Phase = "intro" | "step" | "ask" | "answer" | "finish";
 export type AskMode = "voice" | "type";
 
 export interface StageState {
@@ -23,13 +23,12 @@ export interface StageState {
   answer: string | null;
   grounded: boolean | null;
   askWho: string | null;
-  /** The phase to go back to after asking (a question can be asked from intro, step or check-in). */
-  askFrom: "intro" | "step" | "checkin" | "finish";
+  /** The phase to go back to after asking (a question can be asked from intro, step or finish). */
+  askFrom: "intro" | "step" | "finish";
 }
 
 export type StageEvent =
   | { type: "start" }
-  | { type: "narrated" } // the guide finished saying the step
   | { type: "next" }
   | { type: "back" }
   | { type: "jump"; index: number }
@@ -75,9 +74,6 @@ export function stageReducer(s: StageState, e: StageEvent): StageState {
       return { ...s, total: e.total, index: clamp(s.index, e.total) };
     case "start":
       return { ...toStep(s, s.index), dir: "none" };
-    case "narrated":
-      // Only a step being narrated turns into a check-in; anything else (an answer, the intro) stays put.
-      return s.phase === "step" ? { ...s, phase: "checkin" } : s;
     case "next":
       if (s.index >= s.total - 1) return { ...s, ...clearAsk, phase: "finish", dir: "none" };
       return toStep(s, s.index + 1);
@@ -99,18 +95,19 @@ export function stageReducer(s: StageState, e: StageEvent): StageState {
     case "answered":
       if (s.phase !== "answer" && s.phase !== "ask") return s;
       return { ...s, phase: "answer", answer: e.answer, grounded: e.grounded ?? null, askWho: e.askWho ?? null };
-    case "backToStep": {
-      const back = s.askFrom === "checkin" ? "step" : s.askFrom;
-      return { ...s, ...clearAsk, phase: back, dir: "none" };
-    }
+    default:
+      return s;
+    case "backToStep":
+      return { ...s, ...clearAsk, phase: s.askFrom, dir: "none" };
     case "restart":
       return { ...initialStage(s.total, 0, "step") };
   }
 }
 
-/** True when the avatar should be the big picture (not the small circle). */
+/** True when the avatar should be the big picture (not the small circle): only before the steps start and at the end.
+ *  Through every step, question and answer she stays in the corner so the step picture stays visible. */
 export function avatarBig(phase: Phase): boolean {
-  return phase === "intro" || phase === "checkin" || phase === "answer" || phase === "finish";
+  return phase === "intro" || phase === "finish";
 }
 
 /** The last ~`max` characters of a running caption, cut at a word. */
@@ -144,10 +141,4 @@ export function whoToAsk(sender: { name?: string | null } | null | undefined, as
   if (a && !GENERIC_WHO.has(a.toLowerCase())) return a;
   const n = (sender?.name ?? "").trim();
   return n ? shortName(n) : null;
-}
-
-/** A fallback time for the check-in when the guide's "done talking" event never comes. */
-export function narrationTimeoutMs(text: string): number {
-  const words = text.trim().split(/\s+/).filter(Boolean).length;
-  return Math.min(30000, Math.max(9000, 4000 + words * 550));
 }

@@ -8,7 +8,9 @@ import { speak, stopSpeaking } from "../speech";
 import { CloseUp, hasCloseUp } from "../closeups";
 import type { useAnam } from "../useAnam";
 import { prefersReducedMotion } from "../motion";
-import { avatarBig, initialStage, narrationTimeoutMs, stageReducer, tailCaption, whoToAsk, type Phase, type StageEvent } from "./machine";
+import { avatarBig, initialStage, stageReducer, tailCaption, whoToAsk, type Phase, type StageEvent } from "./machine";
+import { SHOW_CHECK } from "./config";
+import "./micStrings";
 import { chooseVisual, conflictStepIndex, dateIndexFor, maxScaleFor, planHighlight, primaryHighlight, type StepVisual } from "./visual";
 import { openRemindMe, openShare } from "../extras/bus";
 import { ConflictCard } from "../extras/ConflictCard";
@@ -53,7 +55,12 @@ export interface GuideStageProps {
   onScale?: (v: number) => void;
 }
 
-const CHECKIN_EN = "Ready to move on, or any questions?";
+/** What the guide is told after each step: say it, then stop (no "Ready to move on?" check-in). */
+/** The finish caption: without the check, she does not offer it. */
+const FINISH_LINE = SHOW_CHECK ? "gs_finishLine" : "gs_finishDone";
+/** Speak opens the mic; with no question for this long it closes again. */
+const MIC_SILENCE_MS = 8000;
+const THEN_WAIT = `Then stop talking and wait. Do not ask if they are ready or if they have questions: the screen shows Back, Next, Speak and Type.`;
 
 function stepTitle(s: Step | undefined) {
   return s?.text ?? "";
@@ -93,6 +100,15 @@ function SlowIcon() {
     <svg viewBox="0 0 24 24" className="gs-ico" aria-hidden="true">
       <path d="M4 16a8 8 0 0116 0" />
       <path d="M12 16l-3.5-4.5" />
+    </svg>
+  );
+}
+function MicOffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="gs-ico" aria-hidden="true">
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0011.2 4.5M18.5 11v0M12 17.5V21M8.5 21h7" />
+      <path d="M3.5 3.5l17 17" />
     </svg>
   );
 }
@@ -235,7 +251,8 @@ function StepVisualView({ v, step, playing, circle = false, onRemind }: { v: Ste
       </div>
     );
   if (v.kind === "highlight") return <HighlightPhoto url={v.url} highlights={v.highlights} callout={v.callout} playing={playing} circle={circle} onRemind={onRemind} />;
-  if (v.kind === "image") return <img className="gs-img" src={v.url} alt="" />;
+  // A still picture drifts gently (Ken Burns) so nothing on the stage is dead still; paused with the guide.
+  if (v.kind === "image") return <img className={"gs-img gs-kb" + (playing ? "" : " still")} src={v.url} alt="" />;
   return (
     <div className={"gs-textonly" + (step.kind === "warning" || step.kind === "get_help" ? " warn" : "")}>
       <Icon name={KIND_ICON[step.kind] ?? "doc"} />
@@ -382,7 +399,7 @@ export function GuideStage(p: GuideStageProps) {
           : how === "again"
           ? `Say step ${n} again, slowly, with short pauses. The screen shows: "${st.text}".`
           : `User moved to step ${n} (index ${i}). The screen shows: "${st.text}"${said}.`;
-      tell(`${lead} Say this one step simply in 1 or 2 short sentences, in the user's language. Then ask "${CHECKIN_EN}" (in the user's language) and wait. Do not call a step tool.`);
+      tell(`${lead} Say this one step simply in 1 or 2 short sentences, in the user's language. ${THEN_WAIT} Do not call a step tool.`);
     },
     [guide.steps, total, tell],
   );
@@ -405,7 +422,11 @@ export function GuideStage(p: GuideStageProps) {
         } else narrate(after.index, e.type === "start" ? "start" : e.type === "back" ? "back" : "move");
       }
       if (after.phase === "finish" && before.phase !== "finish") {
-        tell(`The user finished all ${total} steps. In one short sentence say they did it, then ask if they would like to check they have got it. Do not call a tool.`);
+        tell(
+          SHOW_CHECK
+            ? `The user finished all ${total} steps. In one short sentence say they did it, then ask if they would like to check they have got it. Do not call a tool.`
+            : `The user finished all ${total} steps. In one short sentence say they did it. Do not offer a quiz. Do not call a tool.`,
+        );
       }
       if (e.type === "back" && after.index < before.index) setGoingBack(true);
       return after;
@@ -427,35 +448,13 @@ export function GuideStage(p: GuideStageProps) {
     return () => clearTimeout(tm);
   }, [goingBack]);
 
-  /* ---- narrated -> check-in ---- */
+  /* ---- what she says about this step: captions count only messages after the step (or phase) changed ---- */
+  // No check-in: after she narrates a step the stage stays as it is (circle in the corner, picture, Back / Next).
   const narrBase = useRef(anam.replySeq);
   useEffect(() => {
     narrBase.current = anam.replySeq;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.phase, s.index]);
-  useEffect(() => {
-    if (readMode || paused || conflictOpen || s.phase !== "step") return;
-    if (anam.replySeq <= narrBase.current) return;
-    const tm = setTimeout(() => dispatch({ type: "narrated" }), 700);
-    return () => clearTimeout(tm);
-    // replyDone ticks when a message ends
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anam.replyDone]);
-  // Fallback: the check-in buttons always come, even if the "done talking" event never does.
-  useEffect(() => {
-    if (readMode || paused || conflictOpen || s.phase !== "step") return;
-    let tm: ReturnType<typeof setTimeout>;
-    const wait = (ms: number) => {
-      tm = setTimeout(() => {
-        if (activityRef.current === "talking") wait(2000);
-        else dispatch({ type: "narrated" });
-      }, ms);
-    };
-    wait(narrationTimeoutMs(`${step?.text ?? ""} ${step?.say ?? ""}`));
-    return () => clearTimeout(tm);
-  }, [readMode, paused, conflictOpen, s.phase, s.index, step?.text, step?.say]);
-  const activityRef = useRef(anam.activity);
-  activityRef.current = anam.activity;
 
   /* ---- asking ---- */
   const askBase = useRef(anam.replySeq);
@@ -481,6 +480,43 @@ export function GuideStage(p: GuideStageProps) {
     [guide.id, guide.sender, lang],
   );
 
+  /* ---- the mic: OFF by default; Speak opens it for one question; the toggle can leave it on (hands-free) ---- */
+  /** True while the mic is on only because Speak opened it: it closes again by itself. */
+  const autoMic = useRef(false);
+  const closeAutoMic = useCallback(() => {
+    if (!autoMic.current) return;
+    autoMic.current = false;
+    anam.setMic(true);
+  }, [anam]);
+  // The mic starts OFF when the live session starts.
+  useEffect(() => {
+    if (!live) return;
+    autoMic.current = false;
+    anam.setMic(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live]);
+  // Leaving the voice question (typing, back to the step, moving on) closes a Speak-opened mic.
+  useEffect(() => {
+    if (!(s.phase === "ask" && s.askMode === "voice") && s.phase !== "answer") closeAutoMic();
+  }, [s.phase, s.askMode, closeAutoMic]);
+  // Silence: ~8 s on the listening screen with no question closes the mic and goes back.
+  useEffect(() => {
+    if (!live || s.phase !== "ask" || s.askMode !== "voice" || !autoMic.current) return;
+    if (anam.activity === "listening" || anam.userCaption.trim()) return;
+    const tm = setTimeout(() => {
+      closeAutoMic();
+      run({ type: "backToStep" });
+    }, MIC_SILENCE_MS);
+    return () => clearTimeout(tm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, s.phase, s.askMode, anam.activity, anam.userCaption, closeAutoMic]);
+  // Her answer finished: close the mic.
+  useEffect(() => {
+    if (s.phase === "answer" && anam.replySeq > askBase.current) closeAutoMic();
+    // replyDone ticks when a message ends
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anam.replyDone]);
+
   const startAsk = useCallback(
     (mode: "voice" | "type") => {
       askBase.current = anam.replySeq;
@@ -491,7 +527,11 @@ export function GuideStage(p: GuideStageProps) {
       if (liveRef.current) {
         if (mode === "voice") {
           anam.interrupt();
-          if (anam.micMuted) anam.setMic(false);
+          // Speak opens the mic just for this question (unless the user chose hands-free with the toggle).
+          if (anam.micMuted) {
+            autoMic.current = true;
+            anam.setMic(false);
+          }
         }
         return;
       }
@@ -570,11 +610,11 @@ export function GuideStage(p: GuideStageProps) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anam.userSeq]);
-  // Live: the user starts talking on a step or a check-in: that is a question (09a).
+  // Live: the user starts talking on a step or an answer (mic on): that is a question (09a).
   useEffect(() => {
     if (!live || paused || anam.activity !== "listening") return;
     const ph = sRef.current.phase;
-    if (ph === "step" || ph === "checkin" || ph === "answer") {
+    if (ph === "step" || ph === "answer") {
       askBase.current = anam.replySeq;
       askInfoBase.current = p.askInfo?.seq ?? 0;
       dispatch({ type: "ask", mode: "voice" });
@@ -611,18 +651,21 @@ export function GuideStage(p: GuideStageProps) {
     }
   }, [readMode]);
 
+  // Pause turns the mic off; Carry on puts it back the way the user had it (the mic toggle).
+  const micBeforePause = useRef(false);
   function togglePause() {
     if (!paused) {
       setPaused(true);
+      micBeforePause.current = anam.micMuted;
       anam.interrupt();
       anam.setMic(true);
       anam.setSound(true);
       stopSpeaking();
     } else {
       setPaused(false);
-      anam.setMic(false);
+      anam.setMic(micBeforePause.current);
       anam.setSound(false);
-      if (s.phase === "step" || s.phase === "checkin") narrate(s.index, "resume");
+      if (s.phase === "step") narrate(s.index, "resume");
     }
     setSheet("none");
   }
@@ -641,7 +684,7 @@ export function GuideStage(p: GuideStageProps) {
     setSlow(next);
     setSheet("none");
     if (live) {
-      tell(next ? `Please speak more slowly from now on, with short pauses between sentences. Now say step ${s.index + 1} again slowly: "${step?.text ?? ""}". Then ask "${CHECKIN_EN}" (in the user's language).` : "You can speak at your normal pace again. Keep sentences short.");
+      tell(next ? `Please speak more slowly from now on, with short pauses between sentences. Now say step ${s.index + 1} again slowly: "${step?.text ?? ""}". ${THEN_WAIT}` : "You can speak at your normal pace again. Keep sentences short.");
     }
   }
 
@@ -651,12 +694,15 @@ export function GuideStage(p: GuideStageProps) {
   const liveText = live && anam.replySeq > narrBase.current ? anam.liveCaption : "";
   let captionLabel = t(lang, live && anam.activity === "talking" ? "gs_talking" : "gs_yourGuide");
   let caption = "";
+  // Guide mode has no big step text: the caption is the only text. It shows what she is saying; when she is paused,
+  // not live, or has not started on this step yet, it shows the step itself so it is still readable.
+  const stepWords = (step?.say || step?.text || "").trim();
+  let captionIsStep = false;
   if (s.phase === "intro") caption = live && anam.liveCaption ? anam.liveCaption : t(lang, "gs_intro");
-  else if (s.phase === "step") caption = liveText || stepBody(step) || "";
-  else if (s.phase === "checkin") {
-    const c = live ? anam.liveCaption.trim() : "";
-    caption = c.endsWith("?") || c.endsWith("؟") ? c : t(lang, "gs_checkin");
-  } else if (s.phase === "finish") caption = live && anam.replySeq > narrBase.current && anam.liveCaption ? anam.liveCaption : t(lang, "gs_finishLine");
+  else if (s.phase === "step") {
+    caption = (!paused && liveText.trim()) || stepWords;
+    captionIsStep = caption === stepWords;
+  } else if (s.phase === "finish") caption = live && anam.replySeq > narrBase.current && anam.liveCaption ? anam.liveCaption : t(lang, FINISH_LINE);
   let answerText: string | null = null;
   if (s.phase === "answer") {
     captionLabel = t(lang, "gs_answering");
@@ -678,6 +724,23 @@ export function GuideStage(p: GuideStageProps) {
         <Icon name="home" />
       </button>
       {stepHeader ? <h1 className={"gs-count" + (readMode ? " start" : "")}>{tf(lang, "gs_stepOf", { n: s.index + 1, m: total })}</h1> : <span className="gs-grow" />}
+      {!readMode && live && (
+        <button
+          type="button"
+          className={"gs-mictoggle" + (anam.micMuted ? " off" : "")}
+          role="switch"
+          aria-checked={!anam.micMuted}
+          title={t(lang, anam.micMuted ? "gs_micOffHint" : "gs_micOnHint")}
+          aria-label={t(lang, anam.micMuted ? "gs_micOffHint" : "gs_micOnHint")}
+          onClick={() => {
+            autoMic.current = false; // the user chose: on stays on (hands-free), off stays off
+            anam.setMic(!anam.micMuted);
+          }}
+        >
+          {anam.micMuted ? <MicOffIcon /> : <Icon name="mic" />}
+          <span>{t(lang, anam.micMuted ? "gs_micOff" : "gs_micOn")}</span>
+        </button>
+      )}
       {readMode ? (
         <Toggle on={false} label={t(lang, "gs_guide")} icon={<SpeakerIcon />} onClick={() => p.onReadMode(false)} />
       ) : s.phase === "intro" ? (
@@ -687,7 +750,7 @@ export function GuideStage(p: GuideStageProps) {
           <BookIcon />
         </button>
       ) : (
-        <span className="gs-grow" />
+        !live && <span className="gs-grow" />
       )}
     </header>
   );
@@ -768,7 +831,7 @@ export function GuideStage(p: GuideStageProps) {
         {conflictView ? (
           conflictView
         ) : finished ? (
-          <FinishBody lang={lang} total={total} caption={t(lang, "gs_finishLine")} label={t(lang, "gs_yourGuide")} p={p} onAgain={() => run({ type: "restart" })} />
+          <FinishBody lang={lang} total={total} caption={t(lang, FINISH_LINE)} label={t(lang, "gs_yourGuide")} p={p} onAgain={() => run({ type: "restart" })} />
         ) : s.phase === "ask" || s.phase === "answer" ? (
           <AskPanel
             lang={lang}
@@ -848,8 +911,8 @@ export function GuideStage(p: GuideStageProps) {
       ) : (
         <>
           <div className={"gs-stage" + (s.phase === "ask" ? " asking" : "")}>
-            {/* the step visual: under the avatar, shown when she is the small circle */}
-            {(s.phase === "step" || s.phase === "ask") && step && (
+            {/* the step visual: under the avatar, who stays the small circle through steps, questions and answers */}
+            {(s.phase === "step" || s.phase === "ask" || s.phase === "answer") && step && (
               <div className={"gs-visual" + (visual.kind === "text" ? " textonly" : "")} key={s.index} data-dir={s.dir}>
                 <StepVisualView v={visual} step={step} playing={!paused} circle onRemind={onRemind} />
                 {onRemind && !paused && <RemindChip lang={lang} onClick={onRemind} />}
@@ -913,13 +976,21 @@ export function GuideStage(p: GuideStageProps) {
             />
           ) : (
             <>
-              {s.phase === "step" && <h2 className="gs-title" dir="auto">{stepTitle(step)}</h2>}
+              {/* Guide mode: no big step text here; the caption below is the only text (Read mode keeps the title). */}
               {(caption || answerText !== null || s.phase === "answer") && (
-                <div className={"gs-caption" + (paused ? " paused" : "")} aria-live="polite">
+                <div className={"gs-caption" + (paused ? " paused" : "") + (captionIsStep ? " step" : "")} aria-live="polite">
                   <small>
                     {captionLabel} · {langName}
                   </small>
-                  <p dir="auto">{paused ? t(lang, "gs_tapCarryOn") : s.phase === "answer" ? tailCaption(answerText ?? "", 220) || t(lang, "gs_thinking") : tailCaption(caption)}</p>
+                  <p dir="auto">
+                    {paused && s.phase !== "step"
+                      ? t(lang, "gs_tapCarryOn")
+                      : s.phase === "answer"
+                      ? tailCaption(answerText ?? "", 220) || t(lang, "gs_thinking")
+                      : captionIsStep
+                      ? caption
+                      : tailCaption(caption, 220)}
+                  </p>
                 </div>
               )}
               {s.phase === "answer" && answerText && grounded !== null && (
@@ -948,56 +1019,35 @@ export function GuideStage(p: GuideStageProps) {
                     </div>
                   </>
                 )}
-                {s.phase === "step" &&
-                  (paused ? (
+                {s.phase === "step" && (
+                  <>
+                    {/* Always there: Back / Next to move, Speak / Type to ask (no check-in after each step). */}
                     <div className="gs-two">
                       <button className="gs-btn ghost" onClick={() => run({ type: "back" })} disabled={s.index === 0}>
                         <Chev back />
                         {t(lang, "gs_back")}
                       </button>
-                      <button className="gs-btn" onClick={togglePause}>
+                      <button className="gs-btn" onClick={() => run({ type: "next" })}>
+                        <Chev />
+                        {t(lang, "gs_next")}
+                      </button>
+                    </div>
+                    {paused ? (
+                      <button className="gs-btn sage" onClick={togglePause}>
                         <Icon name="play" />
                         {t(lang, "gs_carryOn")}
                       </button>
-                    </div>
-                  ) : (
-                    <div className="gs-three">
-                      <button className="gs-btn ghost" onClick={() => run({ type: "back" })} disabled={s.index === 0}>
-                        <Chev back />
-                        {t(lang, "gs_back")}
-                      </button>
-                      <button className="gs-btn sage" onClick={() => startAsk("voice")}>
-                        <Icon name="mic" />
-                        {t(lang, "gs_speak")}
-                      </button>
-                      <button className="gs-btn ghost" onClick={() => startAsk("type")}>
-                        <KbIcon />
-                        {t(lang, "gs_type")}
-                      </button>
-                    </div>
-                  ))}
-                {s.phase === "checkin" && (
-                  <>
-                    <button className="gs-btn" onClick={() => run({ type: "next" })}>
-                      <Chev />
-                      {t(lang, "gs_nextStep")}
-                    </button>
-                    <p className="gs-or">{t(lang, "gs_askQ")}</p>
-                    <div className="gs-two">
-                      <button className="gs-btn sage" onClick={() => startAsk("voice")}>
-                        <Icon name="mic" />
-                        {t(lang, "gs_speak")}
-                      </button>
-                      <button className="gs-btn ghost" onClick={() => startAsk("type")}>
-                        <KbIcon />
-                        {t(lang, "gs_type")}
-                      </button>
-                    </div>
-                    {s.index > 0 && (
-                      <button className="gs-link" onClick={() => run({ type: "back" })}>
-                        <Chev back />
-                        {t(lang, "gs_goBackStep")}
-                      </button>
+                    ) : (
+                      <div className="gs-two">
+                        <button className="gs-btn sage" onClick={() => startAsk("voice")}>
+                          <Icon name="mic" />
+                          {t(lang, "gs_speak")}
+                        </button>
+                        <button className="gs-btn ghost" onClick={() => startAsk("type")}>
+                          <KbIcon />
+                          {t(lang, "gs_type")}
+                        </button>
+                      </div>
                     )}
                   </>
                 )}
@@ -1202,10 +1252,12 @@ function FinishBody({ lang, total, caption, label, p, onAgain, avatar }: { lang:
         </span>
       )}
       <div className="gs-actions">
-        <button className="gs-btn" onClick={p.onCheck}>
-          <Icon name="check" />
-          {t(lang, "gs_checkGotIt")}
-        </button>
+        {SHOW_CHECK && (
+          <button className="gs-btn" onClick={p.onCheck}>
+            <Icon name="check" />
+            {t(lang, "gs_checkGotIt")}
+          </button>
+        )}
         <div className="gs-two">
           <button className="gs-btn ghost" onClick={() => openShare(p.guide)}>
             <Icon name="send" />

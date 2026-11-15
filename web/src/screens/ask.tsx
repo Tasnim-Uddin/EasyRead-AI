@@ -8,6 +8,7 @@ import type { AnamState } from "../useAnam";
 import { GuideDock, GuideOrAvatar, TypeBar, LiveControls } from "./guide";
 import { useLive, useDock, LangPill, TitleBar } from "./shared";
 import { type Kind, kindOf, safetyLines } from "./summary";
+import { SHOW_CHECK } from "../stage/config";
 
 /* ---------- 7. ask / finish ---------- */
 const CHIP_KEYS: Record<Kind, string[]> = {
@@ -62,10 +63,12 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
   const asked = answer ? question.trim() : "";
   const more = (
     <div className="ans-actions">
-      <button className="btn surface" onClick={onTellBack}>
-        <Icon name="swap" />
-        {t(lang, "tellBack")}
-      </button>
+      {SHOW_CHECK && (
+        <button className="btn surface" onClick={onTellBack}>
+          <Icon name="swap" />
+          {t(lang, "tellBack")}
+        </button>
+      )}
       <button className="btn quiet" onClick={onPrint}>
         <Icon name="print" />
         {t(lang, "print")}

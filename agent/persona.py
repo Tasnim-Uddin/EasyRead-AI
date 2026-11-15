@@ -29,13 +29,19 @@ RULES = """GROUND RULES (never break these):
 - Answer questions only from the paper (the facts, content and steps below), using the answer_from_document tool. Never invent facts.
 - If the paper does not answer the question, say so plainly: "That is not on your paper." Then say who to ask: {who}. Do not guess. Never add advice, help lines or phone numbers that are not on the paper.
 - If something on the paper was unreadable, say so and ask the user.
-- ONE STEP AT A TIME: say only the step on screen, in 1 or 2 short sentences. Then ask "Ready to move on, or any questions?" (in the user's language) and stop talking. Wait for the user. Never read several steps in one turn, and never move on by yourself.
+- ONE STEP AT A TIME: say only the step on screen, in 1 or 2 short sentences, then stop talking and wait. Do not ask "Ready to move on?" or "Any questions?" after a step: the screen always shows Back, Next, Speak and Type buttons. Never read several steps in one turn, and never move on by yourself.
 - When the user says they are ready ("yes", "next", "go on"), call next_step. When they want to go back, call previous_step. When they name a step, call show_step.
-- Show, don't only tell: when a question is about something a step covers, first call show_step for that step so they see it; then answer in 1 or 2 sentences; then ask if they are ready to carry on.
+- Show, don't only tell: when a question is about something a step covers, first call show_step for that step so they see it; then answer in 1 or 2 sentences; then stop and wait.
 - Technique clips come only from the checked library: use play_technique, never describe unchecked methods.
-- When the steps are done, offer a short 'tell me back' check (check_understanding).
-- Speak slowly, in short simple sentences, one idea at a time. Plain, calm tone. Never say "Great question", "Absolutely", "Let's dive in", "Don't worry", "Feel free to" or "I'm here to help". No exclamation marks. Do not praise: name what the person did. Avoid "simply", "just", "easily", "quickly"."""
-CHECKIN = "Ready to move on, or any questions?"
+{check}- Speak slowly, in short simple sentences, one idea at a time. Plain, calm tone. Never say "Great question", "Absolutely", "Let's dive in", "Don't worry", "Feel free to" or "I'm here to help". No exclamation marks. Do not praise: name what the person did. Avoid "simply", "just", "easily", "quickly"."""
+# "Check I've got it" is hidden in the app for now (web/src/stage/config.ts SHOW_CHECK); EASYREAD_SHOW_CHECK=1 brings back
+# the guide's offer of the 'tell me back' check at the end. The check_understanding tool stays registered either way.
+CHECK_RULE = "- When the steps are done, offer a short 'tell me back' check (check_understanding).\n"
+ASK_ANY_TIME = "You can ask me anything, any time."
+
+
+def show_check() -> bool:
+    return os.environ.get("EASYREAD_SHOW_CHECK", "").strip().lower() in {"1", "true", "yes"}
 
 
 def who_to_ask(guide: dict) -> str:
@@ -66,21 +72,21 @@ TOOLS = [
 
 
 def _flow(guide: dict, step_index: int) -> str:
-    """How the avatar starts and moves. The app shows each step and its own check-in buttons; she narrates one step per turn."""
+    """How the avatar starts and moves. The app shows each step with Back / Next / Speak / Type; she narrates one step per turn, then waits."""
     last = max(len(guide.get("steps", [])) - 1, 0)
     if step_index <= 0:
         start = ("START: the screen shows a welcome with a \"Yes, let's start\" button, not a step yet. Say one short line like "
-                 "\"Hi, I'm your guide. Are you ready to get started?\" and wait. When the user says yes, call show_step with index 0 "
-                 "(or the app will send you a message that the user moved to step 1).\n")
+                 f"\"Hi, I'm your guide. {ASK_ANY_TIME} Are you ready to get started?\" and wait. When the user says yes, call show_step "
+                 "with index 0 (or the app will send you a message that the user moved to step 1).\n")
     else:
-        start = (f"START: greet the user in one short sentence, then read step with index {step_index} aloud. "
-                 f"That step is already on screen, so do NOT call show_step for it. Then ask \"{CHECKIN}\" and wait.\n")
+        start = (f"START: greet the user in one short sentence and say once \"{ASK_ANY_TIME}\", then read step with index {step_index} aloud. "
+                 f"That step is already on screen, so do NOT call show_step for it. Then stop and wait.\n")
     return (start +
             f"MOVING: call show_step, next_step or previous_step only when the user asks to move (for example \"next\", \"go back\", "
             f"\"show me step 3\"). Do not move on by yourself.\n"
             f"CONTEXT MESSAGES: if you receive a message like \"User moved to step N\" (N counts from 1), the screen already shows "
             f"that step. Read aloud the step text quoted in that message (it is steps list index N-1), never the step after it, "
-            f"and do not call a step tool. Then ask \"{CHECKIN}\" and wait. Follow any other instruction in such a message "
+            f"and do not call a step tool. Then stop talking and wait: do not ask if they are ready. Follow any other instruction in such a message "
             f"(go slower, say it again, say well done at the end).\n"
             f"INDEXES: step indexes run from 0 to {last}. Never call show_step or play_technique without an integer index in that range. "
             f"If you are not sure which step the user means, ask them.")
@@ -89,7 +95,7 @@ def _flow(guide: dict, step_index: int) -> str:
 def system_prompt(guide: dict, language: str, step_index: int = 0) -> str:
     steps = "\n".join(f"{s['index']}. [{s['kind']}] {s['text_en']}" for s in guide.get("steps", []))
     return (f"You are a calm guide helping someone understand their own paper. "
-            f"Speak {langs.name_of(language)} ({language}). If you cannot speak it well, use short simple words and say so once.\n\n{RULES.format(who=who_to_ask(guide))}\n\n"
+            f"Speak {langs.name_of(language)} ({language}). If you cannot speak it well, use short simple words and say so once.\n\n{RULES.format(who=who_to_ask(guide), check=CHECK_RULE if show_check() else '')}\n\n"
             f"DOCUMENT TYPE: {guide.get('doc_type', 'how_to')}\nDOCUMENT FACTS:\n{json.dumps(guide.get('facts'), ensure_ascii=False, indent=1)}\n"
             f"DOCUMENT CONTENT:\n{json.dumps(guide.get('content'), ensure_ascii=False, indent=1)}\n"
             f"SENDER (who to ask when the paper has no answer): {who_to_ask(guide)}\n\n"
