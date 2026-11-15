@@ -257,9 +257,13 @@ export function conflictStepIndex(guide: Pick<Guide, "facts" | "steps">): number
 }
 
 /** Which of `guide.dates` this step is about (its highlighted words, callout or text), or -1. */
-export function dateIndexFor(step: Step | undefined, guide: Pick<Guide, "dates">): number {
-  const dates = guide.dates ?? [];
-  if (!step || !dates.length) return -1;
+export function dateIndexFor(step: Step | undefined, guide: Pick<Guide, "dates">, now = new Date()): number {
+  const all = guide.dates ?? [];
+  if (!step || !all.length) return -1;
+  // A date that has passed gets no Remind me (same rule as extras/ics datesFor); indexes stay those of guide.dates.
+  const p2 = (n: number) => String(n).padStart(2, "0");
+  const today = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`;
+  const dates = all.map((d) => (d.date && d.date < today ? { ...d, quote: "", what: "", amount: null } : d));
   const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
   const hs = (step.highlights ?? []).map((h) => norm(h.text)).filter(Boolean);
   const text = norm(`${step.text} ${step.text_en} ${step.callout?.value ?? ""} ${step.callout?.sub ?? ""}`);

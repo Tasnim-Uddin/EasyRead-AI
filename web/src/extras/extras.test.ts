@@ -91,7 +91,14 @@ describe("calendar", () => {
       ["2026-12-15", "Tell the council if you disagree"],
     ]);
     const withDates = { ...letter, dates: [{ what: "Pay £212.50", what_en: "Pay £212.50", date: "2026-11-17", quote: "17 Nov", amount: "£212.50" }] } as Guide;
-    expect(datesFor(withDates)[0].date).toBe("2026-11-17");
+    expect(datesFor(withDates, new Date(2026, 10, 15))[0].date).toBe("2026-11-17");
+  });
+  it("leaves out dates that have passed (no Remind me for an old bill)", () => {
+    const old = { ...letter, content: { ...letter.content, by_when: [{ date: "1 Nov 2023", what: "first payment" }, { date: "1 Oct 2024", what: "last payment" }] } } as Guide;
+    expect(datesFor(old, new Date(2026, 10, 15))).toEqual([]);
+    const saved = { ...letter, dates: [{ what: "Pay", what_en: "Pay", date: "2026-11-14", quote: "14 Nov", amount: null }] } as Guide;
+    expect(datesFor(saved, new Date(2026, 10, 15))).toEqual([]);
+    expect(datesFor(saved, new Date(2026, 10, 14))).toHaveLength(1);
   });
   it("minusDays crosses months and years", () => {
     expect(minusDays("2026-12-01", 1)).toBe("2026-11-30");

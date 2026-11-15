@@ -28,8 +28,8 @@ output `finetune/data/train_v2.jsonl`).
 - Dataset id: `c3d8bd88-0450-494e-bcd2-1ec13329b0e4` (1,002 rows, raw upload, prompt/completion)
 - Run id: `7477f072-ea28-40cd-ae62-9ec893a51667`
 - Base: `Qwen/Qwen3.5-4B`, max iterations 3, target win rate 0.8
-- Status at 2026-11-14 23:31 London: running, iteration 0 of 3 finished
-- Best win rate: pending (update when the run finishes)
+- Status: succeeded, all 3 iterations finished (checked 2026-11-15)
+- Best win rate: **0.7387** (74% preferred over the base model). It beat the 0.7 bar but not its own 0.8 target, and stayed below run 1 (0.7712), so run 1 remains the best result.
 
 ### Cleaning rules (all deterministic, applied to both prompt and completion where relevant)
 
