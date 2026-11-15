@@ -14,7 +14,7 @@ Legend for the key column: **LIVE** needs `ANTHROPIC_API_KEY` (+ `FAL_KEY` for p
 | 1:05 | Talk to the guide. Avatar reads the step and says "next". Open dev panel > Tool calls. | "The Anam avatar drives the guide with tool calls: show step, next step, set language. Every call is in this log." Point at `show_step`, `next_step` lines. | LIVE (Anam). OFFLINE: illustrated stand-in, on-screen buttons call the same tools and log them |
 | 1:30 | Language pill in the top bar > Spanish, then Arabic. Layout flips right to left. Back to English. | "Same guide, same pictures, new language and voice. Arabic switches the whole layout right to left." | Interface text OFFLINE. Guide text translation LIVE (Anthropic). Voice LIVE (ElevenLabs / Anam), else browser voice |
 | 1:45 | Ask: tap Ask, type "Can I take 6 puffs?". Then type "I can't breathe". Point at the 999 link at the top. | "It answers only from the paper. Not in the paper means ask your pharmacist. And chest pain or can't breathe: it says call 999, every time, checked by keywords before any model runs." | Emergency check OFFLINE. Answers LIVE (Anthropic) |
-| 2:05 | Last step > Tell me back. Answer the question aloud. | "At the end it checks you understood, so you are not left guessing." | OFFLINE (sample), LIVE for the avatar voice |
+| 2:05 | Last step > Check I've got it. Answer the question aloud. | "At the end it checks you understood, so you are not left guessing." | OFFLINE (sample), LIVE for the avatar voice |
 | 2:20 | Open `#/sample/council` (or upload a fictional council letter image if you have one ready). Show summary: what it is, what to do, by when. | "Same engine, any paper. A council letter. What it is, what to do, by when, what it costs, and: get free advice before you pay." | OFFLINE (sample). LIVE if uploading |
 | 2:40 | Open `#/sample/flatpack`, then press Print on the last screen. | "Furniture instructions, same thing. And everyone can take a printed sheet home." | OFFLINE |
 | 2:55 | Show base vs tuned (`python -m finetune.eval` output, or slide). | "Our Adaption-tuned rewriter, win rate against the base model: **[WIN RATE %, fill in]**." | OFFLINE (slide) |
@@ -32,7 +32,7 @@ Say it plainly: "This is a saved real run." Everything below is OFFLINE. Start t
 | Specific step (here step 3) | `#/sample/inhaler/step/2` |
 | Ask screen | `#/sample/inhaler/ask` |
 | Talk screen (avatar stand-in) | `#/sample/inhaler/talk` |
-| Tell me back | `#/sample/inhaler/tellback` |
+| Check I've got it | `#/sample/inhaler/tellback` |
 | Council letter | `#/sample/council` |
 | Flat-pack | `#/sample/flatpack` |
 | Upload tray / photo check / reading / error / settings | `#/tray`, `#/check`, `#/reading`, `#/error`, `#/settings` |
