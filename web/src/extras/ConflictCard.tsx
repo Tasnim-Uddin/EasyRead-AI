@@ -18,7 +18,7 @@ export function ConflictCard({ guide, lang, onOk, onAsk }: { guide: Guide; lang:
   const list = conflictsOf(guide, lang);
   if (!list.length) return null;
   return (
-    <section className="x-conflict" role="alert" aria-label={t(lang, "xConflictTitle")}>
+    <section className="x-conflict" lang={lang} role="alert" aria-label={t(lang, "xConflictTitle")}>
       <span className="x-check-this">
         <XIcon name="alert" />
         {t(lang, "xCheckThis")}
