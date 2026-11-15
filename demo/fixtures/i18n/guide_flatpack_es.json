@@ -52,7 +52,8 @@
       "picture_prompt": "a small wooden bookshelf standing against a wall",
       "image_url": "/fixtures/img/flatpack_step_0.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 1,
@@ -62,7 +63,8 @@
       "picture_prompt": "wooden shelf parts and screws laid out on a floor",
       "image_url": "/fixtures/img/flatpack_step_1.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 2,
@@ -72,7 +74,11 @@
       "picture_prompt": "a hand turning a screwdriver to join a wooden side to a top board",
       "image_url": "/fixtures/img/flatpack_step_2.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "screwdriver_turn"
+      }
     },
     {
       "index": 3,
@@ -82,7 +88,8 @@
       "picture_prompt": "a thin back panel sliding into a groove in a wooden frame",
       "image_url": "/fixtures/img/flatpack_step_3.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 4,
@@ -92,7 +99,8 @@
       "picture_prompt": "two people lifting a wooden shelf together",
       "image_url": "/fixtures/img/flatpack_step_4.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 5,
@@ -102,7 +110,8 @@
       "picture_prompt": "a finished bookshelf standing against a wall",
       "image_url": "/fixtures/img/flatpack_step_5.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 6,
@@ -112,7 +121,11 @@
       "picture_prompt": "a person on the phone holding a screw",
       "image_url": "/fixtures/img/flatpack_step_6.jpg",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "phone_call"
+      }
     }
   ],
   "created_at": "2026-11-14T00:00:00+00:00"

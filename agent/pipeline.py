@@ -417,7 +417,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             raw = finish_steps(raw, dt, domain, facts["conflicts"], facts.get("device_type"))
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,
-                               "technique_clip_id": None, "status": "pending"} for i, r in enumerate(raw)]
+                               "technique_clip_id": None, "status": "pending", "visual": r.get("visual")} for i, r in enumerate(raw)]
             await place_on_paper(guide, ex, files, ocr_task)
             await translate_steps(guide["steps"], language, guide.get("dates"))
             await translate_safety(guide, language)

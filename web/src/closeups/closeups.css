@@ -1,0 +1,190 @@
+/* Close-up library animations. Nothing moves unless the svg has .cu-on (playing and motion allowed);
+   the default state of every part is the still frame. Durations come from the motion tokens in styles.css. */
+.closeup {
+  display: block;
+  width: 100%;
+  height: 100%;
+  direction: ltr;
+}
+/* styles.css gives every svg a currentColor stroke (for line icons); close-ups are flat fills. */
+svg.closeup.closeup { stroke: none; fill: none; stroke-width: 0; transform: none; }
+
+.closeup {
+  --cu-shake: var(--dur-loop-shake, 700ms);
+  --cu-press: calc(var(--dur-press, 750ms) * 4);
+  --cu-loop: calc(var(--dur-press, 750ms) * 4);
+  --cu-pulse: var(--dur-highlight, 900ms);
+  --cu-ease: var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* ---- shake: rock +-12deg, motion lines swap sides (Figma 06a-d) ---- */
+.cu-on .cu-shake-rock { animation: cu-rock var(--cu-shake) ease-in-out infinite alternate; }
+.cu-on .cu-shake-left { animation: cu-swap-a var(--cu-shake) ease-in-out infinite alternate; }
+.cu-on .cu-shake-right { animation: cu-swap-b var(--cu-shake) ease-in-out infinite alternate; }
+@keyframes cu-rock { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+@keyframes cu-swap-a { from { opacity: 1; } to { opacity: 0.2; } }
+@keyframes cu-swap-b { from { opacity: 0.2; } to { opacity: 1; } }
+
+/* ---- press + breathe in (Figma 07a-d): finger pushes the canister, puff, breathe-in arrow ---- */
+.cu-on .cu-press-push { animation: cu-push var(--cu-press) var(--cu-ease) infinite; }
+.cu-on .cu-press-lines { animation: cu-lines var(--cu-press) var(--cu-ease) infinite; }
+.cu-on .cu-press-mist { animation: cu-mist var(--cu-press) var(--cu-ease) infinite; }
+.cu-on .cu-spacer-mist { animation: cu-mist-long var(--cu-press) var(--cu-ease) infinite; }
+.cu-on .cu-press-breath { animation: cu-breath-in var(--cu-press) var(--cu-ease) infinite; }
+@keyframes cu-push { 0%, 14% { transform: translateY(0); } 24%, 42% { transform: translateY(12px); } 54%, 100% { transform: translateY(0); } }
+@keyframes cu-lines { 0%, 16% { opacity: 0; } 24%, 40% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes cu-mist {
+  0%, 24% { opacity: 0; transform: translateX(10px); }
+  36% { opacity: 1; }
+  70% { opacity: 0.8; transform: translateX(-26px); }
+  82%, 100% { opacity: 0; transform: translateX(-34px); }
+}
+@keyframes cu-mist-long {
+  0%, 24% { opacity: 0; transform: translateX(0); }
+  36% { opacity: 1; }
+  78% { opacity: 0.7; transform: translateX(-44px); }
+  88%, 100% { opacity: 0; transform: translateX(-50px); }
+}
+@keyframes cu-breath-in {
+  0%, 30% { opacity: 0.35; transform: translateX(0); }
+  50%, 76% { opacity: 1; transform: translateX(-10px); }
+  92%, 100% { opacity: 0.35; transform: translateX(0); }
+}
+
+/* ---- cap off / on ---- */
+.cu-on .cu-cap-off { animation: cu-cap-off var(--cu-loop) var(--cu-ease) infinite; }
+.cu-on .cu-cap-on { animation: cu-cap-on var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-cap-off {
+  0%, 12% { transform: translate(0, 0); opacity: 1; }
+  50%, 72% { transform: translate(-48px, -10px); opacity: 1; }
+  84% { transform: translate(-48px, -10px); opacity: 0; }
+  92% { transform: translate(0, 0); opacity: 0; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+@keyframes cu-cap-on {
+  0% { transform: translate(-48px, -10px); opacity: 0; }
+  10%, 22% { transform: translate(-48px, -10px); opacity: 1; }
+  58%, 90% { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(0, 0); opacity: 1; }
+}
+
+/* ---- breathe out / hold / rinse / wait ---- */
+.cu-on .cu-breath-out { animation: cu-out calc(var(--cu-loop) * 0.7) ease-out infinite; }
+@keyframes cu-out { 0% { opacity: 0; transform: translateX(-16px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateX(34px); } }
+.cu-on .cu-puff { animation: cu-puff var(--cu-pulse) ease-in-out infinite alternate; }
+@keyframes cu-puff { from { transform: scale(1); } to { transform: scale(1.1); } }
+.cu-on .cu-timer { animation: cu-timer calc(var(--cu-loop) * 1.4) linear infinite; }
+@keyframes cu-timer { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+.cu-on .cu-swish { animation: cu-swish calc(var(--cu-shake) * 0.8) ease-in-out infinite alternate; }
+@keyframes cu-swish { from { transform: translateX(-8px); } to { transform: translateX(8px); } }
+.cu-on .cu-hand-fast { animation: cu-spin var(--cu-loop) linear infinite; }
+.cu-on .cu-hand-slow { animation: cu-spin calc(var(--cu-loop) * 12) linear infinite; }
+@keyframes cu-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ---- tablet, drops, spoon, cream ---- */
+.cu-on .cu-wave { animation: cu-swish var(--cu-pulse) ease-in-out infinite alternate; }
+.cu-on .cu-tablet-hop { animation: cu-hop calc(var(--cu-loop) * 0.6) var(--cu-ease) infinite; }
+@keyframes cu-hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-26px); } 60% { transform: translateY(-20px); } }
+.cu-on .cu-drop { animation: cu-drop calc(var(--cu-loop) * 0.6) ease-in infinite; }
+@keyframes cu-drop {
+  0% { transform: translateY(-8px) scale(0.4); opacity: 0; }
+  20% { transform: translateY(0) scale(1); opacity: 1; }
+  75% { transform: translateY(78px) scale(1); opacity: 1; }
+  90%, 100% { transform: translateY(84px) scale(1.4, 0.4); opacity: 0; }
+}
+.cu-on .cu-pour { animation: cu-pour calc(var(--cu-loop) * 0.8) linear infinite; }
+@keyframes cu-pour { 0%, 100% { opacity: 1; } 80% { opacity: 1; } 90% { opacity: 0; } }
+.cu-on .cu-fill { animation: cu-fill calc(var(--cu-loop) * 0.8) var(--cu-ease) infinite; }
+@keyframes cu-fill { 0% { transform: scale(0.2); } 80% { transform: scale(1); } 100% { transform: scale(1); } }
+.cu-on .cu-rub { animation: cu-rub calc(var(--cu-shake) * 1.1) ease-in-out infinite alternate; }
+@keyframes cu-rub { from { transform: translateX(-26px); } to { transform: translateX(26px); } }
+.cu-on .cu-smear { animation: cu-smear calc(var(--cu-loop) * 1.2) ease-in-out infinite; }
+@keyframes cu-smear { 0% { opacity: 1; } 70% { opacity: 0.25; } 100% { opacity: 1; } }
+
+/* ---- writing: ink draws in, pen follows (Figma 30a/b highlight style) ---- */
+.cu-on .cu-ink { animation: cu-ink var(--cu-loop) linear infinite; }
+@keyframes cu-ink { 0%, 6% { stroke-dashoffset: 100; } 72%, 100% { stroke-dashoffset: 0; } }
+.cu-on .cu-pen-write { animation: cu-pen var(--cu-loop) linear infinite; }
+@keyframes cu-pen {
+  0%, 6% { transform: translate(-134px, 0); }
+  20% { transform: translate(-104px, -6px); }
+  40% { transform: translate(-64px, 4px); }
+  56% { transform: translate(-30px, -4px); }
+  72%, 100% { transform: translate(0, 0); }
+}
+.cu-on .cu-pen-tick { animation: cu-pen-tick var(--cu-loop) linear infinite; }
+@keyframes cu-pen-tick {
+  0%, 6% { transform: translate(-34px, 14px); }
+  30% { transform: translate(-22px, 28px); }
+  72%, 100% { transform: translate(0, 0); }
+}
+.cu-on .cu-glow-box { animation: cu-glow var(--cu-pulse) ease-in-out infinite alternate; }
+@keyframes cu-glow { from { stroke-opacity: 1; } to { stroke-opacity: 0.45; } }
+.cu-on .cu-nudge { animation: cu-nudge var(--cu-pulse) ease-in-out infinite alternate; }
+@keyframes cu-nudge { from { transform: translateX(0); } to { transform: translateX(-10px); } }
+
+/* ---- pay by card ---- */
+.cu-on .cu-card-tap { animation: cu-tap-card var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-tap-card {
+  0%, 8% { transform: translate(44px, 14px); }
+  34%, 64% { transform: translate(-22px, -6px); }
+  90%, 100% { transform: translate(44px, 14px); }
+}
+.cu-on .cu-waves { animation: cu-waves var(--cu-loop) linear infinite; }
+@keyframes cu-waves { 0%, 30% { opacity: 0; } 38%, 60% { opacity: 1; } 68%, 100% { opacity: 0; } }
+.cu-on .cu-paid { animation: cu-paid var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-paid { 0%, 44% { stroke-dashoffset: 100; } 60%, 92% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 100; } }
+.cu-on .cu-amount { animation: cu-amount var(--cu-loop) linear infinite; }
+@keyframes cu-amount { 0%, 44% { opacity: 0.8; } 56%, 92% { opacity: 0.25; } 100% { opacity: 0.8; } }
+
+/* ---- bank transfer ---- */
+.cu-on .cu-coin { animation: cu-coin var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-coin {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: 1; }
+  45% { transform: translate(40px, -28px); }
+  75% { transform: translate(78px, -16px); opacity: 1; }
+  88%, 100% { transform: translate(78px, -16px); opacity: 0; }
+}
+
+/* ---- phone ringing ---- */
+.cu-on .cu-buzz { animation: cu-buzz calc(var(--cu-loop) * 0.5) linear infinite; }
+@keyframes cu-buzz {
+  0%, 40%, 100% { transform: rotate(0deg); }
+  5%, 15%, 25%, 35% { transform: rotate(-4deg); }
+  10%, 20%, 30% { transform: rotate(4deg); }
+}
+.cu-on .cu-ring-l, .cu-on .cu-ring-r { animation: cu-ring calc(var(--cu-loop) * 0.5) ease-out infinite; }
+.cu-on .cu-ring-r { animation-delay: calc(var(--cu-loop) * 0.06); }
+@keyframes cu-ring { 0% { opacity: 0.2; } 15%, 35% { opacity: 1; } 60%, 100% { opacity: 0.2; } }
+
+/* ---- go online: finger taps the button ---- */
+.cu-on .cu-tap { animation: cu-tap var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-tap { 0%, 10% { transform: translate(34px, 40px); } 40%, 56% { transform: translate(0, 0); } 86%, 100% { transform: translate(34px, 40px); } }
+.cu-on .cu-ripple { animation: cu-ripple var(--cu-loop) ease-out infinite; transform-origin: 200px 262px; }
+@keyframes cu-ripple { 0%, 40% { opacity: 0; transform: scale(0.4); } 46% { opacity: 1; } 70%, 100% { opacity: 0; transform: scale(1.8); } }
+
+/* ---- calendar: ring drawn round the date, then a pulse ---- */
+.cu-on .cu-ring-draw { animation: cu-ring-draw var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-ring-draw { 0%, 8% { stroke-dashoffset: 100; } 42%, 92% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: 100; } }
+.cu-on .cu-pulse circle { animation: cu-pulse var(--cu-loop) ease-out infinite; transform-origin: 215px 231px; }
+@keyframes cu-pulse { 0%, 44% { opacity: 0; transform: scale(0.8); } 52% { opacity: 0.9; } 80%, 100% { opacity: 0; transform: scale(1.35); } }
+
+/* ---- post / bring / keep ---- */
+.cu-on .cu-post { animation: cu-post var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-post { 0% { transform: translateY(-40px); opacity: 0; } 14% { opacity: 1; transform: translateY(-30px); } 62%, 74% { transform: translateY(66px); opacity: 1; } 92%, 100% { transform: translateY(98px); opacity: 1; } }
+.cu-on .cu-present { animation: cu-present var(--cu-pulse) ease-in-out infinite alternate; }
+@keyframes cu-present { from { transform: translateY(0) rotate(0deg); } to { transform: translateY(-10px) rotate(-2deg); } }
+.cu-on .cu-file { animation: cu-file var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-file { 0%, 8% { transform: translateY(-70px); opacity: 0; } 18% { opacity: 1; } 60%, 100% { transform: translateY(0); opacity: 1; } }
+
+/* ---- how-to ---- */
+.cu-on .cu-grip { animation: cu-grip calc(var(--cu-shake) * 0.8) linear infinite; }
+@keyframes cu-grip { from { transform: translateX(0); } to { transform: translateX(18px); } }
+.cu-on .cu-turn-arrow { animation: cu-swap-a var(--cu-pulse) ease-in-out infinite alternate; }
+.cu-on .cu-plug { animation: cu-plug var(--cu-loop) var(--cu-ease) infinite; }
+@keyframes cu-plug { 0%, 10% { transform: translateX(0); } 50%, 80% { transform: translateX(88px); } 100% { transform: translateX(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .closeup *, .closeup { animation: none !important; }
+}
