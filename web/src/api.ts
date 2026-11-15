@@ -81,6 +81,7 @@ async function json<T>(res: Response): Promise<T> {
 interface UploadItem {
   file: File;
   role: string;
+  quad?: [number, number][] | null;
 }
 
 /**
@@ -97,6 +98,9 @@ export function buildGuideForm(items: UploadItem[], language: string): FormData 
   // Extra device photos have no field of their own, so they go as ordinary papers.
   const roles = main.map((d) => (d.role === "auto" || d === device ? "" : d.role === "device_photo" ? "other" : d.role));
   if (roles.some(Boolean)) f.append("roles", JSON.stringify(roles));
+  // v4: the corners from the crop screen, aligned with the documents (null = use the photo as it is).
+  const quads = main.map((d) => (d.quad && d.quad.length === 4 ? d.quad : null));
+  if (quads.some(Boolean)) f.append("quads", JSON.stringify(quads));
   if (device && docs.length) f.append("device_photo", device.file);
   f.append("language", language);
   return f;
