@@ -158,8 +158,17 @@ def match_line(quote: str, text: str) -> tuple[float, float, float] | None:
         start, end, score = al.dest_start, al.dest_end, al.score
     if _digits(q) and _digits(q) != _digits(t[start:end]):
         return None  # "17 November" must not land on "10 November": digits are exact
-    n = max(len(text), 1)
-    return score, idx[start] / n, (idx[end - 1] + 1) / n
+    return score, _xfrac(text, idx[start]), _xfrac(text, idx[end - 1] + 1)
+
+
+_NARROW, _WIDE = set(" .,:;'|!()[]/-iIl1jtfr"), set("mwMW@%")
+
+
+def _xfrac(text: str, i: int) -> float:
+    """Where character i starts along the line, as a fraction of its width (narrow and wide glyphs weighted)."""
+    w = [0.45 if c in _NARROW else 1.35 if c in _WIDE else 1.0 for c in text]
+    total = sum(w) or 1.0
+    return sum(w[:i]) / total
 
 
 def _lerp(a, b, f):
@@ -235,7 +244,8 @@ def find(pages: list[dict | None], quote: str, page_hint: int | None = None, for
     end_x = None
     if form:
         rest = line["text"][int(round(f1 * len(line["text"]))):]
-        if re.fullmatch(r"[\s:_\-\[\]().|]*", rest):
+        # the quote is the whole box label, or the start of one that ends in a colon: the box follows on this line
+        if re.fullmatch(r"[\s:_\-\[\]().|]*", rest) or re.fullmatch(r"[^:]{0,60}:[\s_\-\[\]().|]*", rest):
             f1 = 1.0  # boxes/underscores read as text: the rest of the line is the box
             end_x = _blank_line_end(page, line["poly"])
     quad = _span_quad(line["poly"], f0, f1, len(line["text"]), end_x=end_x)
@@ -275,10 +285,22 @@ def quotes_for_step(step_text: str, quotes: list[dict], form: bool = False) -> l
             qw = _words(qt)
             if not qw or len(qw & sw) / len(qw) < (0.6 if form else 0.75):
                 continue
-            score = len(qw & sw) / len(qw)
-        scored.append((score, -i, q))
-    scored.sort(reverse=True)
-    return [q for _, _, q in scored[:2]]
+            # a label written out in the step ("the box called Signature(s)") beats one whose words are just nearby
+            # and a label named early in the step ("Find the box called Signature. ...") beats one in a later sentence
+            plain = lambda x: _norm(re.sub(r"\((s|es)\)", "", x))
+            low = step_text.lower()
+            first = min(low.find(w) for w in qw & sw)
+            score = (len(qw & sw) / len(qw) + (1 if plain(qt) in plain(step_text) else 0)
+                     + 0.2 * (1 - first / max(len(low), 1)))
+        scored.append((score, -i, bool(qf), q))
+    scored.sort(key=lambda x: x[:2], reverse=True)
+    out, wordy = [], False
+    for _, _, has_facts, q in scored:
+        if not has_facts and wordy:
+            continue  # one label per step: a second, weaker label match is usually a neighbouring box
+        wordy = wordy or not has_facts
+        out.append(q)
+    return out[:2]
 
 
 def callout_for(step: dict, quotes: list[dict], language: str) -> dict | None:

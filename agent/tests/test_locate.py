@@ -81,6 +81,12 @@ def test_quotes_for_step_and_money_callout():
     assert locate.callout_for({"kind": "how", "text_en": "Pay £212.50 by 17 November."}, got, "es") == {"value": "£212.50"}
     assert [q["t"] for q in locate.quotes_for_step("Parent name: write your name.", quotes, form=True)] == ["Parent name"]
     assert locate.quotes_for_step("Read the letter.", quotes) == []
+    labels = [{"t": "Name(s) of account holder(s)"}, {"t": "Signature(s)"}, {"t": "Bank/building society account number"},
+              {"t": "Name and full postal address"}]
+    pick = lambda text: [q["t"] for q in locate.quotes_for_step(text, labels, form=True)]
+    assert pick("Find the box called Signature(s). Sign your name. Every account holder signs.") == ["Signature(s)"]
+    assert pick("Find the box called Signature. Sign your name. If there is more than 1 account holder, all account holders sign.") == ["Signature(s)"]
+    assert pick("Find the box called Name and full postal address of your bank or building society.") == ["Name and full postal address"]
     assert locate.callout_for({"kind": "warning", "text_en": "x"}, got, "en") is None
 
 
