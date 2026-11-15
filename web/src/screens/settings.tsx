@@ -5,6 +5,10 @@ import { Counted } from "../bidi";
 import { isRtl, languageLabel } from "../languages";
 import { THEMES, THEME_KEY, type Theme } from "../look";
 import { isPreset, LanguageDialog, TitleBar } from "./shared";
+import { TextSizeControl } from "../extras/TextSize";
+import { openLanguagePicker, openPrivacy } from "../extras/bus";
+import { XIcon } from "../extras/icons";
+import "../extras/strings";
 
 /* ---------- 11. settings ---------- */
 interface SettingsProps {
@@ -29,15 +33,8 @@ export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onV
       <TitleBar title={t(lang, "settings")} lang={lang} onBack={onBack} />
       <div className="set">
         <div className="sec">
-          <h3>
-            {t(lang, "textSize")}
-            <em>{Math.round(scale * 100)}%</em>
-          </h3>
-          <input className="range" type="range" min={1} max={1.4} step={0.1} value={scale} onChange={(e) => onScale(Number(e.target.value))} aria-label={t(lang, "textSize")} />
-          <div className="sz">
-            <span style={{ fontSize: 14 }}>A</span>
-            <span style={{ fontSize: 26 }}>A</span>
-          </div>
+          <h3>{t(lang, "textSize")}</h3>
+          <TextSizeControl lang={lang} scale={scale} onScale={onScale} />
         </div>
         <div className="sec">
           <h3>
@@ -67,6 +64,11 @@ export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onV
               {t(lang, "otherLanguage")}
             </button>
           </div>
+          <button className="x-set-link" onClick={openLanguagePicker}>
+            <XIcon name="globe" />
+            <span>{t(lang, "xChooseLanguage")}</span>
+            <XIcon name="chevRight" />
+          </button>
           {other && <LanguageDialog lang={lang} onClose={() => setOther(false)} onPick={(c) => { setOther(false); onLanguage(c); }} />}
           {isRtl(lang) && (
             <div className="rtlnote">
@@ -87,6 +89,13 @@ export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onV
             </div>
           </div>
         )}
+        <div className="sec">
+          <button className="x-set-link" onClick={openPrivacy}>
+            <XIcon name="lock" />
+            <span>{t(lang, "xPrivacyLink")}</span>
+            <XIcon name="chevRight" />
+          </button>
+        </div>
         <button className="sec toggle" role="switch" aria-checked={voice} onClick={() => onVoice(!voice)}>
           <h3>{t(lang, "readAuto")}</h3>
           <span className={"tg" + (voice ? " on" : "")} />

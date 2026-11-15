@@ -1,6 +1,7 @@
 import { t } from "../i18n";
 import Icon from "../icons";
 import type { PaperRow } from "./papers";
+import { RecentGuides } from "../extras/MyGuides";
 import { TopBar } from "./shared";
 
 /* ---------- 1. home ---------- */
@@ -17,8 +18,10 @@ interface HomeProps {
   /** The newest paper made on this phone (from My guides), shown as "Last paper". */
   lastPaper?: PaperRow | null;
   onOpenPaper?: (id: string) => void;
+  /** My guides on this phone (newest two shown, with See all). */
+  recent?: PaperRow[] | null;
 }
-export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers }: HomeProps) {
+export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSample, onPapers, recent, onOpenPaper }: HomeProps) {
   return (
     <div className="screen">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
@@ -42,6 +45,7 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
           <Icon name="upload" />
           {t(lang, "upload")}
         </button>
+        <RecentGuides lang={lang} rows={recent ?? null} onOpen={(id) => onOpenPaper?.(id)} onAll={onPapers} />
         {/* History lives behind the labelled "My guides" button in the top bar, never on the main page. */}
         <p className="help">
           <Icon name="lock" />
