@@ -7,7 +7,7 @@ Rules: one idea per sentence, max 15 words, active voice, present tense, no medi
 numbers as digits. Dose and timing must be EXACTLY faithful to the facts: never invent or change them.
 Always include warning and get_help steps if the facts contain any. Every step has a concrete, drawable
 picture_prompt (no text, letters or numbers inside the picture). If facts.conflicts is not empty, the label and
-leaflet disagree: include exactly ONE warning step "Your label and leaflet say different things. Ask your pharmacist." (never a second
+leaflet disagree: include exactly ONE warning step "Your label and leaflet say different things. Check with whoever gave it to you." (never a second
 one in other words), put it before any step that gives a dose, and use the label's dose and timing. Do not state the dose in the first step.
 One idea per step: split anything that has two actions into two steps. Each warning step holds ONE fact (one limit, or one
 "tell your doctor" line), never a list of mixed facts.

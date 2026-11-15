@@ -37,7 +37,7 @@ const en: Dict = {
   ask: "Ask a question about your document",
   askGo: "Ask",
   sampleNote: "Sample document. Not a real patient.",
-  noMedical: "This guide explains your own document. It is not medical advice. Ask your pharmacist or GP.",
+  noMedical: "This guide explains your own paper. It is not advice. If you are not sure, ask whoever sent it.",
   print: "Print",
   devPanel: "Tool calls",
   tooMany: "You can add up to 8 pages. The extra pages were left out.",
@@ -66,8 +66,7 @@ const en: Dict = {
   dose: "How much",
   when: "When",
   yourDevice: "Your device",
-  notSure: "We are not sure which device this is. Please ask your pharmacist.",
-  unreadable: "We could not read this part. Please ask your pharmacist:",
+  unreadable: "We could not read this part. Take a clearer photo of it, or ask {who}:",
 };
 Object.assign(en, {
   homeTitleA: "Confusing paper?",
@@ -136,7 +135,7 @@ Object.assign(en, {
   conflictTitle: "Your papers say different things",
   conflictLabel: "Label",
   conflictLeaflet: "Leaflet",
-  conflictAsk: "Ask your pharmacist before you go on.",
+  conflictAsk: "Your papers say different things. Check with whoever sent them before you go on.",
   dosage: "How much",
   listen: "Listen",
   showHow: "Show me how",
@@ -204,7 +203,7 @@ Object.assign(en, {
   clipTitle: "Show me how",
   playAgain: "Play again",
   slower: "Slower",
-  clipUnchecked: "DEMO ONLY: Not yet checked by a pharmacist",
+  clipUnchecked: "DEMO ONLY: This video is not checked yet",
   clipMissing: "The checked video is not ready yet. This is the picture for this step.",
   clipChecked: "Checked by a person",
   clipNhs: "Checked against NHS advice",
@@ -241,15 +240,14 @@ const es: Dict = {
   ask: "Haga una pregunta sobre su documento",
   askGo: "Preguntar",
   sampleNote: "Documento de ejemplo. No es un paciente real.",
-  noMedical: "Esta guía explica su propio documento. No es consejo médico. Pregunte a su farmacéutico o médico.",
+  noMedical: "Esta guía explica su propio papel. No es un consejo. Si no está seguro, pregunte a quien se lo envió.",
   print: "Imprimir",
   devPanel: "Llamadas de herramientas",
   medicine: "Medicina",
   dose: "Cuánto",
   when: "Cuándo",
   yourDevice: "Su dispositivo",
-  notSure: "No estamos seguros de qué dispositivo es. Pregunte a su farmacéutico.",
-  unreadable: "No pudimos leer esta parte. Pregunte a su farmacéutico:",
+  unreadable: "No pudimos leer esta parte. Haga una foto más clara o pregunte a {who}:",
 };
 const ar: Dict = {
   ...en,
@@ -270,7 +268,7 @@ const ar: Dict = {
   ask: "اسأل عن مستندك",
   askGo: "اسأل",
   sampleNote: "مستند تجريبي. ليس مريضًا حقيقيًا.",
-  noMedical: "يشرح هذا الدليل مستندك أنت. ليس نصيحة طبية. اسأل الصيدلي أو طبيبك.",
+  noMedical: "يشرح هذا الدليل ورقتك أنت. ليس نصيحة. إذا لم تكن متأكدًا، فاسأل الجهة التي أرسلتها.",
   print: "اطبع",
   devPanel: "استدعاءات الأدوات",
 };
@@ -365,7 +363,7 @@ Object.assign(es, {
   conflictTitle: "Sus papeles dicen cosas distintas",
   conflictLabel: "Etiqueta",
   conflictLeaflet: "Prospecto",
-  conflictAsk: "Pregunte a su farmacéutico antes de seguir.",
+  conflictAsk: "Sus papeles dicen cosas distintas. Consulte con quien se los envió antes de seguir.",
   dosage: "Cuánto",
   listen: "Escuchar",
   showHow: "Muéstreme cómo",
@@ -477,7 +475,7 @@ Object.assign(ar, {
   when: "متى",
   yourDevice: "جهازك",
   notSure: "غير متأكد؟",
-  unreadable: "لم نتمكن من قراءة هذا الجزء. اسأل الصيدلي:",
+  unreadable: "لم نتمكن من قراءة هذا الجزء. التقط صورة أوضح له، أو اسأل {who}:",
   homeTitleA: "ورقة مربكة؟",
   homeTitleB: "سنجعلها سهلة.",
   homeLead: "خطوة بخطوة، مع صور، بكلماتك.",
@@ -542,7 +540,7 @@ Object.assign(ar, {
   conflictTitle: "أوراقك تقول أشياء مختلفة",
   conflictLabel: "الملصق",
   conflictLeaflet: "النشرة",
-  conflictAsk: "اسأل الصيدلي قبل أن تتابع.",
+  conflictAsk: "أوراقك تقول أشياء مختلفة. تحقّق مع الجهة التي أرسلتها قبل أن تتابع.",
   dosage: "الكمية",
   listen: "استمع",
   showHow: "أرني كيف",
@@ -641,7 +639,7 @@ const ur: Dict = {
   ask: "پوچھیں",
   askGo: "پوچھیں",
   sampleNote: "نمونے کا کاغذ۔ یہ کوئی اصلی مریض نہیں۔",
-  noMedical: "یہ گائیڈ آپ کے اپنے کاغذ کو سمجھاتی ہے۔ یہ طبی مشورہ نہیں۔ اپنے فارماسسٹ یا ڈاکٹر سے پوچھیں۔",
+  noMedical: "یہ گائیڈ آپ کے اپنے کاغذ کو سمجھاتی ہے۔ یہ مشورہ نہیں۔ اگر یقین نہ ہو تو اس سے پوچھیں جس نے یہ بھیجا۔",
   print: "پرنٹ کریں",
   devPanel: "ٹول کالز",
   tooMany: "آپ زیادہ سے زیادہ 8 صفحات شامل کر سکتے ہیں۔ باقی صفحات چھوڑ دیے گئے۔",
@@ -671,7 +669,7 @@ const ur: Dict = {
   when: "کب",
   yourDevice: "آپ کا آلہ",
   notSure: "یقین نہیں؟",
-  unreadable: "ہم یہ حصہ نہیں پڑھ سکے۔ اپنے فارماسسٹ سے پوچھیں:",
+  unreadable: "ہم یہ حصہ نہیں پڑھ سکے۔ اس کی زیادہ صاف تصویر لیں، یا {who} سے پوچھیں:",
   homeTitleA: "الجھا ہوا کاغذ؟",
   homeTitleB: "ہم اسے آسان بنائیں گے۔",
   homeLead: "ایک وقت میں ایک مرحلہ، تصویروں کے ساتھ، آپ کے اپنے الفاظ میں۔",
@@ -736,7 +734,7 @@ const ur: Dict = {
   conflictTitle: "آپ کے کاغذات میں الگ الگ باتیں ہیں",
   conflictLabel: "لیبل",
   conflictLeaflet: "پرچہ",
-  conflictAsk: "آگے بڑھنے سے پہلے اپنے فارماسسٹ سے پوچھیں۔",
+  conflictAsk: "آپ کے کاغذ الگ الگ باتیں کہتے ہیں۔ آگے بڑھنے سے پہلے اس سے پوچھیں جس نے یہ بھیجے۔",
   dosage: "کتنی مقدار",
   listen: "سنیں",
   showHow: "مجھے دکھائیں کیسے",
@@ -835,7 +833,7 @@ const pl: Dict = {
   ask: "Zapytaj",
   askGo: "Zapytaj",
   sampleNote: "Przykładowy dokument. To nie jest prawdziwy pacjent.",
-  noMedical: "Ten przewodnik wyjaśnia Twój własny dokument. To nie jest porada lekarska. Zapytaj farmaceutę lub lekarza.",
+  noMedical: "Ten przewodnik wyjaśnia Twój własny dokument. To nie jest porada. Jeśli nie masz pewności, zapytaj nadawcę pisma.",
   print: "Drukuj",
   devPanel: "Wywołania narzędzi",
   tooMany: "Możesz dodać do 8 stron. Pozostałe pominęliśmy.",
@@ -865,7 +863,7 @@ const pl: Dict = {
   when: "Kiedy",
   yourDevice: "Twoje urządzenie",
   notSure: "Nie jesteś pewien?",
-  unreadable: "Nie mogliśmy odczytać tej części. Zapytaj farmaceutę:",
+  unreadable: "Nie mogliśmy odczytać tej części. Zrób wyraźniejsze zdjęcie albo zapytaj: {who}:",
   homeTitleA: "Niejasny papier?",
   homeTitleB: "Zrobimy go prostym.",
   homeLead: "Krok po kroku, z obrazkami, Twoimi słowami.",
@@ -930,7 +928,7 @@ const pl: Dict = {
   conflictTitle: "Twoje papiery mówią co innego",
   conflictLabel: "Etykieta",
   conflictLeaflet: "Ulotka",
-  conflictAsk: "Zapytaj farmaceutę, zanim pójdziesz dalej.",
+  conflictAsk: "Twoje dokumenty mówią co innego. Zanim pójdziesz dalej, zapytaj nadawcę.",
   dosage: "Ile",
   listen: "Słuchaj",
   showHow: "Pokaż jak",
@@ -1026,7 +1024,7 @@ const bn: Dict = {
   working: "আপনার গাইড বানানো হচ্ছে…",
   language: "ভাষা",
   sampleNote: "এটি নমুনা কাগজ। এটি কোনো সত্যিকারের রোগীর নয়।",
-  noMedical: "এই গাইড আপনার নিজের কাগজ বুঝিয়ে দেয়। এটি চিকিৎসার পরামর্শ নয়। আপনার ফার্মাসিস্ট বা ডাক্তারকে জিজ্ঞাসা করুন।",
+  noMedical: "এই গাইড আপনার নিজের কাগজ বুঝিয়ে দেয়। এটি কোনো পরামর্শ নয়। নিশ্চিত না হলে যিনি এটি পাঠিয়েছেন তাঁকে জিজ্ঞেস করুন।",
   print: "প্রিন্ট",
   devPanel: "টুল কল",
   tooMany: "আপনি সর্বোচ্চ ৮টি পাতা দিতে পারবেন। বাকি পাতা বাদ গেছে।",
@@ -1052,7 +1050,7 @@ const bn: Dict = {
   dose: "কতটুকু",
   when: "কখন",
   yourDevice: "আপনার যন্ত্র",
-  unreadable: "আমরা এই অংশ পড়তে পারিনি। আপনার ফার্মাসিস্টকে জিজ্ঞাসা করুন:",
+  unreadable: "আমরা এই অংশ পড়তে পারিনি। এর আরও পরিষ্কার ছবি তুলুন, অথবা {who}-কে জিজ্ঞেস করুন:",
   homeTitleA: "কাগজটা কঠিন লাগছে?",
   homeTitleB: "আমরা সহজ করে দেব।",
   homeLead: "একবারে একটি ধাপ, ছবি সহ, আপনার নিজের ভাষায়।",
@@ -1119,7 +1117,7 @@ const bn: Dict = {
   conflictTitle: "আপনার কাগজগুলো আলাদা কথা বলছে",
   conflictLabel: "লেবেল",
   conflictLeaflet: "ওষুধের পাতা",
-  conflictAsk: "এগোনোর আগে আপনার ফার্মাসিস্টকে জিজ্ঞাসা করুন।",
+  conflictAsk: "আপনার কাগজগুলো আলাদা কথা বলছে। এগোনোর আগে যিনি পাঠিয়েছেন তাঁকে জিজ্ঞেস করুন।",
   dosage: "কতটুকু",
   listen: "শুনুন",
   showHow: "কীভাবে করবেন দেখান",
@@ -1286,7 +1284,7 @@ Object.assign(en, {
   qWhen: "When do you use it?",
   qHowMuch: "How much do you take?",
   qConflict: "Your label and leaflet say different things. What do you do?",
-  aPharm: "Ask your pharmacist before you use it",
+  aPharm: "Check with whoever sent it before you use it",
   dMorning: "Every morning",
   dNight: "Only at night",
   dAsMuch: "As much as you like",
@@ -1323,7 +1321,7 @@ Object.assign(es, {
   qWhen: "¿Cuándo lo usa?",
   qHowMuch: "¿Cuánto toma?",
   qConflict: "Su etiqueta y su prospecto dicen cosas distintas. ¿Qué hace?",
-  aPharm: "Pregunte a su farmacéutico antes de usarlo",
+  aPharm: "Consulte con quien se lo envió antes de usarlo",
   dMorning: "Todas las mañanas",
   dNight: "Solo por la noche",
   dAsMuch: "Tanto como quiera",
@@ -1367,7 +1365,7 @@ Object.assign(ar, {
   qWhen: "متى تستعمله؟",
   qHowMuch: "كم تأخذ؟",
   qConflict: "الملصق والنشرة يقولان أشياء مختلفة. ماذا تفعل؟",
-  aPharm: "اسأل الصيدلي قبل أن تستعمله",
+  aPharm: "تحقّق مع الجهة التي أرسلتها قبل أن تستعمله",
   dMorning: "كل صباح",
   dNight: "في الليل فقط",
   dAsMuch: "بقدر ما تريد",
@@ -1411,7 +1409,7 @@ Object.assign(pl, {
   qWhen: "Kiedy tego używasz?",
   qHowMuch: "Ile bierzesz?",
   qConflict: "Etykieta i ulotka mówią co innego. Co robisz?",
-  aPharm: "Zapytaj farmaceutę, zanim użyjesz",
+  aPharm: "Zapytaj nadawcę, zanim użyjesz",
   dMorning: "Każdego ranka",
   dNight: "Tylko w nocy",
   dAsMuch: "Ile chcesz",
@@ -1455,7 +1453,7 @@ Object.assign(bn, {
   qWhen: "আপনি এটা কখন ব্যবহার করেন?",
   qHowMuch: "আপনি কতটা নেন?",
   qConflict: "লেবেল আর লিফলেট আলাদা কথা বলছে। আপনি কী করবেন?",
-  aPharm: "ব্যবহারের আগে ফার্মাসিস্টকে জিজ্ঞেস করুন",
+  aPharm: "ব্যবহারের আগে যিনি পাঠিয়েছেন তাঁকে জিজ্ঞেস করুন",
   dMorning: "প্রতিদিন সকালে",
   dNight: "শুধু রাতে",
   dAsMuch: "যতটা খুশি",
@@ -1499,7 +1497,7 @@ Object.assign(ur, {
   qWhen: "آپ اسے کب استعمال کرتے ہیں؟",
   qHowMuch: "آپ کتنی لیتے ہیں؟",
   qConflict: "لیبل اور پرچہ الگ باتیں کہتے ہیں۔ آپ کیا کریں گے؟",
-  aPharm: "استعمال سے پہلے فارماسسٹ سے پوچھیں",
+  aPharm: "استعمال سے پہلے اس سے پوچھیں جس نے یہ بھیجا",
   dMorning: "ہر صبح",
   dNight: "صرف رات کو",
   dAsMuch: "جتنی چاہیں",
@@ -1776,11 +1774,6 @@ Object.assign(ur, { seePaper: "میرا کاغذ دیکھیں" });
 Object.assign(pl, { seePaper: "Zobacz mój dokument" });
 Object.assign(bn, { seePaper: "আমার কাগজ দেখুন" });
 Object.assign(en, { stepN: "Step {n}" }); Object.assign(es, { stepN: "Paso {n}" }); Object.assign(ar, { stepN: "الخطوة {n}" }); Object.assign(ur, { stepN: "مرحلہ {n}" }); Object.assign(pl, { stepN: "Krok {n}" }); Object.assign(bn, { stepN: "ধাপ {n}" });
-Object.assign(es, { safe_medicine: "Pregunte a su farmacéutico. Para consejo, llame al 111.", safe_howto: "Si algo se rompe o no parece seguro, pare y pida ayuda.", safe_letter: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848.", safe_form: "Pida consejo gratis antes de firmar o pagar. Citizens Advice puede ayudar: 0800 144 8848." });
-Object.assign(ar, { safe_medicine: "اسأل الصيدلي. للنصيحة اتصل بـ ⁨111⁩.", safe_howto: "إذا انكسر شيء أو شعرت بأنه غير آمن، توقّف واطلب المساعدة.", safe_letter: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩.", safe_form: "احصل على نصيحة مجانية قبل أن توقّع أو تدفع. يمكن لـ Citizens Advice المساعدة: ⁨0800 144 8848⁩." });
-Object.assign(ur, { safe_medicine: "اپنے فارماسسٹ سے پوچھیں۔ مشورے کے لیے ⁨111⁩ پر کال کریں۔", safe_howto: "اگر کچھ ٹوٹ جائے یا غیر محفوظ لگے تو رک جائیں اور مدد مانگیں۔", safe_letter: "دستخط یا ادائیگی سے پہلے مفت مشورہ لیں۔ Citizens Advice مدد کر سکتا ہے: ⁨0800 144 8848⁩۔", safe_form: "دستخط یا ادائیگی سے پہلے مفت مشورہ لیں۔ Citizens Advice مدد کر سکتا ہے: ⁨0800 144 8848⁩۔" });
-Object.assign(pl, { safe_medicine: "Zapytaj farmaceutę. Po poradę zadzwoń pod 111.", safe_howto: "Jeśli coś się zepsuje lub wydaje się niebezpieczne, przerwij i poproś o pomoc.", safe_letter: "Zanim podpiszesz lub zapłacisz, skorzystaj z bezpłatnej porady. Citizens Advice może pomóc: 0800 144 8848.", safe_form: "Zanim podpiszesz lub zapłacisz, skorzystaj z bezpłatnej porady. Citizens Advice może pomóc: 0800 144 8848." });
-Object.assign(bn, { safe_medicine: "আপনার ফার্মাসিস্টকে জিজ্ঞেস করুন। পরামর্শের জন্য 111-এ কল করুন।", safe_howto: "কিছু ভেঙে গেলে বা অনিরাপদ মনে হলে থামুন এবং সাহায্য চান।", safe_letter: "সই বা টাকা দেওয়ার আগে বিনামূল্যে পরামর্শ নিন। Citizens Advice সাহায্য করতে পারে: 0800 144 8848।", safe_form: "সই বা টাকা দেওয়ার আগে বিনামূল্যে পরামর্শ নিন। Citizens Advice সাহায্য করতে পারে: 0800 144 8848।" });
 Object.assign(en, { stTalking: "Guide is talking", stListening: "Listening to you", stPaused: "Paused", stReading: "Reading aloud", stClip: "Quiet while clip plays", stSoundOff: "Sound off", stReady: "Your guide" });
 Object.assign(es, { stTalking: "La guía está hablando", stListening: "Le escucho", stPaused: "En pausa", stReading: "Leyendo en voz alta", stClip: "En silencio durante el vídeo", stSoundOff: "Sin sonido", stReady: "Su guía" });
 Object.assign(ar, { stTalking: "المرشد يتحدث", stListening: "أستمع إليك", stPaused: "متوقف مؤقتًا", stReading: "قراءة بصوت عالٍ", stClip: "صامت أثناء الفيديو", stSoundOff: "الصوت مغلق", stReady: "مرشدك" });
@@ -1813,7 +1806,17 @@ Object.assign(ur, { gettingReady: "آپ کا گائیڈ تیار ہو رہا ہ�
 Object.assign(pl, { gettingReady: "Przygotowujemy twój przewodnik" });
 Object.assign(bn, { gettingReady: "আপনার গাইড তৈরি হচ্ছে" });
 
+// Audit fills (web/src/i18n.audit.test.ts): strings that were English or missing in some UI languages.
+Object.assign(en, { gateTitle: "Enter access code", gateSub: "This test version is private. Type the code you were given.", gateLabel: "Access code", gateGo: "Continue", speak: "Speak", unreadableAny: "We could not read this part. Take a clearer photo of it, or ask whoever sent it:" });
+Object.assign(es, { gateTitle: "Escriba el código de acceso", gateSub: "Esta versión de prueba es privada. Escriba el código que le dieron.", gateLabel: "Código de acceso", gateGo: "Continuar", speak: "Hablar", unreadableAny: "No pudimos leer esta parte. Haga una foto más clara o pregunte a quien se lo envió:", clipUnchecked: "SOLO DEMO: Este vídeo aún no está revisado" });
+Object.assign(ar, { gateTitle: "أدخل رمز الدخول", gateSub: "هذه النسخة التجريبية خاصة. اكتب الرمز الذي أُعطي لك.", gateLabel: "رمز الدخول", gateGo: "متابعة", speak: "تحدّث", unreadableAny: "لم نتمكن من قراءة هذا الجزء. التقط صورة أوضح له، أو اسأل الجهة التي أرسلته:", clipUnchecked: "عرض تجريبي فقط: لم تتم مراجعة هذا الفيديو بعد", notAPaper: "هذه ليست صورة لورقة. جرّب صورة أخرى.", clearerPhoto: "التقط صورة أوضح في ضوء جيد." });
+Object.assign(ur, { gateTitle: "رسائی کا کوڈ لکھیں", gateSub: "یہ آزمائشی ورژن نجی ہے۔ وہ کوڈ لکھیں جو آپ کو دیا گیا۔", gateLabel: "رسائی کا کوڈ", gateGo: "جاری رکھیں", speak: "بولیں", unreadableAny: "ہم یہ حصہ نہیں پڑھ سکے۔ اس کی زیادہ صاف تصویر لیں، یا اس سے پوچھیں جس نے یہ بھیجا:", clipUnchecked: "صرف ڈیمو: اس ویڈیو کی ابھی جانچ نہیں ہوئی", notAPaper: "یہ کسی کاغذ کی تصویر نہیں۔ دوسری آزمائیں۔", clearerPhoto: "اچھی روشنی میں زیادہ صاف تصویر لیں۔" });
+Object.assign(pl, { gateTitle: "Wpisz kod dostępu", gateSub: "Ta wersja testowa jest prywatna. Wpisz kod, który dostałeś.", gateLabel: "Kod dostępu", gateGo: "Dalej", speak: "Mów", unreadableAny: "Nie mogliśmy odczytać tej części. Zrób wyraźniejsze zdjęcie albo zapytaj nadawcę pisma:", clipUnchecked: "TYLKO DEMO: Ten film nie jest jeszcze sprawdzony", notAPaper: "To nie jest zdjęcie dokumentu. Spróbuj innego.", clearerPhoto: "Zrób wyraźniejsze zdjęcie w dobrym świetle." });
+Object.assign(bn, { gateTitle: "অ্যাক্সেস কোড লিখুন", gateSub: "এই পরীক্ষামূলক সংস্করণটি ব্যক্তিগত। আপনাকে দেওয়া কোডটি লিখুন।", gateLabel: "অ্যাক্সেস কোড", gateGo: "এগিয়ে যান", speak: "বলুন", unreadableAny: "আমরা এই অংশ পড়তে পারিনি। এর আরও পরিষ্কার ছবি তুলুন, অথবা যিনি এটি পাঠিয়েছেন তাঁকে জিজ্ঞেস করুন:", clipUnchecked: "শুধু ডেমো: এই ভিডিও এখনও যাচাই করা হয়নি", notAPaper: "এটি কোনো কাগজের ছবি নয়। অন্যটি চেষ্টা করুন।", clearerPhoto: "ভালো আলোতে আরও পরিষ্কার ছবি তুলুন।" });
+
 const dicts: Record<string, Dict> = { en, es, ar, ur, pl, bn };
+/** Every UI dictionary (read-only use: the translation audit test). */
+export const DICTS: Readonly<Record<string, Dict>> = dicts;
 
 /** v4: each area adds its own strings from its own file (avoids edit clashes): extendStrings({ en: {...}, es: {...} }). */
 export function extendStrings(add: Record<string, Dict>): void {
