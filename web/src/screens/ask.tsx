@@ -168,12 +168,14 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       ) : (
         more
       )}
-      <p className="safe info">
-        <Icon name="info" />
-        <span>
-          <b>{t(lang, "notSure")}</b> {safetyLines(guide, lang).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
-        </span>
-      </p>
+      {safetyLines(guide, lang).length > 0 && (
+        <p className="safe info">
+          <Icon name="info" />
+          <span>
+            <b>{t(lang, "notSure")}</b> {safetyLines(guide, lang).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
+          </span>
+        </p>
+      )}
       <div className={dock ? "bottombar" : "foot"}>
         {dock && live ? (
           <GuideDock text={answer ?? t(lang, "allDoneSub")} lang={lang} />

@@ -23,6 +23,13 @@ export function useAnam(
   /** What the guide is doing, for the dock's status chip. */
   const [activity, setActivity] = useState<"idle" | "talking" | "listening" | "paused">("idle");
   const [liveCaption, setLiveCaption] = useState("");
+  /** What the user is saying, live (Anam's own transcript of the user's speech). */
+  const [userCaption, setUserCaption] = useState("");
+  const [userSeq, setUserSeq] = useState(0); // +1 each time the user finishes saying something
+  const userDone = useRef(true);
+  /** The whole of the guide's last finished message (for "Say that again"). */
+  const lastReplyRef = useRef("");
+  const captionRef = useRef("");
   const msgDone = useRef(true); // the last persona message ended: the next chunk starts a new caption
   const [replySeq, setReplySeq] = useState(0); // +1 for each new persona message
   const [replyDone, setReplyDone] = useState(0); // +1 each time a persona message ends
@@ -52,7 +59,10 @@ export function useAnam(
     setSoundOff(false);
     setActivity("idle");
     setLiveCaption("");
+    setUserCaption("");
+    captionRef.current = "";
     msgDone.current = true;
+    userDone.current = true;
     setState((s) => (s === "standin" || s === "error" ? s : "idle"));
     try {
       await c?.stopStreaming(); // closes the connection and stops the mic track
@@ -113,20 +123,36 @@ export function useAnam(
           if (typeof off === "function") offs.push(off);
         }
         on(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (e: { id: string; content: string; role: string; endOfSpeech: boolean; interrupted: boolean }) => {
+          if (e.role === "user") {
+            if (userDone.current) {
+              userDone.current = false;
+              setUserCaption(e.content ?? "");
+            } else setUserCaption((c) => c + (e.content ?? ""));
+            if (e.endOfSpeech || e.interrupted) {
+              userDone.current = true;
+              setUserSeq((n) => n + 1);
+            }
+            return;
+          }
           if (e.role !== "persona") return;
           // Chunks of one message share nothing reliable, so a message runs until endOfSpeech/interrupted.
           if (msgDone.current) {
             msgDone.current = false;
             setReplySeq((n) => n + 1);
-            setLiveCaption(e.content ?? "");
-          } else setLiveCaption((c) => c + (e.content ?? ""));
+            captionRef.current = e.content ?? "";
+          } else captionRef.current += e.content ?? "";
+          setLiveCaption(captionRef.current);
           if (e.endOfSpeech || e.interrupted) {
             msgDone.current = true;
+            if (e.endOfSpeech && captionRef.current.trim()) lastReplyRef.current = captionRef.current;
             setReplyDone((n) => n + 1);
           }
           setActivity(e.endOfSpeech || e.interrupted ? "idle" : "talking");
         });
-        on(AnamEvent.USER_SPEECH_STARTED, () => setActivity("listening"));
+        on(AnamEvent.USER_SPEECH_STARTED, () => {
+          setActivity("listening");
+          if (userDone.current) setUserCaption("");
+        });
         on(AnamEvent.USER_SPEECH_ENDED, () => setActivity("idle"));
         on(AnamEvent.TALK_STREAM_INTERRUPTED, () => setActivity((a) => (a === "paused" ? a : "idle")));
         on(AnamEvent.CONNECTION_CLOSED, () => {
@@ -174,6 +200,18 @@ export function useAnam(
       /* no mic permission */
     }
   }, [micMuted]);
+
+  /** Mic on or off on purpose (Pause / Carry on). */
+  const setMic = useCallback((muted: boolean) => {
+    const c = clientRef.current;
+    if (!c) return;
+    try {
+      const s = muted ? c.muteInputAudio() : c.unmuteInputAudio();
+      setMicMuted(s.isMuted);
+    } catch {
+      /* no mic permission */
+    }
+  }, []);
 
   /** Avatar sound off or on (the video element's own audio). */
   const toggleSound = useCallback(() => {
@@ -247,5 +285,22 @@ export function useAnam(
     };
   }, [stop]);
 
-  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, replySeq, replyDone };
+  /** Avatar sound on purpose (Pause / Carry on). */
+  const setSound = useCallback(
+    (off: boolean) => {
+      const v = document.getElementById(videoId) as HTMLVideoElement | null;
+      if (!v) return;
+      v.muted = off;
+      setSoundOff(off);
+    },
+    [videoId],
+  );
+  const lastReply = useCallback(() => lastReplyRef.current, []);
+  /** "Try guide again": forget the last failure so a new session can start. */
+  const resetError = useCallback(() => {
+    setError(null);
+    setState((s) => (s === "error" || s === "standin" ? "idle" : s));
+  }, []);
+
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, setMic, toggleSound, setSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, userCaption, userSeq, lastReply, resetError, replySeq, replyDone };
 }
