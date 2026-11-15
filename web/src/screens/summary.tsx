@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { Guide } from "../types";
-import { t } from "../i18n";
+import { t, tf } from "../i18n";
+import { whoToAsk } from "../stage/machine";
 import { CountThen } from "../bidi";
 import { canSpeak } from "../languages";
 import Icon, { GuideFace } from "../icons";
@@ -22,6 +23,12 @@ export function kindOf(g: Guide): Kind {
 /* ---------- 4. summary first ---------- */
 /** Only lines the server sent from the paper itself; the app never adds advice lines of its own. */
 export const safetyLines = (g: Guide, _lang = "en"): string[] => g.safety_lines ?? [];
+
+/** "We could not read this part": take a clearer photo, or ask the paper's sender (never a fixed person or service). */
+export function unreadableLead(g: Guide, lang: string): string {
+  const who = whoToAsk(g.sender, null);
+  return who ? tf(lang, "unreadable", { who }) : t(lang, "unreadableAny");
+}
 
 export function summaryText(g: Guide): string {
   const k = kindOf(g);
@@ -186,7 +193,7 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
 
       {(f?.unreadable?.length ?? 0) > 0 && (
         <p className="banner" role="alert">
-          {t(lang, "unreadable")} {f!.unreadable.join("; ")}
+          {unreadableLead(guide, lang)} {f!.unreadable.join("; ")}
         </p>
       )}
 
