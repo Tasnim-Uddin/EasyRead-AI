@@ -136,9 +136,9 @@ describe("visual priority", () => {
   });
   it("the paper-action list", () => {
     expect([...PAPER_ACTION_CLOSEUPS].sort()).toEqual(
-      ["bring_document", "calendar_date", "clock_wait", "go_online", "keep_safe", "pay_bank", "pay_card", "phone_call", "post_letter", "sign_here", "tick_box", "write_in_box"],
+      ["appointment_go", "ask_help", "bank_transfer", "bring_document", "bring_id", "building_visit", "calendar_date", "check_amount", "clock_wait", "deadline_clock", "decide", "email_send", "go_online", "id_number_find", "instalments", "keep_safe", "letter_arrive", "letter_open", "meter_reading", "online_form", "pay_bank", "pay_card", "phone_call", "post_letter", "read_letter", "sign_here", "tick_box", "warning_attention", "write_in_box"],
     );
-    for (const id of ["inhaler_shake", "spacer_use", "tablet_with_water", "eye_drops", "liquid_measure_spoon", "cream_apply", "rinse_mouth", "screwdriver_turn", "plug_in"])
+    for (const id of ["inhaler_shake", "spacer_use", "tablet_with_water", "eye_drops", "liquid_measure_spoon", "cream_apply", "rinse_mouth", "screwdriver_turn", "plug_in", "parts_check"])
       expect(PAPER_ACTION_CLOSEUPS.has(id)).toBe(false);
   });
   it("unknown close-up falls through to the highlight on the user's photo", () => {

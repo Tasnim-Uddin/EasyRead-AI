@@ -10,6 +10,7 @@ import "./closeups.css";
 import { C } from "./parts";
 import * as M from "./medicine";
 import * as P from "./papers";
+import * as E from "./everyday";
 
 export const CLOSEUP_IDS: readonly string[] = ids;
 
@@ -41,6 +42,24 @@ const ART: Record<string, () => React.ReactElement> = {
   clock_wait: P.ClockWait,
   screwdriver_turn: P.ScrewdriverTurn,
   plug_in: P.PlugIn,
+  letter_open: E.LetterOpen,
+  read_letter: E.ReadLetter,
+  check_amount: E.CheckAmount,
+  deadline_clock: E.DeadlineClock,
+  appointment_go: E.AppointmentGo,
+  building_visit: E.BuildingVisit,
+  bring_id: E.BringId,
+  email_send: E.EmailSend,
+  online_form: E.OnlineForm,
+  bank_transfer: E.BankTransfer,
+  instalments: E.Instalments,
+  decide: E.Decide,
+  ask_help: E.AskHelp,
+  warning_attention: E.WarningAttention,
+  id_number_find: E.IdNumberFind,
+  meter_reading: E.MeterReading,
+  parts_check: E.PartsCheck,
+  letter_arrive: E.LetterArrive,
 };
 
 /** True when the library has a drawing for this id. */

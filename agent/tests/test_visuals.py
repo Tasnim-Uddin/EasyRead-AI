@@ -63,7 +63,7 @@ CASES = [
     (LETTER, s("If you cannot pay, phone us on 0300 123 4567."), "phone_call"),
     (LETTER, s("A part is missing? Call the shop.", "get_help"), "phone_call"),
     (LETTER, s("Go to the council website to tell us."), "go_online"),
-    (LETTER, s("Fill in the form online at www.example.gov.uk."), "go_online"),
+    (LETTER, s("Fill in the form online at www.example.gov.uk."), "online_form"),
     (LETTER, s("By 1 December 2026: pay the first part", "when"), "calendar_date"),
     (LETTER, s("By 15 December 2026: tell the council if you disagree", "when"), "calendar_date"),
     (LETTER, s("Your appointment is on Tuesday 4 March at 10am.", "when"), "calendar_date"),
@@ -71,7 +71,7 @@ CASES = [
     (LETTER, s("Post the form back in the envelope."), "post_letter"),
     (LETTER, s("Bring this letter and your passport to the meeting."), "bring_document"),
     (LETTER, s("Keep this letter somewhere safe."), "keep_safe"),
-    (LETTER, s("Wait for a letter from us."), "clock_wait"),
+    (LETTER, s("Wait for a letter from us."), "letter_arrive"),
     # forms
     (FORM, s("Parent name: write your name in this box."), "write_in_box"),
     (FORM, s("Child's name: your child's full name"), "write_in_box"),
@@ -82,30 +82,145 @@ CASES = [
     # how-to
     (HOWTO, s("Join the 2 sides to the top with 4 screws."), "screwdriver_turn"),
     (HOWTO, s("Plug it in at the wall."), "plug_in"),
-    (HOWTO, s("Lay out all the parts on the floor."), None),
+    (HOWTO, s("Lay out all the parts on the floor."), "parts_check"),
 ]
+
+# Real step texts from unseen everyday papers (rent notice, parking fine, energy bill, council tax, HMRC, DWP,
+# NHS appointment, school form, Direct Debit form, flat-pack leaflet, paracetamol leaflet).
+LEGAL = {"doc_type": "letter", "domain": "legal", "facts": {}}
+COUNCIL_BILL = {"doc_type": "bill", "domain": "council", "facts": {}}
+BENEFIT = {"doc_type": "letter", "domain": "other", "facts": {}}
+NHS = {"doc_type": "letter", "domain": "medicine", "facts": {}}
+LEAFLET = {"doc_type": "how_to", "domain": "medicine", "facts": {}}
+DD_FORM = {"doc_type": "form", "domain": "money", "facts": {}}
+
+EVERYDAY = [
+    # the paper itself
+    (LEGAL, s("This letter says your landlord wants to change your rent.", "what", index=0), "letter_open"),
+    (COUNCIL_BILL, s("This is a parking fine notice from North Lincolnshire Council.", "what", index=0), "letter_open"),
+    (BILL, s("This is an example gas bill from Efficient Energy to Ms P Smith.", "what", index=0), "letter_open"),
+    (COUNCIL_BILL, s("Read this council tax reminder from Fenwick Borough Council about an unpaid instalment.", "what", index=0), "letter_open"),
+    (NHS, s("This is an NHS letter. It reminds you about an appointment in person.", "what", index=0), "letter_open"),
+    (NHS, s("The dietitian wrote this letter to Dr O'Reilly, the GP.", "what", index=0), "letter_open"),
+    (BENEFIT, s("This letter from the DWP says your Disability Living Allowance is ending.", "what", index=0), "letter_open"),
+    (LETTER, s("This letter says your council tax bill has changed.", "what"), "letter_open"),
+    # reading and finding
+    (LEGAL, s("Read the whole notice."), "read_letter"),
+    (LEGAL, s("Read Section 5. It shows how to take action and where to find advice."), "read_letter"),
+    (LETTER, s("Read the whole letter."), "read_letter"),
+    (COUNCIL_BILL, s("Read the back of your original ticket. It says how to pay or challenge the fine."), "read_letter"),
+    (HOWTO, s("You are building a piece of furniture. Read all the instructions first.", "what", index=0), "read_letter"),
+    (LEGAL, s("Find the date in question 4.6. This page does not show the date."), "calendar_date"),
+    (BILL, s("Have your National Insurance number and payment reference ready when you phone."), "id_number_find"),
+    (BILL, s("Have your bank account number and sort code ready too."), "id_number_find"),
+    (COUNCIL_BILL, s("Write your Penalty Charge Notice number on the back of the cheque."), "write_in_box"),
+    # amounts
+    (BILL, s("The total you owe for these periods is £98.27.", "what"), "check_amount"),
+    (BILL, s("Check your new account balance. It is £168.97 in debit."), "check_amount"),
+    (BILL, s("Charges from 20 October 2025 to 20 November 2025: £176.61. This includes VAT at 5%.", "what"), "check_amount"),
+    (COUNCIL_BILL, s("Full penalty charge. The paper does not say the amount. Ask the council.", "what"), "check_amount"),
+    (LETTER, s("Check the new amount in the letter."), "check_amount"),
+    (LETTER, s("New monthly bill: £112", "what"), "check_amount"),
+    # money moves
+    (COUNCIL_BILL, s("Pay each instalment on the 1st of the month."), "instalments"),
+    (BILL, s("Note that your monthly Direct Debit payments are going up."), "instalments"),
+    (COUNCIL_BILL, s("Or visit the council website to arrange a payment plan."), "instalments"),
+    (COUNCIL_BILL, s("Pay the £212.50 instalment in full."), "pay_card"),
+    (BENEFIT, s("We will pay £84.80 into your bank account every 4 weeks.", "what"), "bank_transfer"),
+    (BILL, s("You will get a refund of the money you overpaid."), "bank_transfer"),
+    (BILL, s("Give your supplier a meter reading each month. Or use a smart meter."), "meter_reading"),
+    # choices, help, places
+    (BENEFIT, s("Decide if you want to claim Personal Independence Payment. It is called PIP."), "decide"),
+    (BILL, s("Think about switching to a cheaper tariff. A tariff is the price plan you pay for your gas."), "decide"),
+    (LEGAL, s("If you disagree or have questions, talk to your landlord or get advice."), "ask_help"),
+    (NHS, s("If you cannot attend, contact the hospital as soon as possible."), "ask_help"),
+    (LETTER, s("Get free advice before you sign or pay. For example, Citizens Advice.", "get_help"), "ask_help"),
+    (HOWTO, s("If a part is missing or damaged, stop building. Contact the customer service team.", "get_help"), "ask_help"),
+    (NHS, s("Go to your appointment in person. The paper does not say the date, time or place."), "appointment_go"),
+    (BENEFIT, s("Attend your assessment at the centre."), "appointment_go"),
+    (LETTER, s("Visit the council office to show your documents."), "building_visit"),
+    (BENEFIT, s("Bring your passport or driving licence."), "bring_id"),
+    (LETTER, s("Email us at help@example.gov.uk with your reference."), "email_send"),
+    (BENEFIT, s("Apply online at www.gov.uk/pip."), "online_form"),
+    (LETTER, s("The council will write to you again."), "letter_arrive"),
+    (LEGAL, s("To challenge the rent, take action before the date in question 4.6."), "deadline_clock"),
+    (COUNCIL_BILL, s("Appeal within 28 days."), "deadline_clock"),
+    # forms
+    (FORM, s("Find the line that says I confirm that I have parental responsibility for. Write your child's name."), "write_in_box"),
+    (FORM, s("Find the box called Signed.", "warning"), "sign_here"),
+    (DD_FORM, s("Find the box called Signature. Sign your name. If there is more than 1 account holder, all account holders sign."), "sign_here"),
+    (DD_FORM, s("Find the box called Reference. It is already filled in. Check it matches your bill."), "write_in_box"),
+    # warnings: calm sign, or the action they name
+    (BENEFIT, s("If you do not call to claim PIP, your DLA will end.", "warning"), "warning_attention"),
+    (BILL, s("HMRC may pass your debt to a Debt Collection Agency.", "warning"), "warning_attention"),
+    (HOWTO, s("Keep children away while you build. Small parts can cause choking.", "warning"), "warning_attention"),
+    (HOWTO, s("Ask a second person to help you lift it.", "warning"), "ask_help"),
+    (INHALER, s("Tell your GP if you need it more than 3 times a week.", "warning"), "ask_help"),
+    (MED, s("Do not take more than 8 tablets in 24 hours.", "warning"), "warning_attention"),
+    # medicine: the leaflet's own words only
+    (LEAFLET, s("Take 1 or 2 tablets. Swallow the tablets with a drink of water.", "what", index=0), "tablet_with_water"),
+    (LEAFLET, s("Talk to your doctor if you do not get better.", "get_help"), "ask_help"),
+]
+
+# Steps that must stay without a close-up even with the broader matching.
+EVERYDAY_NONE = [
+    # a clinical letter's feed plan: never a spoon, a bottle or a hand
+    (NHS, s("Give 1000 ml of Energy Multifibre Feed at 100 ml an hour.")),
+    (NHS, s("Give 1400 ml of water in small flushes through the day.")),
+    (NHS, s("Run the feed for 10 hours, from 09:00 to 19:00.")),
+    (NHS, s("Give a flush before the feed, after the feed, and with medicines.")),
+    # medicine steps with no checked picture
+    (LEAFLET, s("Do not store the tablets above 25°C. Keep them out of the sight and reach of children.")),
+    (MED, s("Use it when you feel wheezy or tight in your chest.", "when")),
+    (INHALER, s("This is your blue inhaler. It helps you breathe.", "what", index=0)),
+    # hands-on everyday close-ups are never shown on a medicine paper
+    (LEAFLET, s("Check you have all the parts of the spacer.")),
+    (LEAFLET, s("Spread the payments over a year.")),
+    # no action, no topic
+    (HOWTO, s("You are building a small bookshelf.", "what", index=0)),
+    (HOWTO, s("Slide the back panel into the groove.")),
+    (LETTER, s("Your postcode is on the letter.", "what", index=3)),
+    (LETTER, s("You do not need to pay anything.")),
+]
+
+
+@pytest.mark.parametrize("guide,step,want", EVERYDAY)
+def test_everyday(guide, step, want):
+    assert choose_closeup(step, guide) == want
+
+
+@pytest.mark.parametrize("guide,step", EVERYDAY_NONE)
+def test_everyday_none(guide, step):
+    assert choose_closeup(step, guide) is None
+
+
+def test_attach_uses_position_for_the_intro():
+    steps = [s("This is a reminder from the council about your bill.", "what"), s("This is a reminder from the council.", "what")]
+    out = visuals.attach_visuals(steps, LETTER)
+    assert [x["visual"]["id"] for x in out] == ["letter_open", "letter_open"]
+
+
+def test_new_ids_have_drawings():
+    src = (ROOT / "web" / "src" / "closeups" / "everyday.tsx").read_text()
+    for name in ["LetterOpen", "ReadLetter", "CheckAmount", "DeadlineClock", "AppointmentGo", "BuildingVisit", "BringId",
+                 "EmailSend", "OnlineForm", "BankTransfer", "Instalments", "Decide", "AskHelp", "WarningAttention",
+                 "IdNumberFind", "MeterReading", "PartsCheck", "LetterArrive"]:
+        assert f"export function {name}()" in src, name
+    # No text inside the drawings.
+    assert "<text" not in src
 
 NEGATIVE = [
     (INHALER, s("This is your blue inhaler. It helps you breathe.", "what")),
     (INHALER, s("Take 2 puffs each time. Use it no more than 4 times in 1 day.", "when")),
-    (INHALER, s("Tell your GP if you need it more than 3 times a week.", "warning")),
     (INHALER, s("Do not shake it.")),
-    (MED, s("Do not take more than 8 tablets in 24 hours.", "warning")),
     (MED, s("Take no more than 8 tablets in 24 hours.")),
     (MED, s("Shake the bottle well.")),  # a liquid: an inhaler shake would be wrong
     (MED, s("Complete the course, even if you feel better.")),
     (MED, s("Keep out of the reach of children.")),
-    (LETTER, s("This letter says your council tax bill has changed.", "what")),
-    (LETTER, s("Check the new amount in the letter.")),
-    (LETTER, s("New monthly bill: £112", "what")),
-    (LETTER, s("Get free advice before you sign or pay. For example, Citizens Advice.", "get_help")),
     (LETTER, s("You do not need to pay anything.")),
     (LETTER, s("Do not sign anything yet.")),
-    (LETTER, s("Read the whole letter.")),
-    (LETTER, s("The council will write to you again.")),
     (LETTER, s("Sign up for email updates.")),
     (LETTER, s("Your postcode is on the letter.", "what")),
-    (HOWTO, s("Ask a second person to help you lift it.", "warning")),
     (HOWTO, s("Stand the shelf up against a wall.")),
     (HOWTO, s("Unplug it before cleaning.")),
     (LETTER, s("", "how")),
