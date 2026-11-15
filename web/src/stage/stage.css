@@ -219,3 +219,17 @@ button.gs-callout { border: 0; text-align: start; cursor: pointer; font: inherit
 .gs-conflict-av .gs-av-slot.circle { top: 0.75rem; inset-inline-end: 0.75rem; width: 4.25rem; height: 4.25rem; }
 .gs-conflict .x-conflict h2 { padding-inline-end: 4.75rem; }
 .gs-conflict .x-row .btn { flex: 1 1 0; width: auto; min-width: 0; }
+
+/* live guide mic toggle (top bar): "Mic on" / "Mic off", 48px high */
+.gs-mictoggle { display: inline-flex; align-items: center; gap: 0.375rem; height: 3rem; padding: 0 0.75rem; border-radius: var(--r-pill); background: var(--sage); color: var(--sage-ink); border: 0.125rem solid var(--sage); font: 600 1rem var(--font-display); flex: none; white-space: nowrap; cursor: pointer; }
+.gs-mictoggle.off { background: var(--white); color: var(--warn-text); border-color: var(--warn-accent); }
+.gs-mictoggle svg { width: 1.25rem; height: 1.25rem; }
+.gs-top .gs-count { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gs-top .gs-toggle { min-width: 0; }
+.gs-top .gs-toggle > span:not(.gs-sw) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* gentle Ken Burns drift on still step pictures; paused with the guide; off for reduced motion */
+.gs-kb { animation: gs-kb 8s ease-in-out infinite alternate; transform-origin: 50% 45%; will-change: transform; }
+.gs-kb.still, .gs.paused .gs-kb { animation-play-state: paused; }
+@keyframes gs-kb { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.06) translate(-1.5%, -1%); } }
+@media (prefers-reduced-motion: reduce) { .gs .gs-kb { animation: none !important; } }

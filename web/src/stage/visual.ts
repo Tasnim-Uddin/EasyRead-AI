@@ -3,6 +3,7 @@ import type { Guide, Highlight, Step } from "../types";
 /**
  * Close-ups that show an action on the paper itself. For these, the user's OWN photo with the words highlighted
  * wins when the step has a located highlight; physical-action close-ups (inhaler, cream, screwdriver...) always win.
+ * To add a new paper-action close-up, add its id here (one id per entry); every other close-up id is physical.
  */
 export const PAPER_ACTION_CLOSEUPS: ReadonlySet<string> = new Set([
   "write_in_box", "sign_here", "tick_box", "pay_card", "pay_bank", "phone_call",
