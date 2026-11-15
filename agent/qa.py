@@ -38,9 +38,22 @@ def ask_who(guide: dict, lang: str) -> str:
     kind, name = s.get("kind"), (s.get("name") or "").strip()
     if kind in table:
         return table[kind]
-    if name and len(name) <= 48:
-        return name
+    if name:
+        return short_name(name)
     return table["unknown"]
+
+
+def short_name(name: str, limit: int = 48) -> str:
+    """A sender name short enough to say and to fit the 'Who to ask' chip: 'HM Revenue & Customs, Accounts Office
+    Cumbernauld' -> 'HM Revenue & Customs'. Never empty for a non-empty name."""
+    name = re.sub(r"\s+", " ", name).strip()
+    if len(name) <= limit:
+        return name
+    head = re.split(r"\s*(?:,|\(|;| - | – | — )\s*", name, maxsplit=1)[0].strip()
+    if 2 < len(head) <= limit:
+        return head
+    cut = name[:limit].rsplit(" ", 1)[0].strip(" ,;-–—")
+    return cut or name[:limit]
 
 
 def not_on_paper(guide: dict, lang: str) -> str:
