@@ -205,16 +205,30 @@ def _covered(item: dict, steps: list[dict]) -> bool:
     return all(_sentence_covered(p, steps) for p in parts)
 
 
+COVER_SAME_FACTS = 0.5  # a step that already carries all the line's numbers needs half its action words
+COVER_WORDS = 0.6       # otherwise most of them
+
+
 def _sentence_covered(text: str, steps: list[dict]) -> bool:
+    """The writer rewords lines ("Read this notice in full" -> "Read the whole notice") and splits one line over two
+    steps ("1000 ml at 100 ml/hour" + "for 10 hours, 09:00 to 19:00"). Both count as covered, so the line is not
+    added again as a near-duplicate step."""
     item = {"text_en": text}
     need = _facts_in(text) | _links_in(text)
+    action = _action(item["text_en"])
     for s in steps:
         t = s.get("text_en") or ""
         if need and not need <= (_facts_in(t) | _links_in(t)):
             continue
         if any(n.startswith("£") for n in need):
             return True  # an amount is its own fact: the step that carries it covers it
-        if postprocess.similar(item["text_en"], t) or _overlap(_action(item["text_en"]), t, _COMMON) >= 0.6:
+        if postprocess.similar(item["text_en"], t) or _overlap(action, t, _COMMON) >= COVER_SAME_FACTS:
+            return True
+    if need and not any(n.startswith("£") for n in need):
+        # Split over steps: every number is in some step, and those steps together say the same action.
+        rel = [s.get("text_en") or "" for s in steps if (_facts_in(s.get("text_en") or "") | _links_in(s.get("text_en") or "")) & need]
+        have = set().union(*(_facts_in(t) | _links_in(t) for t in rel)) if rel else set()
+        if need <= have and _overlap(action, " ".join(rel), _COMMON) >= COVER_WORDS:
             return True
     return False
 
@@ -320,7 +334,13 @@ def content_to_steps(doc_type: str, content: dict) -> list[dict]:
         out.append(_step("how", t, "a person calmly doing one simple task at a desk"))
     for b in content["by_when"][:3]:
         date = str(b.get("date") or "")
-        text = f"By {date}: {b['what']}" if re.search(r"\d", date) else str(b["what"])
+        what = str(b["what"]).strip().rstrip(".")
+        if re.match(r"^\d+\s+(?:working\s+)?(?:days?|weeks?|months?)\b", date):
+            text = f"{what} within {date}"  # "28 days from the notice date" is a period, not a calendar date
+        elif re.search(r"\d", date):
+            text = f"By {date}: {b['what']}"
+        else:
+            text = str(b["what"])
         text = text if re.search(r"[.!?]$", text.strip()) else text.strip() + "."  # "date to come by letter" -> just the action
         out.append(_step("when", text, "a calendar page with one day circled"))
     for a in content["amounts"][:3]:
@@ -348,3 +368,22 @@ def finish_steps(steps: list[dict], doc_type: str, domain: str, conflicts: list,
     if doc_type == "how_to":
         steps = postprocess.fit_warnings(steps)
     return postprocess.cap(steps, doc_type, domain)
+
+
+_BLANK_DATE_NOTE = re.compile(r"\bdates?\b.*(?:placeholder|blank|not (?:shown|filled|given|printed)|missing|dd/mm)"
+                              r"|(?:placeholder|blank|missing|dd/mm).*\bdates?\b", re.I)
+_SAYS_NO_DATE = re.compile(r"\bdate\b.*(?:does not|doesn't|not) (?:show|say|give)|(?:does not|doesn't) (?:show|say|give)[^.]*\bdate\b"
+                           r"|\bdate\b[^.]*\b(?:blank|not shown|not on (?:this|the|your) (?:page|paper))", re.I)
+
+
+def ensure_blank_date_step(steps: list[dict], notes: list[str], sender: dict | None) -> list[dict]:
+    """The reader read the paper and saw the date is blank (a template, DD/MM/YYYY): if no step says so, one plain
+    step does, so the guide never reads as if there were no deadline. Nothing is added when the date is not blank."""
+    if not any(_BLANK_DATE_NOTE.search(n or "") for n in notes):
+        return steps
+    if any(_SAYS_NO_DATE.search(s.get("text_en") or "") for s in steps):
+        return steps
+    name = ((sender or {}).get("name") or "").strip()
+    who = name if name and len(name) <= 48 else "whoever sent it"
+    return steps + [_step("when", f"Your paper does not show the date. Check with {who}.",
+                          "a calendar page with an empty space where the date should be")]

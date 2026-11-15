@@ -87,9 +87,17 @@ def _medicine(step: dict, guide: dict, cl: list[str]) -> str | None:
     if _any(r"\b(?:tablets?|capsules?|pills?)\b", cl) and _any(r"\b(?:take|swallow)\b", cl):
         return "tablet_with_water"
     if _any(r"\b\d+(?:\.\d+)?\s?ml\b|\bspoon(?:ful)?s?\b|\bmeasuring (?:cup|spoon|syringe)\b|\boral syringe\b", cl) \
-            and _any(r"\b(?:take|give|measure|use|swallow)\b", cl):
-        return "liquid_measure_spoon"
+            and _any(r"\b(?:take|give|measure|use|swallow)\b", cl) and not _big_volume(cl) \
+            and not _any(r"\b(?:tube|feed|feeding|flush(?:es)?|drip|pump)\b", cl):
+        return "liquid_measure_spoon"  # a spoon dose; never a 1000 ml tube feed or a water flush
     return None
+
+
+SPOON_MAX_ML = 30
+
+
+def _big_volume(cl: list[str]) -> bool:
+    return any(float(v) > SPOON_MAX_ML for c in cl for v in re.findall(r"\b(\d+(?:\.\d+)?)\s?ml\b", c, re.I))
 
 
 def _paper(step: dict, guide: dict, cl: list[str]) -> str | None:
@@ -109,7 +117,9 @@ def _paper(step: dict, guide: dict, cl: list[str]) -> str | None:
         if _any(r"\bby post\b|\bcheque\b|\bpostal order\b", cl):
             return "post_letter"  # paying by post is not a card payment
         return "pay_card"
-    if _any(r"\b(?:call|phone|ring|telephone)\b(?! (?:number|bill))", cl):
+    if doc_type == "form" and _any(r"\bwrite\b|\bfill (?:in|out)\b|\bthe box\b", cl):
+        return "write_in_box"  # "Find the box called Telephone No. Write your number." is writing, not a call
+    if _any(r"\b(?:call|phone|ring|telephone)\b(?! (?:number|numbers|no\b|bill))", cl):
         return "phone_call"
     if _any(r"\bonline\b|\bwebsite\b|\bwww\.|\.gov\.uk\b|\.nhs\.uk\b|\blog ?in\b|\bsign in\b|\binternet\b|\bon the app\b", step_clauses_raw(step)):
         return "go_online"

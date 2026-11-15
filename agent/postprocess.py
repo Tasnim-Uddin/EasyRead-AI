@@ -89,13 +89,24 @@ def split_technique(steps: list[dict], device_type: str | None) -> list[dict]:
     return out
 
 
+BACKREF = re.compile(r"^(?:it|this|that|these|those|they|them|doing this|otherwise|because|so)\b", re.I)
+
+
 def split_warnings(steps: list[dict]) -> list[dict]:
     """A warning step with several sentences becomes one step per sentence (one idea per step)."""
     out = []
     for s in steps:
         parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s["text_en"].strip()) if p.strip()]
         if s["kind"] == "warning" and not is_conflict(s["text_en"]) and len(parts) > 1 and all(len(p.split()) >= 3 for p in parts):
-            out += [{**s, "text_en": p} for p in parts]
+            # A sentence that starts "It ..." / "This ..." explains the one before ("Never use a drill. It can damage
+            # the parts."): it stays with it, never as a step of its own.
+            groups = [[parts[0]]]
+            for p in parts[1:]:
+                if BACKREF.match(p):
+                    groups[-1].append(p)
+                else:
+                    groups.append([p])
+            out += [{**s, "text_en": " ".join(g)} for g in groups]
         else:
             out.append(s)
     return out
@@ -240,7 +251,7 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
         # A step holding a date, time or amount no other step has is a fact; keep it unless the guide is far too long.
         keep = len(steps) <= limit + EXTRA_FOR_FACTS
         def droppable(i, s):
-            return i > 0 and not (keep and unique_numbers(s, steps))
+            return i > 0 and not (keep and unique_numbers(s, steps)) and not SIGN.search(s["text_en"])
         cands = [i for i, s in enumerate(steps) if s["kind"] == "what" and droppable(i, s)] or \
                 [i for i, s in enumerate(steps) if s["kind"] in ("how", "when") and droppable(i, s)
                  and not s.get("technique")]  # a checked technique line is never trimmed
@@ -251,6 +262,8 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
 
 
 EXTRA_FOR_FACTS = 4
+# The step where the reader signs or gives consent is the point of a form: never trimmed by the cap.
+SIGN = re.compile(r"\bsign(?:ature|ed)?\b(?! (?:up|in)\b)|\bconsent\b|\bI (?:agree|confirm|give permission)\b", re.I)
 NUM = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?|\d+(?:[:.]\d+)?")
 
 

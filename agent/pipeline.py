@@ -3,7 +3,7 @@ import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
 from . import langs, llm, locate, postprocess, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
-from .doctypes import STYLE_RULES, content_to_steps, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
+from .doctypes import STYLE_RULES, content_to_steps, ensure_blank_date_step, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
 
 log = logging.getLogger("agent.pipeline")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -20,7 +20,11 @@ A blank box or a template placeholder (for example «Amount», [date], [time], D
 never copy it as one and never guess it. Keep the action and say plainly that the paper does not show the value, for
 example "Pay by the date on your letter. This paper does not show the date." Give no "dates" entry for it, and in
 "amounts" write "not shown on the paper" as the amount. Never add urgency the paper does not print ("now", "today",
-"straight away"): if the paper gives no date, do not make one up.
+"straight away"): if the paper gives no date, do not make one up. Only say a value is not shown when the paper itself
+has a blank or a placeholder for it; do not list values the paper never asks for.
+If the paper is written to someone else (for example a clinic's letter to a GP), say so in "what_this_is" and give in
+"what_to_do" only what the paper asks the reader (the patient or carer) to do or expect; do not turn the writer's
+clinical notes into instructions.
 
 First decide if this is a paper at all. Set "is_document": false only when NO file is a document, label, leaflet, letter,
 bill, form, instructions or a medicine or device (for example a drawing, a selfie, a pet, a view). Otherwise true.
@@ -421,6 +425,8 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             else:
                 raw = await write_easy_read(with_technique(facts), language)
             raw = finish_steps(raw, dt, domain, facts["conflicts"], facts.get("device_type"))
+            notes = [u.get("note") or "" for u in ex.get("unreadable_parts") or []] + list(facts.get("unreadable") or [])
+            raw = ensure_blank_date_step(raw, notes, ex.get("sender"))
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,
                                "technique_clip_id": None, "status": "pending", "visual": r.get("visual")} for i, r in enumerate(raw)]
