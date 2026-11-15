@@ -31,7 +31,8 @@
       "picture_prompt": "an open palm held out flat holding a blue L-shaped inhaler, close-up of just the hand and the whole inhaler, no face",
       "image_url": "/fixtures/img/step_0.png",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 1,
@@ -41,7 +42,8 @@
       "picture_prompt": "the person sitting calmly but looking worried, one hand on their chest, mouth slightly open, small curved wheeze lines near the chest, empty plain background, no objects",
       "image_url": "/fixtures/img/step_1.png",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 2,
@@ -51,7 +53,11 @@
       "picture_prompt": "the person holding the blue inhaler upright in one hand and shaking it, simple curved motion lines either side of the inhaler",
       "image_url": "/fixtures/img/step_2.png",
       "technique_clip_id": "inhaler_mdi_shake",
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "inhaler_shake"
+      }
     },
     {
       "index": 3,
@@ -61,7 +67,11 @@
       "picture_prompt": "side view of the person breathing out first, mouth open and turned away from the blue inhaler held in one hand, calm eyes, then lips sealing round the grey mouthpiece with a finger on the canister",
       "image_url": "/fixtures/img/step_3.png",
       "technique_clip_id": "inhaler_mdi_press",
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "inhaler_press_breathe_in"
+      }
     },
     {
       "index": 4,
@@ -71,7 +81,11 @@
       "picture_prompt": "portrait of a person with puffed round cheeks and tightly closed mouth, eyes closed, one hand pinching nothing, holding their breath, a small clock with a shaded sector at the top corner, no inhaler",
       "image_url": "/fixtures/img/step_4.png",
       "technique_clip_id": "inhaler_mdi_hold",
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "inhaler_hold_breath"
+      }
     },
     {
       "index": 5,
@@ -81,7 +95,11 @@
       "picture_prompt": "a small clock with a shaded sector at the top corner next to the blue inhaler resting on a table, no person",
       "image_url": "/fixtures/img/step_8.png",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "inhaler_wait"
+      }
     },
     {
       "index": 6,
@@ -91,7 +109,8 @@
       "picture_prompt": "an open hand holding the blue inhaler with two small round puff clouds above it, and under it a bright yellow sun shape and a crescent moon shape side by side, wordless symbols only",
       "image_url": "/fixtures/img/step_5.png",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 7,
@@ -101,7 +120,8 @@
       "picture_prompt": "a friendly doctor in a white coat with a stethoscope on the left, facing the guide woman on the right who holds the blue inhaler, both smiling",
       "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": null
     },
     {
       "index": 8,
@@ -111,7 +131,11 @@
       "picture_prompt": "the person looking worried with a hand at their throat, holding a smartphone that shows a big red phone-call symbol",
       "image_url": "/fixtures/img/step_7.png",
       "technique_clip_id": null,
-      "status": "ready"
+      "status": "ready",
+      "visual": {
+        "kind": "closeup",
+        "id": "phone_call"
+      }
     }
   ],
   "created_at": "2026-11-14T15:00:00Z"
