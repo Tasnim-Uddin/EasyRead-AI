@@ -353,7 +353,11 @@ def attach(guide: dict, quotes: list[dict], pages: list[dict | None]) -> dict:
 
 # ---------- urgency the paper does not print ----------
 
+# Any way a paper asks for speed. If the OCR finds one, the step's urgency stands.
 URGENT = re.compile(r"\s*,?\s*\b(?:right now|now|today|immediately|straight away|straightaway|at once|as soon as possible|asap|urgently)\b", re.I)
+# The words a writer adds on its own. Only these are ever removed: OCR can miss words (white print on a dark box),
+# so a paper phrase such as "as soon as possible" is never taken out on OCR evidence alone.
+ADDED = re.compile(r"\s*,?\s*\b(?:right now|now|today|straight away|straightaway)\b", re.I)
 
 
 def page_words(pages: list[dict | None], pdf_texts: list[str]) -> str | None:
@@ -375,7 +379,7 @@ def ground_urgency(steps: list[dict], printed: str | None) -> int:
         def keep(m):
             word = m.group(0).strip(" ,").lower()
             return m.group(0) if re.search(rf"\b{re.escape(word)}\b", printed) else ""
-        new = URGENT.sub(keep, t)
+        new = ADDED.sub(keep, t)
         if new != t:
             new = re.sub(r"\s+([.,!?])", r"\1", new).strip()
             new = new[:1].upper() + new[1:]

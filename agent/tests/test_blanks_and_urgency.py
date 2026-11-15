@@ -86,6 +86,13 @@ def test_urgency_the_paper_prints_is_kept():
     assert steps[0]["text_en"] == "Pay now."
 
 
+def test_paper_phrases_are_never_removed_on_ocr_alone():
+    # OCR often misses white print on a dark box; "as soon as possible" may well be on the paper.
+    steps = [{"text_en": "Pay any balance from other years as soon as possible.", "kind": "how"}]
+    assert locate.ground_urgency(steps, PRINTED) == 0
+    assert steps[0]["text_en"] == "Pay any balance from other years as soon as possible."
+
+
 def test_urgency_unchanged_without_ocr():
     steps = [{"text_en": "Pay now.", "kind": "how"}]
     assert locate.ground_urgency(steps, locate.page_words([None], [""])) == 0
