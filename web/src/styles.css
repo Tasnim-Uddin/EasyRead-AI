@@ -863,3 +863,4 @@ body { font-size: var(--fs-body); line-height: 1.5; }
 .step-screen .pic { flex: 0 0 auto; min-height: 0; height: clamp(7rem, calc(100dvh - 36rem), 17rem); max-height: none; }
 .step-screen.is-live .pic { height: clamp(7rem, calc(100dvh - 32rem), 17rem); }
 .step-screen .pic.small { height: 7rem; }
+.round.back-named { width: auto; padding-inline: 0.625rem 0.875rem; gap: 0.25rem; border-radius: var(--r-pill); font-weight: 600; font-size: 0.9375rem; display: inline-flex; align-items: center; }

@@ -376,12 +376,13 @@ export function TopBar({ lang, onLanguage, onSettings, onBrand, onPapers }: { la
 }
 
 /** Back on the start side, the title centred, an optional control on the end side (mirrors in RTL). */
-export function TitleBar({ title, lang, onBack, right }: { title: React.ReactNode; lang: string; onBack: () => void; right?: React.ReactNode }) {
+export function TitleBar({ title, lang, onBack, right, backLabel }: { title: React.ReactNode; lang: string; onBack: () => void; right?: React.ReactNode; backLabel?: string }) {
   const nav = useContext(NavContext);
   return (
     <div className="title-top">
-      <button className="round" onClick={onBack} aria-label={t(lang, "back2")}>
+      <button className={"round" + (backLabel ? " back-named" : "")} onClick={onBack} aria-label={backLabel ?? t(lang, "back2")}>
         <Icon name="back" />
+        {backLabel && <span>{backLabel}</span>}
       </button>
       <h1>{title}</h1>
       <div className="title-end">
@@ -657,7 +658,8 @@ const FALLBACK_SAFETY: Record<Kind, string> = {
   letter: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
   form: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
 };
-export const safetyLines = (g: Guide) => (g.safety_lines && g.safety_lines.length ? g.safety_lines : [FALLBACK_SAFETY[kindOf(g)]]);
+export const safetyLines = (g: Guide, lang = "en") =>
+  g.safety_lines && g.safety_lines.length ? g.safety_lines : [isFallback(lang, "safe_" + kindOf(g)) ? FALLBACK_SAFETY[kindOf(g)] : t(lang, "safe_" + kindOf(g))];
 
 export function summaryText(g: Guide): string {
   const k = kindOf(g);
@@ -857,7 +859,7 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
       )}
       {guide.source.is_sample && k === "medicine" && <p className="safe">{t(lang, "sampleNote")}</p>}
       <p className="safe" dir="auto">
-        {safetyLines(guide).map((l, i) => (
+        {safetyLines(guide, lang).map((l, i) => (
           <span key={i}>
             {l}{" "}
           </span>
@@ -967,6 +969,7 @@ export function StepScreen({ guide, index, lang, clips, onClose, onIndex, onFini
       <TitleBar
         lang={lang}
         onBack={onClose}
+        backLabel={t(lang, "summaryNav")}
         title={
           <>
             <T lang={lang} k="step" /> <Counter lang={lang} n={index + 1} total={total} />
@@ -1144,7 +1147,7 @@ export function ClipScreen({ guide, index, lang, clips, onBack }: { guide: Guide
   };
   return (
     <div className="screen">
-      <TitleBar title={t(lang, "clipTitle")} lang={lang} onBack={onBack} />
+      <TitleBar title={t(lang, "clipTitle")} lang={lang} onBack={onBack} backLabel={tf(lang, "stepN", { n: index + 1 })} />
       <div className="clip">
         {clip ? (
           <video ref={vid} src={clip.video_url} poster={clip.poster_url} loop muted playsInline controls={playing} aria-label={clip.caption_en} />
@@ -1364,7 +1367,7 @@ export function AskScreen({ guide, lang, question, answer, busy, onQuestion, onA
       <p className="safe info">
         <Icon name="info" />
         <span>
-          <b>{t(lang, "notSure")}</b> {safetyLines(guide).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
+          <b>{t(lang, "notSure")}</b> {safetyLines(guide, lang).map((l) => l.replace(/^Not sure\?\s*/, "")).join(" ")}
         </span>
       </p>
       <div className={dock ? "bottombar" : "foot"}>
@@ -1965,7 +1968,7 @@ export function PrintSheet({ guide, lang }: { guide: Guide; lang: string }) {
           </li>
         ))}
       </ol>
-      <p dir="auto">{safetyLines(guide).join(" ")}</p>
+      <p dir="auto">{safetyLines(guide, lang).join(" ")}</p>
       {guide.source.is_sample && <p>{t(lang, "printSample")}</p>}
     </div>
   );
