@@ -58,6 +58,8 @@ export interface GuideStageProps {
 /** What the guide is told after each step: say it, then stop (no "Ready to move on?" check-in). */
 /** The finish caption: without the check, she does not offer it. */
 const FINISH_LINE = SHOW_CHECK ? "gs_finishLine" : "gs_finishDone";
+/** Speak opens the mic; with no question for this long it closes again. */
+const MIC_SILENCE_MS = 8000;
 const THEN_WAIT = `Then stop talking and wait. Do not ask if they are ready or if they have questions: the screen shows Back, Next, Speak and Type.`;
 
 function stepTitle(s: Step | undefined) {
@@ -478,6 +480,43 @@ export function GuideStage(p: GuideStageProps) {
     [guide.id, guide.sender, lang],
   );
 
+  /* ---- the mic: OFF by default; Speak opens it for one question; the toggle can leave it on (hands-free) ---- */
+  /** True while the mic is on only because Speak opened it: it closes again by itself. */
+  const autoMic = useRef(false);
+  const closeAutoMic = useCallback(() => {
+    if (!autoMic.current) return;
+    autoMic.current = false;
+    anam.setMic(true);
+  }, [anam]);
+  // The mic starts OFF when the live session starts.
+  useEffect(() => {
+    if (!live) return;
+    autoMic.current = false;
+    anam.setMic(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live]);
+  // Leaving the voice question (typing, back to the step, moving on) closes a Speak-opened mic.
+  useEffect(() => {
+    if (!(s.phase === "ask" && s.askMode === "voice") && s.phase !== "answer") closeAutoMic();
+  }, [s.phase, s.askMode, closeAutoMic]);
+  // Silence: ~8 s on the listening screen with no question closes the mic and goes back.
+  useEffect(() => {
+    if (!live || s.phase !== "ask" || s.askMode !== "voice" || !autoMic.current) return;
+    if (anam.activity === "listening" || anam.userCaption.trim()) return;
+    const tm = setTimeout(() => {
+      closeAutoMic();
+      run({ type: "backToStep" });
+    }, MIC_SILENCE_MS);
+    return () => clearTimeout(tm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, s.phase, s.askMode, anam.activity, anam.userCaption, closeAutoMic]);
+  // Her answer finished: close the mic.
+  useEffect(() => {
+    if (s.phase === "answer" && anam.replySeq > askBase.current) closeAutoMic();
+    // replyDone ticks when a message ends
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anam.replyDone]);
+
   const startAsk = useCallback(
     (mode: "voice" | "type") => {
       askBase.current = anam.replySeq;
@@ -488,7 +527,11 @@ export function GuideStage(p: GuideStageProps) {
       if (liveRef.current) {
         if (mode === "voice") {
           anam.interrupt();
-          if (anam.micMuted) anam.setMic(false);
+          // Speak opens the mic just for this question (unless the user chose hands-free with the toggle).
+          if (anam.micMuted) {
+            autoMic.current = true;
+            anam.setMic(false);
+          }
         }
         return;
       }
@@ -684,12 +727,15 @@ export function GuideStage(p: GuideStageProps) {
       {!readMode && live && (
         <button
           type="button"
-          className={"gs-mictoggle" + (anam.micMuted ? " off" : "") + (s.phase === "intro" ? " compact" : "")}
+          className={"gs-mictoggle" + (anam.micMuted ? " off" : "")}
           role="switch"
           aria-checked={!anam.micMuted}
           title={t(lang, anam.micMuted ? "gs_micOffHint" : "gs_micOnHint")}
           aria-label={t(lang, anam.micMuted ? "gs_micOffHint" : "gs_micOnHint")}
-          onClick={() => anam.setMic(!anam.micMuted)}
+          onClick={() => {
+            autoMic.current = false; // the user chose: on stays on (hands-free), off stays off
+            anam.setMic(!anam.micMuted);
+          }}
         >
           {anam.micMuted ? <MicOffIcon /> : <Icon name="mic" />}
           <span>{t(lang, anam.micMuted ? "gs_micOff" : "gs_micOn")}</span>
