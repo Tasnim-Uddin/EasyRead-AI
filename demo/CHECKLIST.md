@@ -1,6 +1,6 @@
 # Demo morning checklist
 
-For the live script in `demo/SCRIPT.md` (the video is 2 minutes, see `demo/VIDEO.md`; the video uses the v4 flow with a real paper, so for the live final also bring a real paper with personal details covered, or a printed public template, and photograph it in the app). Judging Sun 13:00 to 16:30, Huxley 308.
+For the live script in `demo/SCRIPT.md` (the video is 2 minutes and uses the v4 flow with a real paper, so for the live final also bring a real paper with personal details covered, or a printed public template, and photograph it in the app). Judging Sun 13:00 to 16:30, Huxley 308.
 
 ## 1. Before leaving home / on arrival
 - [ ] Laptop charged and charger in the bag. Phone hotspot as a second network.
