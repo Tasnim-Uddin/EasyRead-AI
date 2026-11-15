@@ -862,7 +862,7 @@ export function GuideStage(p: GuideStageProps) {
         {conflictView ? (
           conflictView
         ) : finished ? (
-          <FinishBody lang={lang} total={total} caption={t(lang, FINISH_LINE)} label={t(lang, "gs_yourGuide")} p={p} onAgain={again} />
+          <FinishBody lang={lang} total={total} caption={t(lang, FINISH_LINE)} label={t(lang, "gs_yourGuide")} p={p} onAgain={again} onAsk={startAsk} />
         ) : s.phase === "ask" || s.phase === "answer" ? (
           <AskPanel
             lang={lang}
@@ -928,6 +928,7 @@ export function GuideStage(p: GuideStageProps) {
           label={captionLabel}
           p={p}
           onAgain={again}
+          onAsk={startAsk}
           avatar={
             <div className="gs-finish-av">
               <div className="gs-av-slot circle" data-avatar-slot="gs" data-shape="finish">
@@ -1255,7 +1256,7 @@ function AskPanel(props: {
 }
 
 /* ---------------------------------------------------------------- finish (13) */
-function FinishBody({ lang, total, caption, label, p, onAgain, avatar }: { lang: string; total: number; caption: string; label: string; p: GuideStageProps; onAgain: () => void; avatar?: React.ReactNode }) {
+function FinishBody({ lang, total, caption, label, p, onAgain, onAsk, avatar }: { lang: string; total: number; caption: string; label: string; p: GuideStageProps; onAgain: () => void; onAsk?: (mode: "voice" | "type") => void; avatar?: React.ReactNode }) {
   return (
     <div className="gs-finish">
       {avatar ?? (
@@ -1283,6 +1284,22 @@ function FinishBody({ lang, total, caption, label, p, onAgain, avatar }: { lang:
         </span>
       )}
       <div className="gs-actions">
+        {onAsk && (
+          <>
+            {/* Not sure about a step? The guide still answers from the paper here. */}
+            <p className="gs-or">{t(lang, "gs_finishAsk")}</p>
+            <div className="gs-two">
+              <button className="gs-btn sage" onClick={() => onAsk("voice")}>
+                <Icon name="mic" />
+                {t(lang, "gs_speak")}
+              </button>
+              <button className="gs-btn ghost" onClick={() => onAsk("type")}>
+                <KbIcon />
+                {t(lang, "gs_type")}
+              </button>
+            </div>
+          </>
+        )}
         {SHOW_CHECK && (
           <button className="gs-btn" onClick={p.onCheck}>
             <Icon name="check" />
@@ -1305,16 +1322,11 @@ function FinishBody({ lang, total, caption, label, p, onAgain, avatar }: { lang:
             {t(lang, "gs_remind")}
           </button>
         )}
-        <div className="gs-two">
-          <button className="gs-link" onClick={onAgain}>
-            <Icon name="history" />
-            {t(lang, "gs_again")}
-          </button>
-          <button className="gs-link" onClick={p.onHome}>
-            <Icon name="home" />
-            {t(lang, "gs_home")}
-          </button>
-        </div>
+        {/* Home is in the top bar (top left, like every screen): no second Home here. */}
+        <button className="gs-link" onClick={onAgain}>
+          <Icon name="history" />
+          {t(lang, "gs_again")}
+        </button>
       </div>
     </div>
   );

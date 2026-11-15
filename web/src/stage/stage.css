@@ -240,3 +240,7 @@ button.gs-callout { border: 0; text-align: start; cursor: pointer; font: inherit
 .gs-kb.still, .gs.paused .gs-kb { animation-play-state: paused; }
 @keyframes gs-kb { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.06) translate(-1.5%, -1%); } }
 @media (prefers-reduced-motion: reduce) { .gs .gs-kb { animation: none !important; } }
+
+/* "You did it": the buttons follow the message (no gap pushing them to the bottom); the block sits in the middle. */
+.gs-finish { justify-content: center; }
+.gs-finish .gs-actions { margin-top: 0.5rem; }
