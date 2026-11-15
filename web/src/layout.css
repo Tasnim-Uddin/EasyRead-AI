@@ -36,9 +36,10 @@
 .x-size-row { gap: 6px; }
 .x-a { width: 44px; height: 44px; font-size: 18px; }
 .x-a.plus { font-size: 22px; }
-.x-stops { height: 44px; }
-.x-track { inset-inline: 18px; height: 6px; margin-top: -3px; }
-.x-stop { flex: none; width: 36px; height: 44px; min-width: 0; }
+.x-stops { flex: 1 1 0; min-width: 0; height: 44px; margin-inline: 4px; }
+/* five equal stops: the first/last dot centres sit at 10% / 90%, so the track ends exactly under them */
+.x-track { inset-inline: 10%; height: 6px; margin-top: -3px; }
+.x-stop { flex: 1 1 0; width: auto; height: 44px; min-width: 0; }
 .x-stop::after { width: 12px; height: 12px; }
 .x-stop.on::after { width: 24px; height: 24px; box-shadow: 0 0 0 4px var(--white); }
 
