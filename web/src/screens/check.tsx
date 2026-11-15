@@ -1,129 +1,206 @@
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import type { Guide } from "../types";
 import { t, tf } from "../i18n";
-import { Counter, T } from "../bidi";
-import Icon from "../icons";
-import { TitleBar } from "./shared";
-import { kindOf } from "./summary";
+import { Num } from "../bidi";
+import { languageLabel } from "../languages";
+import Icon, { GuideFace } from "../icons";
+import { NavContext } from "./shared";
+import { buildQuestions } from "../extras/questions";
+import { XIcon } from "../extras/icons";
+import { closeUpFor } from "../extras/closeup";
+import "../extras/strings";
+import "../extras/extras.css";
 
-/* ---------- 9. tell me back ---------- */
-export interface Question {
-  q: string;
-  options: string[];
-  correct: number;
-  icons: string[];
-}
-export function buildQuestions(g: Guide, lang = "en"): Question[] {
-  const T = (key: string) => t(lang, key);
-  const k = kindOf(g);
-  const out: Question[] = [];
-  const mk = (q: string, correct: string, wrong: string[], pos: number): Question => {
-    const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
-    const options = wrong.map(cap);
-    options.splice(Math.min(pos, options.length), 0, cap(correct));
-    return { q, options, correct: options.indexOf(cap(correct)), icons: ["sun", "bulb", "hand"] };
-  };
-  const f = g.facts;
-  const c = g.content;
-  if (k === "medicine" && f?.frequency) out.push(mk(T("qWhen"), f.frequency, [T("dMorning"), T("dNight")].filter((x) => x !== f.frequency), 1));
-  if (k === "medicine" && (f?.conflicts?.length ?? 0) > 0)
-    out.push(mk(T("qConflict"), T("aPharm"), [T("dBigger"), T("dPick")], 1));
-  else if (k === "medicine" && f?.dose) out.push(mk(T("qHowMuch"), f.dose, [T("dAsMuch"), T("dHalf")], 0));
-  if (k === "letter" && c?.what_to_do?.[0]) out.push(mk(T("qLetterFirst"), c.what_to_do[0], [T("dIgnoreLetter"), T("dThrow")], 1));
-  if (k === "letter" && c?.by_when?.[0]) out.push(mk(tf(lang, "qByWhen", { what: c.by_when[0].what }), c.by_when[0].date, [T("dNoDate"), T("dNextYear")], 2));
-  if (k === "form" && c?.fields?.[0]) out.push(mk(tf(lang, "qBox", { label: c.fields[0].label }), c.fields[0].what_to_write, [T("dEmpty"), T("dAnything")], 0));
-  if (k === "howto" && g.steps[0]) out.push(mk(T("qHowFirst"), g.steps[0].text, [T("dSkip"), T("dAskElse")], 1));
-  const warn = g.steps.find((s) => s.kind === "warning");
-  if (warn) out.push(mk(T("qWarn"), warn.text, [T("dNothing"), T("dIgnore")], 2));
-  return out.slice(0, 3);
+export { buildQuestions, type Question } from "../extras/questions";
+
+/** The step that holds the answer, shown again after "Not quite": its close-up or picture, and its words. */
+function StepAgain({ guide, index, lang, onClose }: { guide: Guide; index: number; lang: string; onClose: () => void }) {
+  const s = guide.steps[index];
+  if (!s) return null;
+  const C = closeUpFor(s.visual?.id);
+  return (
+    <div className="x-again" role="region" aria-label={tf(lang, "stepN", { n: index + 1 })}>
+      <small>{tf(lang, "stepN", { n: index + 1 })}</small>
+      {C ? <C id={s.visual!.id} lang={lang} /> : s.image_url ? <img src={s.image_url} alt="" /> : null}
+      <p dir="auto">{s.text}</p>
+      <button className="btn soft" onClick={onClose}>
+        <XIcon name="check" />
+        {t(lang, "xOkGotIt")}
+      </button>
+    </div>
+  );
 }
 
-export function TellBack({ guide, lang, onCheck, onClose, onBack, backLabel }: { guide: Guide; lang: string; onCheck: (answer: string, correct: boolean) => void; onClose: () => void; onBack?: () => void; backLabel?: string }) {
+/* ---------- 24a-d Check I've got it ---------- */
+export function TellBack({
+  guide,
+  lang,
+  onCheck,
+  onClose,
+  onBack,
+  onPapers,
+}: {
+  guide: Guide;
+  lang: string;
+  onCheck: (answer: string, correct: boolean) => void;
+  /** Done (and the X): leave the check. */
+  onClose: () => void;
+  onBack?: () => void;
+  backLabel?: string;
+  onPapers?: () => void;
+}) {
   const qs = useMemo(() => buildQuestions(guide, lang), [guide, lang]);
+  const nav = useContext(NavContext);
   const [qi, setQi] = useState(0);
   const [pick, setPick] = useState<number | null>(null);
-  const [checked, setChecked] = useState(false);
+  const [results, setResults] = useState<boolean[]>([]);
+  const [again, setAgain] = useState(false);
   const q = qs[qi];
-  if (!q) {
+  const finished = !q || results.length === qs.length && pick === null;
+  const home = nav.onHome ?? onBack ?? onClose;
+
+  if (finished) {
+    const right = results.filter(Boolean).length;
     return (
-      <div className="screen">
-        <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onBack ?? onClose} backLabel={backLabel} />
-        <p className="sub">{t(lang, "askExample")}</p>
+      <div className="screen x-check x-check-end">
+        <div className="x-check-top">
+          <button className="round" onClick={home} aria-label={t(lang, "home")}>
+            <Icon name="home" />
+          </button>
+        </div>
+        <div className="x-got">
+          <span className="x-got-face">
+            <GuideFace />
+            <i>
+              <XIcon name="check" />
+            </i>
+          </span>
+          <h1>{t(lang, qs.length && right < qs.length ? "xNearly" : "xGotIt")}</h1>
+          {qs.length > 0 && <p>{tf(lang, "xGotNofM", { n: right, m: qs.length })}</p>}
+        </div>
+        <div className="x-bubble">
+          <small>
+            {t(lang, "xYourGuide")} · <bdi>{languageLabel(lang)}</bdi>
+          </small>
+          <p>{t(lang, qs.length && right < qs.length ? "xNearlyText" : "xGotItText")}</p>
+        </div>
+        {qs.length > 0 && (
+          <div className="x-qdots">
+            {qs.map((_, i) => (
+              <span key={i} className={results[i] ? "ok" : "no"}>
+                <i>
+                  <XIcon name={results[i] ? "check" : "x"} />
+                </i>
+                <small>
+                  Q<Num>{i + 1}</Num>
+                </small>
+              </span>
+            ))}
+          </div>
+        )}
         <div className="foot">
-          <button className="btn" onClick={onClose}>{t(lang, "tbDone")}</button>
+          <button className="btn" onClick={onClose}>
+            <XIcon name="check" />
+            {t(lang, "xDone")}
+          </button>
+          {onPapers && (
+            <button className="btn quiet" onClick={onPapers}>
+              <XIcon name="doc" />
+              {t(lang, "myGuides")}
+            </button>
+          )}
         </div>
       </div>
     );
   }
+
+  const answered = pick !== null;
   const right = pick === q.correct;
+  function choose(i: number) {
+    if (answered) return;
+    setPick(i);
+    const ok = i === q.correct;
+    setResults((r) => [...r.slice(0, qi), ok]);
+    onCheck(q.options[i], ok);
+  }
+  function next() {
+    setPick(null);
+    setAgain(false);
+    if (qi < qs.length - 1) setQi(qi + 1);
+  }
+
   return (
-    <div className="screen">
-      <TitleBar title={t(lang, "tellBack")} lang={lang} onBack={onBack ?? onClose} backLabel={backLabel} />
-      <div className="prog">
-        <div className="bars">
-          {qs.map((_, i) => (
-            <button key={i} className={i <= qi ? "d" : ""} tabIndex={-1} aria-hidden="true" />
-          ))}
-        </div>
-        <div className="of">
-          <Counter lang={lang} n={qi + 1} total={qs.length} />
-        </div>
+    <div className="screen x-check">
+      <div className="x-check-top">
+        <button className="round" onClick={home} aria-label={t(lang, "home")}>
+          <Icon name="home" />
+        </button>
+        <h1>
+          {t(lang, "xCheck")} · <Num>{qi + 1}</Num> {t(lang, "of")} <Num>{qs.length}</Num>
+        </h1>
+        <button className="round" onClick={onClose} aria-label={t(lang, "close")}>
+          <Icon name="x" />
+        </button>
       </div>
-      <p className="sub">{t(lang, "notATest")}</p>
-      <h1 className="qtitle">{q.q}</h1>
-      <div className="choices" role="radiogroup" aria-label={q.q}>
-        {q.options.map((o, i) => (
-          <button
-            key={i}
-            role="radio"
-            aria-checked={pick === i}
-            className={"choice" + (checked && i === q.correct ? " right" : pick === i ? " pick" : "")}
-            onClick={() => !checked && setPick(i)}
-          >
-            <span className="pi">
-              <Icon name={q.icons[i % q.icons.length]} />
-            </span>
-            {o}
-          </button>
+      <div className="x-bars" aria-hidden="true">
+        {qs.map((_, i) => (
+          <i key={i} className={i <= qi ? "on" : ""} />
         ))}
       </div>
-      {checked && (
-        <div className={"check" + (right ? "" : " butter")} aria-live="polite">
-          <Icon name={right ? "check" : "alert"} />
-          {right ? t(lang, "tbRight") : `${t(lang, "tbWrong")} ${q.options[q.correct]}`}
-        </div>
-      )}
+      <div className="x-ask-face">
+        <GuideFace />
+      </div>
+      <div className="x-bubble" aria-live="polite">
+        <small>
+          {t(lang, answered ? "xGuideTalking" : "xGuideAsking")} · <bdi>{languageLabel(lang)}</bdi>
+        </small>
+        <p dir="auto">{!answered ? q.q : right ? `${t(lang, "tbRight")} ${q.options[q.correct]}` : t(lang, "xNotQuite")}</p>
+      </div>
+      <h3 className="x-q">{t(lang, answered ? "xYouPicked" : "xTapPicture")}</h3>
+      <div className="x-answers" role="radiogroup" aria-label={q.q}>
+        {q.options.map((o, i) => {
+          const cls = !answered ? "" : i === q.correct ? " right" : i === pick ? " wrong" : " dim";
+          return (
+            <button key={i} role="radio" aria-checked={pick === i} className={"x-answer" + cls} onClick={() => choose(i)} disabled={answered && i !== pick && i !== q.correct}>
+              <span className="pic">
+                <XIcon name={q.icons[i] ?? "doc"} />
+              </span>
+              <span className="txt">
+                <span dir="auto">{o}</span>
+                {answered && i === q.correct && (
+                  <em className="ok">
+                    <XIcon name="check" />
+                    {t(lang, i === pick ? "xRight" : "xRightAnswer")}
+                  </em>
+                )}
+                {answered && i === pick && i !== q.correct && (
+                  <em className="no">
+                    <XIcon name="x" />
+                    {t(lang, "xNotThisOne")}
+                  </em>
+                )}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {again && q.step !== null && <StepAgain guide={guide} index={q.step} lang={lang} onClose={() => setAgain(false)} />}
       <div className="foot">
-        {!checked ? (
-          <button
-            className="btn"
-            disabled={pick === null}
-            onClick={() => {
-              setChecked(true);
-              onCheck(q.options[pick!], pick === q.correct);
-            }}
-          >
-            {t(lang, "tbCheck")}
+        {answered && !right && q.step !== null && !again && (
+          <button className="btn sage" onClick={() => setAgain(true)}>
+            <XIcon name="eye" />
+            {t(lang, "xShowStepAgain")}
           </button>
-        ) : null}
-        {!checked ? (
+        )}
+        {answered && (
+          <button className="btn" onClick={next}>
+            <Icon name="chevRight" />
+            {t(lang, qi < qs.length - 1 ? "xNextQuestion" : "xSeeResult")}
+          </button>
+        )}
+        {!answered && (
           <button className="btn quiet" onClick={onClose}>
             {t(lang, "skip")}
-          </button>
-        ) : qi < qs.length - 1 ? (
-          <button
-            className="btn"
-            onClick={() => {
-              setQi(qi + 1);
-              setPick(null);
-              setChecked(false);
-            }}
-          >
-            {t(lang, "tbNext")}
-          </button>
-        ) : (
-          <button className="btn" onClick={onClose}>
-            {t(lang, "tbDone")}
           </button>
         )}
       </div>

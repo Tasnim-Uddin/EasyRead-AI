@@ -6,6 +6,10 @@ import { canSpeak } from "../languages";
 import Icon, { GuideFace } from "../icons";
 import { roleName } from "./capture";
 import { LangPill, TitleBar } from "./shared";
+import { ConflictCard } from "../extras/ConflictCard";
+import { hasDates } from "../extras/RemindMe";
+import { openRemindMe, openShare } from "../extras/bus";
+import { XIcon } from "../extras/icons";
 
 export type Kind = "medicine" | "howto" | "letter" | "form";
 export function kindOf(g: Guide): Kind {
@@ -86,8 +90,8 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
   const sources = docs.length ? docs.map((d) => roleName(lang, d.role)) : [];
   const conflicts = f?.conflicts ?? [];
   const warnings = (f?.warnings ?? []).filter((w) => !w.startsWith("Your label and leaflet say different"));
-  const title =
-    k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper");
+  const title = guide.title_override ||
+    (k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper"));
   const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   const thumb = guide.steps.find((s) => s.image_url)?.image_url;
   return (
@@ -113,28 +117,8 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
       <DeviceCard guide={guide} lang={lang} />
 
       {conflicts.length > 0 && (
-        <div className="card warn" role="alert">
-          <div className="warn-head">
-            <span className="warn-ico">
-              <Icon name="alert" />
-            </span>
-            <div>
-              <b>{t(lang, "conflictTitle")}</b>
-              <p>{t(lang, "conflictAsk")}</p>
-            </div>
-          </div>
-          {conflicts.map((x, i) => (
-            <div className="quotes" key={i}>
-              <div className="quote">
-                <b>{t(lang, "labelSays")}</b>
-                <span dir="auto">“{x.label}”</span>
-              </div>
-              <div className="quote">
-                <b>{t(lang, "leafletSays")}</b>
-                <span dir="auto">“{x.leaflet}”</span>
-              </div>
-            </div>
-          ))}
+        <div className="x-summary-conflict">
+          <ConflictCard guide={guide} lang={lang} />
         </div>
       )}
 
@@ -222,6 +206,19 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
           </div>
         </div>
       )}
+
+      <div className="x-sum-actions">
+        {hasDates(guide) && (
+          <button className="btn sage" onClick={() => openRemindMe(guide, 0)}>
+            <XIcon name="bell" />
+            {t(lang, "xRemindMe")}
+          </button>
+        )}
+        <button className="btn quiet" onClick={() => openShare(guide)}>
+          <XIcon name="share" />
+          {t(lang, "xSaveOrShare")}
+        </button>
+      </div>
 
       {guide.source.is_sample && k === "medicine" && <p className="safe">{t(lang, "sampleNote")}</p>}
       <p className="safe" dir="auto">

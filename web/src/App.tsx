@@ -36,9 +36,10 @@ import {
   type Role,
   type TrayItem,
 } from "./screens";
+import { ExtrasHost, extrasOnGuide, guideRows, needsWelcome, renameRow, saveProgress, type Extra } from "./extras/app";
 
 const SAFE_FALLBACK = "I can't check that right now. Please ask your pharmacist or GP.";
-type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers";
+type Screen = "home" | "check" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers" | Extra;
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 /** Screens where the live guide may keep running. Anywhere else ends the session. */
 const GUIDE_FLOW = new Set<Screen>(["step", "clip", "ask", "talk", "tellback"]);
@@ -77,7 +78,7 @@ const fileUrl = (f: File) => (f.type.startsWith("image/") ? URL.createObjectURL(
 export default function App() {
   // `?lang=ar` opens the app in that language (demo and screenshot links); otherwise the remembered one.
   const [lang, setLang] = useState(() => cleanLanguage(new URLSearchParams(location.search).get("lang") ?? "") || load("er.lang", "en"));
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(() => (needsWelcome() ? "welcome" : "home"));
   const [prevScreen, setPrevScreen] = useState<Screen>("home");
   const [guide, setGuide] = useState<Guide | null>(null);
   const [index, setIndex] = useState(0);
@@ -163,7 +164,7 @@ export default function App() {
   // Browser Back/Forward can land on a screen whose data is gone (a checked photo, a deleted guide): never a blank page.
   useEffect(() => {
     if (screen === "check" && !checking) go(items.length ? "tray" : "home", true);
-    else if (!guide && ["summary", "step", "clip", "ask", "talk", "tellback"].includes(screen)) go("home", true);
+    else if (!guide && ["summary", "step", "clip", "ask", "talk", "tellback", "share"].includes(screen)) go("home", true);
     else if (screen === "tray" && items.length === 0) go("home", true);
     else if (screen === "reading" && !guide && !uploading) go(items.length ? "tray" : "home", true);
   }, [screen, checking, guide, items.length, uploading, go]);
@@ -178,6 +179,12 @@ export default function App() {
     save("er.scale", scale);
   }, [scale]);
   useEffect(() => applyTheme(theme), [theme]);
+  // v4 extras: remember the step reached (My guides "Continue"), the guide's type and own photo.
+  useEffect(() => extrasOnGuide(guide), [guide?.id, guide?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (guide && screen === "step") saveProgress(guide.id, index, guide.steps.length);
+    if (guide && screen === "tellback") saveProgress(guide.id, guide.steps.length - 1, guide.steps.length, true);
+  }, [guide?.id, index, screen]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => save("er.rate", rate), [rate]);
   useEffect(() => save("er.voice", voice), [voice]);
   useEffect(() => {
@@ -514,29 +521,32 @@ export default function App() {
     setPapersFailed(false);
     setPapers(null);
     if (ids.length === 0) {
-      setPapers([]);
+      setPapers(guideRows([], demo));
       return;
     }
     api
       .listGuides(ids)
-      .then((rows) => setPapers(rows))
+      .then((rows) => setPapers(guideRows(rows, demo)))
       .catch(() => setPapersFailed(true));
-  }, []);
-
+  }, [demo]);
+  useEffect(() => {
+    if (screen === "home") loadPapers();
+  }, [screen === "home"]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openPapers() {
     loadPapers();
     go("papers");
   }
 
-  async function openPaper(id: string) {
+  async function openPaper(id: string, at?: number) {
     try {
-      const g = await api.getGuide(id);
+      const sample = id.startsWith("g_sample") ? Object.values(api.SAMPLES).find((x) => x.id === id) : undefined;
+      const g = sample ? api.sampleVariant(sample, langRef.current) ?? sample : await api.getGuide(id);
       resetGuideState();
       setGuide(g);
-      setIndex(0);
+      setIndex(at !== undefined ? Math.min(at, Math.max(0, g.steps.length - 1)) : 0);
       // Not ready yet (still being made, or it failed): the progress screen opens the summary or the error when it can.
-      go(g.status === "ready" && g.steps.length ? "summary" : "reading");
+      go(g.status === "ready" && g.steps.length ? (at !== undefined ? "step" : "summary") : "reading");
     } catch (e) {
       if (e instanceof api.ApiError && e.code !== "server") {
         forgetGuide(id);
@@ -604,6 +614,7 @@ export default function App() {
       go("error");
     } else if (parts[0] === "settings") go("settings");
     else if (parts[0] === "papers") openPapers();
+    else if (["privacy", "language", "welcome"].includes(parts[0])) go(parts[0] as Screen);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -629,9 +640,7 @@ export default function App() {
   }
 
   function print() {
-    if (!guide) return;
-    if (isSample(guide)) window.print();
-    else window.open(`/api/guides/${guide.id}/sheet`, "_blank");
+    if (guide) go("share"); // Save or share: Share, Print and Save as PDF of the same one-page sheet
   }
 
   // The user moved: change the step, then tell the live guide (it reads the new step) or read it aloud.
@@ -730,6 +739,8 @@ export default function App() {
             onSample={demo ? (n) => openSample(n) : undefined}
             onPapers={openPapers}
             hasPapers={mine.length > 0}
+            recent={papers}
+            onOpenPaper={(id) => void openPaper(id)}
           />
         )}
         {screen === "check" && checking && (
@@ -850,9 +861,10 @@ export default function App() {
             guide={guide}
             lang={lang}
             onCheck={(a, correct) => void runTool("check_understanding", { answer: a, correct })}
-            onClose={() => go("ask")}
+            onClose={() => go("summary")}
             onBack={() => go("step")}
             backLabel={tf(lang, "stepN", { n: index + 1 })}
+            onPapers={openPapers}
           />
         )}
         {screen === "error" && (
@@ -891,13 +903,26 @@ export default function App() {
             rows={papers}
             failed={papersFailed}
             onBack={() => go("home")}
-            onOpen={(id) => void openPaper(id)}
+            onOpen={(id, at) => void openPaper(id, at)}
             onDelete={(id) => void deletePaper(id)}
+            onRename={(id, title) => setPapers((rows) => renameRow(rows, id, title))}
             onRetry={loadPapers}
             onNew={() => cameraRef.current?.click()}
           />
         )}
 
+        <ExtrasHost
+          screen={screen}
+          lang={lang}
+          guide={guide}
+          go={(s, r) => go(s as Screen, r)}
+          back={() => (window.history.state?.screen && window.history.length > 1 ? window.history.back() : go("home"))}
+          onLanguage={changeLanguage}
+          onShareGuide={(g) => { if (g.id !== guideRef.current?.id) { resetGuideState(); setGuide(g); } }}
+          myCount={mine.length}
+          onDeleteThis={guide && !isSample(guide) ? async () => { await deletePaper(guide.id); } : undefined}
+          onDeleteAll={async () => { for (const id of myGuideIds()) await deletePaper(id); }}
+        />
         {langBusy && (
           <p className="banner lang-busy" role="status">
             {t(lang, "changingLanguage")}
