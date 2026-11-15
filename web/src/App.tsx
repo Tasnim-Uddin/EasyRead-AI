@@ -220,6 +220,8 @@ export default function App() {
     else if (!guide && ["step", "done", "clip", "ask", "talk", "tellback", "share"].includes(screen)) go("home", true);
     else if (screen === "tray" && items.length === 0) go("home", true);
     else if (screen === "reading" && !guide && !uploading) go(items.length ? "tray" : "home", true);
+    // A guide with no steps yet is never shown as a step ("Step 1 of 0"): wait on the progress screen.
+    else if (guide && guide.steps.length === 0 && ["step", "done", "ask", "talk"].includes(screen)) go("reading", true);
   }, [screen, checking, pendingQuality, guide, items.length, uploading, go]);
 
   useEffect(() => {
@@ -660,6 +662,10 @@ export default function App() {
     setBusy(true);
     setUploading(true);
     setError(null);
+    // Drop the previous guide first: while the upload runs, the progress screen must not see the old, finished
+    // guide and open it (that showed "Step 1 of 0" once the new, empty guide arrived).
+    resetGuideState();
+    setGuide(null);
     go("reading", replace);
     try {
       const f = api.buildGuideForm(items, lang);
