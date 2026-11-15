@@ -6,6 +6,15 @@ export const LANGUAGES = [
   { code: "pl", label: "Polski" },
   { code: "bn", label: "বাংলা" },
   { code: "ur", label: "اردو" },
+  { code: "fr", label: "Français" },
+  { code: "pt", label: "Português" },
+  { code: "ro", label: "Română" },
+  { code: "tr", label: "Türkçe" },
+  { code: "lt", label: "Lietuvių" },
+  { code: "zh", label: "中文" },
+  { code: "pa", label: "ਪੰਜਾਬੀ" },
+  { code: "gu", label: "ગુજરાતી" },
+  { code: "fa", label: "فارسی" },
 ] as const;
 
 export { RTL_CODES as RTL } from "./languages";

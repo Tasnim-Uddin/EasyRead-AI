@@ -6,9 +6,14 @@ Figma file: https://www.figma.com/design/tNc9gbdjtkrXMAgsvRT30w
 
 ## What is in the file now
 
-- **Start here.** How to read the file.
-- **01 Final design: v4 Guide stage.** About 68 phone frames (390 x 844). Home; camera finding the edges; crop with draggable corners and a magnifier; loading in three plain stages; the guide intro; steps with animated close-ups; a letter step that highlights the printed words on the user's own photo; ask by voice and by typing; going back; Read mode (no avatar, no sound); You did it; My guides (search, type filter, rename, delete); first run and language picker; add a paper; camera permission; photo check; "couldn't read this part"; "guide can't connect"; "not on the paper"; stop and error states.
-- **02 Design journey: how we chose.** Versions 1 to 4 side by side, with what we kept from each and the principles. v3 (guide in a dock beside the steps) is kept there as the step before v4 (the guide is the screen).
+One page, **EasyRead — Design story**, tells the whole design process top to bottom:
+
+- **A. Early prototypes.** The first mock-ups and the 8 low-literacy principles we set ourselves.
+- **B. Theme directions.** Three directions (A, B, C) explored side by side.
+- **C. Chosen direction.** The guide-led direction we picked, why, and its flow map.
+- **D. Colour variants.** Original, Calm, Fresh and Warm, each with the built Home and Step screens.
+- **E. Final design (v4 Guide stage).** About 68 phone frames (390 x 844): home, camera and edge finding, crop with draggable corners and a magnifier, loading, guide intro, steps with animated close-ups, a letter step that highlights the printed words on the user's own photo, ask by voice and by typing, Read mode, You did it, My guides, first run and language, permissions, photo check, "couldn't read this part", "can't connect", "not on the paper", errors. Panels explain the animations (close-up loops, the avatar morph from full screen to the corner, highlights on the photo) and list the 9 Smart Animate prototype flows (main path, your own letter, first run, errors, any form, two papers disagree, Arabic and more). Ideas we dropped after testing are kept in their own small area.
+- **F. Built.** Each final design next to a screenshot of the built app, and what changed after user testing.
 
 The web app (`web/`) was built from the v4 frames. Colour, type and radius tokens are in `web/src/styles.css`.
 

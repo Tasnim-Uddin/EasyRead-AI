@@ -4,6 +4,7 @@ import App from "./App";
 import { installAccess, setAccessCode } from "./access";
 import { initialDemo } from "./mode";
 import { t } from "./i18n";
+import "./locales";
 import { RTL_CODES } from "./languages";
 import "./styles.css";
 import "./layout.css";

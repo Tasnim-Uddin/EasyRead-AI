@@ -706,7 +706,18 @@ export default function App() {
   async function openPaper(id: string, at?: number) {
     try {
       const sample = id.startsWith("g_sample") ? Object.values(api.SAMPLES).find((x) => x.id === id) : undefined;
-      const g = sample ? api.sampleVariant(sample, langRef.current) ?? sample : await api.getGuide(id);
+      let g = sample ? api.sampleVariant(sample, langRef.current) ?? sample : await api.getGuide(id);
+      // A saved guide made or last read in another language opens in the app's language (same as switching in Settings).
+      if (!sample && g.status === "ready" && g.steps.length && g.language && g.language !== langRef.current) {
+        setLangBusy(true);
+        try {
+          g = await api.setLanguage(id, langRef.current);
+        } catch {
+          /* keep it in its saved language rather than not opening it */
+        } finally {
+          setLangBusy(false);
+        }
+      }
       resetGuideState();
       setGuide(g);
       // Never a restart: the step the user left off on, or "You did it" when they finished it (nav/resume.ts).

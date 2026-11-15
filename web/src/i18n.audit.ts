@@ -2,7 +2,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 
-export const UI_LANGS = ["es", "ar", "ur", "pl", "bn"] as const;
+export const UI_LANGS = ["es", "ar", "ur", "pl", "bn", "fr", "pt", "ro", "tr", "lt", "zh", "pa", "gu", "fa"] as const;
 
 /** Source files (under src/) that add strings with extendStrings({...}). */
 export function stringModules(root: string): string[] {
@@ -20,7 +20,9 @@ export function stringModules(root: string): string[] {
 }
 
 /** Keys (or lang.key) whose text is rightly the same as English: names, codes, or a word spelt the same (es "Normal"). */
-export const SAME_OK_KEYS = new Set<string>(["title", "es.normal", "es.xSizeNormal", "es.themeDefault"]);
+// Words that are the same in that language (French "Page", Romanian "Calm", Turkish "Form" ...).
+export const SAME_OK_KEYS = new Set<string>(["title", "es.normal", "es.xSizeNormal", "es.themeDefault",
+  "fr.page", "fr.themeDefault", "fr.camPage", "fr.camOnePage", "fr.camPages", "fr.pagesLabel", "fr.xNGuides", "fr.xOneGuide", "fr.xContact", "fr.gs_guide", "fr.gs_pause", "pt.item", "pt.normal", "pt.themeDefault", "pt.xSizeNormal", "ro.normal", "ro.themeDefault", "ro.themeCalm", "ro.xContact", "ro.xSizeNormal", "tr.roleForm", "tr.normal", "tr.xForm1", "tr.xSizeNormal"]);
 // Values that need no translation: names, numbers, symbols and placeholders only.
 const SAME_OK_VALUES = /^(EasyRead AI|PDF|OK|NHS|[\d\s.,:;/+\-–—%{}()…·•×#*|<>=!?]*|\{\w+\}([\s/·:-]*\{\w+\})*)$/;
 
@@ -37,7 +39,7 @@ export function audit(dicts: Readonly<Record<string, Record<string, string>>>, a
       if (v === undefined) gaps.push({ lang, key, kind: "missing" });
       else if (v === enVal && !allowSame.has(key) && !allowSame.has(`${lang}.${key}`) && !SAME_OK_VALUES.test(enVal.trim()) && /[A-Za-z]{3}/.test(enVal)) gaps.push({ lang, key, kind: "english" });
       // A Latin-digit number inside right-to-left text must sit in an isolate (U+2068 ... U+2069), or it can jump sides.
-      else if ((lang === "ar" || lang === "ur") && /[؀-ۿ]/.test(v) && hasBareNumber(v)) gaps.push({ lang, key, kind: "rtl-number" });
+      else if ((lang === "ar" || lang === "ur" || lang === "fa") && /[؀-ۿ]/.test(v) && hasBareNumber(v)) gaps.push({ lang, key, kind: "rtl-number" });
     }
   }
   return gaps;
