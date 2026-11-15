@@ -70,7 +70,7 @@ Every step has a picture. The pictures carry the meaning, so they work in any la
 
 | fal model | Where it is used | Status |
 |---|---|---|
-| `fal-ai/flux/dev` | Live step pictures for every uploaded paper. One shared style prompt (the app palette, one character), no text inside the image | Live, needs `FAL_KEY` |
+| `fal-ai/flux/dev` | Live step pictures for every uploaded paper. One shared style prompt (the app palette, one character), no text inside the image. Also the cartoon portrait the Anam guide avatar is made from (`design/guide-cartoon/`) | Live, needs `FAL_KEY` |
 | `fal-ai/flux/schnell` | Pictures for the sample guides, made once and stored in `demo/fixtures/img/`. Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
 | `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | 3 technique clips made from the step pictures: shake, press and breathe in, hold your breath (`library/clips/`) | Made offline. Not checked by a pharmacist, so shown only in demo mode (`SHOW_UNCHECKED_CLIPS=1`) with a "not yet checked" badge |
 | `fal-ai/flux-kontext/dev` | Labels on the user's own device photo (cap, mouthpiece, canister) | Built (`label_device_photo` in `agent/pipeline.py`). Off by default (`DEVICE_PHOTO_LABELS=1` turns it on), because live tests put the labels beside the parts, not on them |
@@ -106,7 +106,7 @@ The avatar talks you through the guide and drives the app with client tools. Cod
 
 **Persona.**
 
-- Avatar "Liv" (`cara-4`). Anam's built-in LLM (GPT OSS 120B). We keep Anam's own LLM because the tool calls are the point.
+- Avatar: our own cartoon guide, a custom `cara-4` avatar made from one `fal-ai/flux/dev` portrait in the same flat style as the step pictures (`design/guide-cartoon/chosen.png`), so the guide and the pictures look like one product. `ANAM_AVATAR_ID` overrides it (the realistic stock avatar "Liv" is the fallback, see `.env.example`). Anam's built-in LLM (GPT OSS 120B). We keep Anam's own LLM because the tool calls are the point.
 - Voice "Amanda - Warm Guide" by default. Anam voices are single-language, so `ANAM_VOICE_ID_<LANG>` (for example `ANAM_VOICE_ID_ES`) sets a voice per language. `tools/anam_voices.py` lists candidates.
 - Speech recognition is set to the user's language when Anam supports it. Otherwise the user can type.
 - The server builds the persona and asks Anam for a session token. The browser gets only the token, never the key.

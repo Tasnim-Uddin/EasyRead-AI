@@ -19,9 +19,9 @@ PALETTE = ("flat colour palette of only warm cream background (#FFF6E9), dark br
            "bright orange accent (#FF9B3D), pale sage green (#C9E2D2) and soft butter yellow (#FFE49A) shapes")
 STYLE = (f"simple flat friendly vector illustration, thick dark brown outlines, {PALETTE}, "
          "plain solid cream background, one clear action, no text, no letters, no numbers")
-# Keeps the same person and inhaler across all pictures of a guide.
-CHARACTER = ("If a person is shown, they are always the same friendly adult with short dark hair and a sage green sweater. "
-             "If an inhaler is shown, it is always a blue L-shaped metered-dose inhaler with a grey cap")
+# Keeps the same person across all pictures of a guide. Kept generic: naming an object here (we used to name the
+# inhaler) makes the model draw it in every picture, even "hold your breath" or a council letter.
+CHARACTER = "If a person is shown, they are always the same friendly adult with short dark hair and a sage green sweater"
 
 _BASE = "https://fal.run/"
 _ENV_FILES = [Path(__file__).resolve().parent.parent / ".env"]
