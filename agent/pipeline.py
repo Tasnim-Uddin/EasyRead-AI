@@ -1,6 +1,6 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
-from . import langs, llm, locate, postprocess, technique
+from . import appstrings, langs, llm, locate, postprocess, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, ensure_blank_date_step, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
@@ -243,13 +243,22 @@ async def _translate(steps: list[dict], language: str):
         for s in steps:
             s["text"] = s["text_en"]
         return
-    if not llm.available():
+    # Sentences the app adds itself (conflict, blank date...) have fixed text in the 6 UI languages: never left in
+    # English, even without a model. Everything else (the paper's own words) goes to the model.
+    rest = []
+    for s in steps:
+        fixed = appstrings.fixed(s["text_en"], language)
+        if fixed:
+            s["text"] = fixed
+        else:
+            rest.append(s)
+    if not rest or not llm.available():
         return  # keep current text; no key to translate with
     out = await llm.complete_json(
         f"Translate each Easy Read sentence into {langs.name_of(language)}. Keep it short and simple, "
         "keep numbers as digits, never change doses or timings. Return a JSON array of strings, same order.",
-        json.dumps([s["text_en"] for s in steps], ensure_ascii=False))
-    for s, t in zip(steps, out):
+        json.dumps([s["text_en"] for s in rest], ensure_ascii=False))
+    for s, t in zip(rest, out):
         s["text"] = t
 
 
@@ -383,8 +392,13 @@ async def write_typed(facts: dict, language: str, dt: str, content: dict) -> lis
     return content_to_steps(dt, content)
 
 
-NOT_READABLE = {"not_a_document": "This is not a photo of a paper. Try another.",
-                "unreadable": "We could not read this photo. Take a clearer photo in good light."}
+NOT_READABLE = {"not_a_document": appstrings.NOT_A_DOCUMENT["en"], "unreadable": appstrings.UNREADABLE["en"]}
+_NOT_READABLE_BY_LANG = {"not_a_document": appstrings.NOT_A_DOCUMENT, "unreadable": appstrings.UNREADABLE}
+
+
+def not_readable_text(problem: str, language: str) -> str:
+    """The stop message in the guide language (fixed text for the 6 UI languages, English otherwise)."""
+    return appstrings.pick(_NOT_READABLE_BY_LANG[problem], language)
 
 
 def not_readable(ex: dict) -> str | None:
@@ -459,7 +473,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             facts, dt, domain = ex["facts"], ex["doc_type"], ex["domain"]
             problem = not_readable(ex)
             if problem:
-                guide.update(facts=facts, error_code=problem, error=NOT_READABLE[problem])
+                guide.update(facts=facts, error_code=problem, error=not_readable_text(problem, language))
                 guide["source"]["image_urls"] = image_urls
                 status("failed")
                 return

@@ -1,12 +1,12 @@
 """Document types: normalise the extraction output, merge label vs leaflet, safety lines, steps for non-how_to guides."""
 import re
-from . import postprocess
+from . import appstrings, postprocess
 
 DOC_TYPES = ["how_to", "letter", "bill", "form", "other"]
 DOMAINS = ["medicine", "money", "legal", "school", "council", "other"]
 
 CONFLICT_TEXT = postprocess.CONFLICT_TEXT
-PAPERS_DIFFER_TEXT = "Your papers say different things. Check which one is right before you act."
+PAPERS_DIFFER_TEXT = appstrings.PAPERS_DIFFER["en"]
 SENDER_KINDS = ["pharmacy", "gp", "hospital", "council", "school", "company", "government", "other"]
 
 STYLE_RULES = """STYLE (Easy Read):
@@ -347,7 +347,7 @@ def content_to_steps(doc_type: str, content: dict) -> list[dict]:
         amount = str(a.get("amount") or "")
         if not re.search(r"\d", amount) or postprocess.PLACEHOLDER.search(amount):
             # Blank or placeholder on the paper: say so, never read the template code out as the amount.
-            text = f"{a['what']}: your paper does not show the amount." if a.get("what") else "Your paper does not show the amount."
+            text = f"{a['what']}: your paper does not show the amount." if a.get("what") else appstrings.NO_AMOUNT["en"]
             step = _step("what", text, "a hand holding a few coins")
             step["blank"] = True
             out.append(step)
@@ -392,8 +392,8 @@ def ensure_blank_date_step(steps: list[dict], notes: list[str], sender: dict | N
     name = ((sender or {}).get("name") or "").strip()
     if len(name) > 48:
         name = re.split(r"\s*[,(]\s*", name)[0].strip()
-    who = name if name and len(name) <= 48 else "whoever sent it"
-    return steps + [_step("when", f"Your paper does not show the date. Check with {who}.",
+    who = name if name and len(name) <= 48 else None
+    return steps + [_step("when", appstrings.no_date_en(who),
                           "a calendar page with an empty space where the date should be")]
 
 

@@ -13,6 +13,14 @@ NOT_ON_PAPER = {
     "pl": "Tego nie ma na Twoim papierze. Zapytaj: {who}.",
     "bn": "এটা আপনার কাগজে নেই। {who}-কে জিজ্ঞেস করুন।",
 }
+NOT_ON_PAPER_ANY = {
+    "en": "That's not on your paper. Ask whoever sent it.",
+    "es": "Eso no está en su papel. Pregunte a quien se lo envió.",
+    "ar": "هذا غير موجود في ورقتك. اسأل من أرسلها.",
+    "ur": "یہ آپ کے کاغذ پر نہیں ہے۔ جس نے یہ بھیجا اس سے پوچھیں۔",
+    "pl": "Tego nie ma na Twoim papierze. Zapytaj nadawcę.",
+    "bn": "এটা আপনার কাগজে নেই। যে পাঠিয়েছে তাকে জিজ্ঞেস করুন।",
+}
 # Who to ask, by sender kind, when the paper names a kind of place rather than one we should repeat by name.
 WHO = {
     "en": {"pharmacy": "the pharmacy", "gp": "your GP surgery", "hospital": "the hospital", "school": "the school",
@@ -37,7 +45,9 @@ def ask_who(guide: dict, lang: str) -> str:
     table = WHO.get(lang, WHO["en"])
     kind, name = s.get("kind"), (s.get("name") or "").strip()
     if guide.get("domain") == "medicine" and guide.get("doc_type") == "how_to" and kind in (None, "company", "other"):
-        return table["pharmacy"]  # a medicine label or leaflet names its maker; the person to ask is the pharmacist
+        # A leaflet names its maker, not who gave the medicine. The app never adds a person of its own (no
+        # "ask your pharmacist"): only a pharmacy printed on the label (kind "pharmacy") is named.
+        return table["unknown"]
     if kind in table:
         return table[kind]
     if name:
@@ -62,7 +72,11 @@ def short_name(name: str, limit: int = 48) -> str:
 
 
 def not_on_paper(guide: dict, lang: str) -> str:
-    return NOT_ON_PAPER.get(lang, NOT_ON_PAPER["en"]).format(who=ask_who(guide, lang))
+    who = ask_who(guide, lang)
+    if who == WHO.get(lang, WHO["en"])["unknown"]:
+        # No sender: a whole sentence per language reads better than "Ask {whoever sent it}" in ur, bn and pl.
+        return NOT_ON_PAPER_ANY.get(lang, NOT_ON_PAPER_ANY["en"])
+    return NOT_ON_PAPER.get(lang, NOT_ON_PAPER["en"]).format(who=who)
 
 
 async def lnot_on_paper(guide: dict, lang: str) -> str:

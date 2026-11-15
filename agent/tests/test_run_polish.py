@@ -83,7 +83,7 @@ def test_tellback_follows_guide_language(client):
     ask = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf"}).json()
     assert "inhalaciones" in ask["say"]
     bad = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "answer": "no se"}).json()
-    assert bad["correct"] is False and "farmac" in bad["say"] and "TWO puffs" in bad["say"]
+    assert bad["correct"] is False and "quien se lo dio" in bad["say"] and "farmac" not in bad["say"] and "TWO puffs" in bad["say"]
     ar = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "language": "ar"}).json()
     assert "بخة" in ar["say"]
     unknown = client.post("/api/tools/check_understanding", json={"guide_id": "g_conf", "language": "Somali"}).json()
