@@ -313,6 +313,9 @@ def device_from_facts(facts: dict) -> str | None:
     return dev if dev else None
 
 
+DOSE_LINE = re.compile(r"\b(\d+|one|two|three|four)\s+(puffs?|doses?|tablets?|capsules?|drops?|sprays?|ml|mg|micrograms?)\b.*\b(a day|daily|each day|every|when you need|as needed|times?)\b|\b(twice|once|\d+ times) (a|each|every) day\b", re.I)
+
+
 def use_checked_technique(steps: list[dict], device_type: str | None) -> list[dict]:
     """For a known device, the how steps ARE the checked technique outline (one step per line, in order).
     Model how steps that cover an outline line are replaced; any other model how step is kept after the outline."""
@@ -328,7 +331,10 @@ def use_checked_technique(steps: list[dict], device_type: str | None) -> list[di
     extra_how = [s for s in rest if s["kind"] == "how" and not any(k in s["text_en"].lower() for k in keys)]
     others = [s for s in rest if s["kind"] != "how"]
     checked = [{"text_en": it["text"], "kind": "how", "picture_prompt": it["picture_prompt"], "technique": True} for it in items]
-    return keep_before + checked + extra_how + others
+    # What to take and how often (the paper's own dose line) comes before how to use the device.
+    dose_how = [s for s in extra_how if DOSE_LINE.search(s["text_en"])]
+    extra_how = [s for s in extra_how if s not in dose_how]
+    return keep_before + dose_how + checked + extra_how + others
 
 
 RESTATES_DOSE = re.compile(r"\b(label|leaflet)\b|not agree|disagree|different things|how many|how much|usual dose is|may take up to", re.I)

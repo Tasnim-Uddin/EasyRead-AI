@@ -284,3 +284,19 @@ def test_pipeline_states_dates_but_offers_no_past_reminder(client, monkeypatch):
     assert all(d["past"] for d in seen["facts"]["dates"])     # the writer was told they are past
     assert g["title"] == "Your inhalers: Flutiform and Ventolin"
     assert sum("notes" in s["text_en"] for s in g["steps"]) == 1
+
+
+def test_dose_line_goes_before_checked_technique():
+    from agent import postprocess
+    steps = [
+        {"text_en": "You have 2 inhalers.", "kind": "what"},
+        {"text_en": "Shake the inhaler.", "kind": "how"},
+        {"text_en": "Take 2 puffs of Flutiform twice a day.", "kind": "how"},
+        {"text_en": "Next issue due: Tuesday 16 August 2022.", "kind": "when"},
+    ]
+    out = postprocess.use_checked_technique(steps, "inhaler_mdi")
+    texts = [s["text_en"] for s in out]
+    dose = texts.index("Take 2 puffs of Flutiform twice a day.")
+    first_checked = next(i for i, s in enumerate(out) if s.get("technique"))
+    assert dose < first_checked
+    assert texts[0] == "You have 2 inhalers."
