@@ -73,81 +73,62 @@ interface TrayProps {
 }
 export function Tray({ lang, items, busy, tooMany, onLanguage, onSettings, onPapers, onAdd, onRole, onRemove, onMove, onMake }: TrayProps) {
   const n = items.length;
+  // The paper kind only matters when there is more than one paper (it is "auto" otherwise).
+  const showRoles = n > 1;
   return (
-    <div className="screen cap-tray">
+    <div className="screen cap-tray v4">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
       <h1 className="ttl">{t(lang, "yourPapers")}</h1>
-      <p className="sub">
-        {n} {t(lang, n === 1 ? "item" : "items")} {t(lang, "itemsReady")}.
-      </p>
-      <div className="crop-pages tray-strip" aria-hidden="true">
-        <div className="strip">
-          {items.map((it, i) => (
-            <span className={"pg" + (i === n - 1 ? " cur" : "")} key={it.id}>
-              {it.url ? <img src={it.url} alt="" /> : <CIcon name="file" />}
-              <b>{i + 1}</b>
-            </span>
-          ))}
-          <button className="pg add" tabIndex={-1} onClick={onAdd} disabled={n >= MAX_FILES}>
-            <CIcon name="plus" />
-          </button>
-          <span className="count">{n === 1 ? t(lang, "camOnePage") : tf(lang, "camPages", { n })}</span>
-        </div>
-      </div>
+      <p className="sub">{n === 1 ? t(lang, "camOnePage") : tf(lang, "camPages", { n })}</p>
       <ul className="tray">
         {items.map((it, i) => (
           <li className="item" key={it.id}>
-            <div className="th">{it.url ? <img src={it.url} alt="" /> : <Icon name="doc" />}</div>
+            <div className="th">{it.url ? <img src={it.url} alt="" /> : <CIcon name="file" />}</div>
             <div className="meta">
               <b>
                 {t(lang, "page")} {i + 1}
               </b>
-              <label className="tag">
-                <span className="sr">{t(lang, "paperKind")}</span>
-                {roleName(lang, it.role)}
-                <i />
-                <select value={it.role} onChange={(e) => onRole(it.id, e.target.value as Role)}>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {roleName(lang, r)}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {showRoles && (
+                <label className="tag">
+                  <span className="sr">{t(lang, "paperKind")}</span>
+                  {roleName(lang, it.role)}
+                  <i />
+                  <select value={it.role} onChange={(e) => onRole(it.id, e.target.value as Role)}>
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {roleName(lang, r)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-            <div className="ctrls">
-              <button onClick={() => onMove(it.id, -1)} disabled={i === 0} aria-label={t(lang, "moveUp")}>
-                <Icon name="up" />
-              </button>
-              <button onClick={() => onMove(it.id, 1)} disabled={i === n - 1} aria-label={t(lang, "moveDown")}>
-                <Icon name="down" />
-              </button>
-            </div>
-            <button className="round" onClick={() => onRemove(it.id)} aria-label={`${t(lang, "remove")} ${it.file.name}`}>
+            {n > 1 && (
+              <div className="ctrls">
+                <button onClick={() => onMove(it.id, -1)} disabled={i === 0} aria-label={t(lang, "moveUp")}>
+                  <Icon name="up" />
+                </button>
+                <button onClick={() => onMove(it.id, 1)} disabled={i === n - 1} aria-label={t(lang, "moveDown")}>
+                  <Icon name="down" />
+                </button>
+              </div>
+            )}
+            <button className="rm" onClick={() => onRemove(it.id)} aria-label={`${t(lang, "remove")} ${t(lang, "page")} ${i + 1}`}>
               <Icon name="trash" />
             </button>
           </li>
         ))}
-        <li>
-          <button className="add" onClick={onAdd} disabled={n >= MAX_FILES}>
-            <Icon name="plus" />
-            {t(lang, "addAnother")}
-          </button>
-        </li>
       </ul>
-      {tooMany ? (
+      <button className="tray-add" onClick={onAdd} disabled={n >= MAX_FILES}>
+        <CIcon name="plus" />
+        {t(lang, "addAnother")}
+      </button>
+      {tooMany && (
         <p className="banner" role="alert">
           {t(lang, "maxFiles")}
         </p>
-      ) : (
-        n > 1 && (
-          <p className="hint">
-            <Icon name="up" />
-            {t(lang, "reorderHint")}
-          </p>
-        )
       )}
-      <div className="foot">
+      <div className="foot sticky">
         <button className="btn" onClick={onMake} disabled={n === 0 || busy}>
           {t(lang, "makeGuide")}
           <Icon name="arrow" />
