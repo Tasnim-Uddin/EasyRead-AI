@@ -296,9 +296,12 @@ describe("extras hooks", () => {
   });
   it("finds the date a step is about", () => {
     const dates = [{ what: "Pay £212.50", what_en: "Pay £212.50", date: "2026-11-17", quote: "by 17 November 2026", amount: "£212.50" }];
-    expect(dateIndexFor(step({ highlights: [{ page: 0, text: "by 17 November 2026", quad }] }), { dates })).toBe(0);
-    expect(dateIndexFor(step({ callout: { value: "£212.50", sub: "by 17 Nov" } }), { dates })).toBe(0);
-    expect(dateIndexFor(step({ text: "Keep it safe." }), { dates })).toBe(-1);
+    const now = new Date(2026, 10, 15);
+    expect(dateIndexFor(step({ highlights: [{ page: 0, text: "by 17 November 2026", quad }] }), { dates }, now)).toBe(0);
+    expect(dateIndexFor(step({ callout: { value: "£212.50", sub: "by 17 Nov" } }), { dates }, now)).toBe(0);
+    expect(dateIndexFor(step({ text: "Keep it safe." }), { dates }, now)).toBe(-1);
+    // the same step after the date has passed: no Remind me
+    expect(dateIndexFor(step({ callout: { value: "£212.50", sub: "by 17 Nov" } }), { dates }, new Date(2026, 10, 18))).toBe(-1);
     expect(dateIndexFor(step(), {})).toBe(-1);
   });
 });

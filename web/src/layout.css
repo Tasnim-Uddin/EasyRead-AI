@@ -67,7 +67,12 @@
 .cap-tray.v4 .ctrls button, .cap-tray.v4 .rm { width: 44px; height: 44px; }
 .cap-tray.v4 .ctrls svg, .cap-tray.v4 .rm svg { width: 20px; height: 20px; }
 .x-card-meta { flex: 1; }
-@media (max-width: 440px) { .gs-mictoggle { width: 44px; } .gs-top { gap: 0.375rem; } }
+@media (max-width: 440px) {
+  .gs-mictoggle { width: 44px; padding: 0; }
+  /* icon only: a translated label ("Apagado", "Wyłączony") never fits 44px; the state is in the icon, colour and aria-label */
+  .gs-mictoggle span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .gs-top { gap: 0.375rem; }
+}
 /* Guide stage button rows wrap into fewer columns as the text grows */
 .gs-two { grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr)); }
 .gs-three { grid-template-columns: repeat(auto-fit, minmax(min(100%, 5.5rem), 1fr)); }

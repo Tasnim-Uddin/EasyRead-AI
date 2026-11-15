@@ -48,11 +48,13 @@ export function parseDate(text: string, now = new Date()): string | null {
 
 /** guide.dates when the server found them; otherwise derived from content.by_when (older guides and the samples). */
 export function datesFor(g: Guide, now = new Date()): DatedAction[] {
-  if (g.dates && g.dates.length) return g.dates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date));
+  // Only today or later: a reminder for a date that has passed is no use (an old bill keeps its past dates).
+  const today = iso(now.getFullYear(), now.getMonth() + 1, now.getDate());
+  if (g.dates && g.dates.length) return g.dates.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.date) && d.date >= today);
   const out: DatedAction[] = [];
   for (const b of g.content?.by_when ?? []) {
     const date = parseDate(b.date, now);
-    if (!date) continue;
+    if (!date || date < today) continue;
     const what = b.what ? b.what.charAt(0).toUpperCase() + b.what.slice(1) : "";
     out.push({ what, what_en: what, date, time: null, quote: b.date, amount: null });
   }

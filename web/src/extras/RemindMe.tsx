@@ -22,7 +22,9 @@ const todayIso = () => {
 /** Remind me (25a) and Reminder ready (25b), as a bottom sheet. */
 export function RemindMe({ guide, lang, dateIndex = 0, onClose }: { guide: Guide; lang: string; dateIndex?: number; onClose: () => void }) {
   const dates = useMemo(() => datesFor(guide), [guide]);
-  const d = dates[dateIndex] ?? dates[0];
+  // dateIndex points into guide.dates; datesFor drops passed dates, so find the same entry by identity.
+  const raw = guide.dates?.[dateIndex];
+  const d = (raw && dates.find((x) => x === raw)) ?? dates[dateIndex] ?? dates[0];
   const today = todayIso();
   const choices = useMemo(() => {
     if (!d) return [];
