@@ -123,7 +123,16 @@ export interface AskResult {
 export interface ScanResult {
   quad: [number, number][];      // normalised corners; full photo when found=false
   found: boolean;
-  quality: { ok: boolean; issues: ("small" | "blurry" | "dark" | "low_contrast" | "glare" | "cut_off")[]; block: boolean };
+  quality: {
+    ok: boolean;
+    issues: ("small" | "blurry" | "dark" | "low_contrast" | "glare" | "cut_off")[];
+    block: boolean;
+    /** Where the problem is, [x, y, w, h] normalised (glare), when known. */
+    region?: [number, number, number, number];
+    metrics?: { sharpness: number; brightness: number; contrast: number };
+  };
+  /** Photo size in px after EXIF rotation. */
+  size?: [number, number];
 }
 
 export type ServerEvent =
