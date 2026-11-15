@@ -5,10 +5,12 @@ from .pipeline import load_library
 
 EMERGENCY = [  # multilingual substrings, lowercase
     "chest pain", "can't breathe", "cant breathe", "cannot breathe", "struggling to breathe", "hard to breathe",
-    "overdose", "took too many", "allergic", "swelling", "face is swelling", "collapsed", "unconscious",
-    "suicid", "dolor de pecho", "no puedo respirar", "sobredosis", "alergia", "alérgica", "alérgico",
+    "overdose", "took too many", "allergic reaction", "anaphyla", "throat is closing", "swelling", "face is swelling", "collapsed", "unconscious",
+    "suicid", "dolor de pecho", "no puedo respirar", "sobredosis", "reacción alérgica", "no puedo respirar bien",
     "বুকে ব্যথা", "শ্বাস", "ألم في الصدر", "لا أستطيع التنفس", "جرعة زائدة", "حساسية",
     "douleur à la poitrine", "overdosis", "सीने में दर्द", "सांस",
+    "ból w klatce", "nie mogę oddychać", "duszę się", "przedawkow", "reakcja alergiczna", "obrzęk",
+    "سینے میں درد", "سانس نہیں", "سانس لینے میں", "زیادہ خوراک",
 ]
 URGENT = ["urgent", "getting worse", "urgente", "empeora"]
 MSG = {
@@ -27,7 +29,7 @@ def msg(kind: str, lang: str) -> str:
 
 
 def emergency_level(q: str) -> str:
-    ql = q.lower()
+    ql = q.lower().replace("\u2019", "'").replace("\u2018", "'")
     if any(k in ql for k in EMERGENCY):
         return "999"
     if any(k in ql for k in URGENT):
