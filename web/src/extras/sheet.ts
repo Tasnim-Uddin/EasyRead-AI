@@ -20,7 +20,7 @@ export function guideTitle(g: Guide, english = false): string {
   const k = kindOf(g);
   if (english && g.summary_line_en && k !== "medicine") return g.summary_line_en;
   if (k === "letter" && c?.what_this_is) return c.what_this_is;
-  return f?.medicine ?? f?.title ?? c?.what_this_is ?? g.steps[0]?.text ?? "";
+  return (english ? g.title_en : g.title) || (f?.medicine ?? f?.title ?? c?.what_this_is ?? g.steps[0]?.text ?? "");
 }
 
 const monthNames = (lang: string, m: number): string[] => {

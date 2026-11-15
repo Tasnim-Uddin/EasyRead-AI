@@ -131,7 +131,8 @@ def normalise(raw: dict) -> dict:
     if dt == "how_to" and domain == "other" and (raw.get("medicine") or raw.get("device_type")):
         domain = "medicine"
     facts = {"medicine": _s(raw.get("medicine")), "dose": _s(raw.get("dose")), "frequency": _s(raw.get("frequency")),
-             "route": _s(raw.get("route")), "device_type": raw.get("device_type") or "unknown",
+             "route": _s(raw.get("route")),
+             "duration": _s(raw.get("duration")), "quantity": _s(raw.get("quantity")), "device_type": raw.get("device_type") or "unknown",
              "device_confidence": raw.get("device_confidence") if isinstance(raw.get("device_confidence"), (int, float)) else 0,
              "title": _s(raw.get("title")), "source_steps": _list(raw.get("source_steps")),
              "warnings": _list(raw.get("warnings")), "get_help": _list(raw.get("get_help")),
@@ -160,7 +161,7 @@ def normalise(raw: dict) -> dict:
     return {"doc_type": dt, "domain": domain, "source_kind": raw.get("kind") or "other",
             "documents": docs, "facts": facts, "content": content, "is_document": raw.get("is_document") is not False,
             "quotes": _quotes(raw.get("quotes")), "sender": _sender(raw.get("sender")), "dates": _dates(raw.get("dates")),
-            "unreadable_parts": _unreadable_parts(raw.get("unreadable_parts"))}
+            "unreadable_parts": _unreadable_parts(raw.get("unreadable_parts")), "short_title": _s(raw.get("short_title"))}
 
 
 def nothing_read(facts: dict, content: dict | None) -> bool:

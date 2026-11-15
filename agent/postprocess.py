@@ -423,4 +423,9 @@ def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None 
         steps = compress_warnings(steps, has_conflict or any(is_conflict(s["text_en"]) for s in steps))
     # Each step gets `visual`: an animated close-up from the web library, or None (agent/visuals.py).
     guide = {"doc_type": doc_type, "domain": domain, "facts": {"device_type": device_type}}
-    return visuals.attach_visuals(order(steps, doc_type), guide)
+    # One idea told over several warning steps ("Read the notes on the back." / "Read them first.") is one step.
+    from .paperguard import merge_related
+    steps = order(steps, doc_type)
+    if doc_type != "form":
+        steps = merge_related(steps)
+    return visuals.attach_visuals(steps, guide)

@@ -1,6 +1,6 @@
 """Guide pipeline: extract -> identify device -> Easy Read rewrite -> pictures. Falls back to the fixture without keys."""
 import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
-from . import appstrings, langs, llm, locate, postprocess, technique
+from . import appstrings, langs, llm, locate, paperguard, postprocess, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
 from .doctypes import STYLE_RULES, content_to_steps, ensure_blank_date_step, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
@@ -44,8 +44,12 @@ an appointment, a test, a discharge letter.
 Return JSON only. Always include: "doc_type", "domain", "kind" (prescription|leaflet|letter|other),
 "documents": [{{"index": N, "role": str}}] for every file, "unreadable": [str].
 Then, by doc_type:
-- how_to (medicine): "medicine", "dose", "frequency", "route", "device_type", "device_confidence" (0-1), "warnings": [str], "get_help": [str]
-  (copy warnings and get_help faithfully). device_type is one of {DEVICE_TYPES}; if a device_photo is included, use it
+- how_to (medicine): "medicine", "dose", "frequency", "route", "duration", "quantity", "device_type", "device_confidence" (0-1),
+  "warnings": [str], "get_help": [str] (copy warnings and get_help faithfully).
+  "dose" is the amount to take exactly as printed ("125mg", "two puffs"); never convert it (mg to ml, ml to spoons) or work
+  out a new number. "duration" is how long to take it as printed, e.g. "Number of days' treatment: 5" -> "5 days", else null.
+  "quantity" is how much was supplied as printed, e.g. "Supply 100ml" -> "100ml", "120 dose" -> "120 doses", else null.
+  With several medicines, name each one in dose, frequency, duration and quantity ("Flutiform: 120 doses. Ventolin: 200 doses."). device_type is one of {DEVICE_TYPES}; if a device_photo is included, use it
   (a metered-dose inhaler is shaken; a dry-powder inhaler is not). Pick a *_spacer type only if the paper says to always
   use a spacer or the device photo shows one; "use a spacer if you have one" is not enough. If both a label and a leaflet are present, also give
   "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
@@ -61,13 +65,31 @@ Also always include (keep them short; copy printed words character for character
 "quotes": [{{"t": str, "p": N}}] at most 12: the printed words a reader must find on the paper: each amount, date, time,
   reference or account number, phone number, web address, form box label (the label only, for example "Name(s) of account holder(s)"),
   and the dose line. 1 to 5 words each. p = document number.
+"short_title": a plain title of at most 6 words for the guide list, e.g. "Amoxicillin liquid", "Your inhalers:
+  Flutiform and Ventolin", "Council tax bill", "School trip form". Brand or plain names, no strengths or company names.
 "sender": {{"name": str, "kind": "pharmacy|gp|hospital|council|school|company|government|other", "contact": str|null}} or null.
-"dates": [{{"what": short English action, "date": "YYYY-MM-DD", "time": "HH:MM"|null, "quote": the printed date words, "amount": str|null}}]
-  for each thing to do by or on a date (pay by, appointment, return the form by). Not the date the letter was written.
-  If the year is not printed, use the next time that date comes after today.
+"dates": [{{"what": short English words for what the date is, "date": "YYYY-MM-DD", "time": "HH:MM"|null, "quote": the printed date words, "amount": str|null}}]
+  for EVERY date printed that the reader needs: pay by, appointment, return the form by, re-order or next issue due,
+  last issued, start or stop, review, use by. Past dates count too (copy them; never change the year).
+  Not the date the paper was written or signed, and never a date of birth. With several medicines, say which one in
+  "what" ("Flutiform next issue due"). If the year is not printed, use the next time that date comes after today.
 "unreadable_parts": [{{"p": N, "near": printed words next to it, "note": str}}] for parts you cannot read ([] if none).
+  Black boxes or blacked-out parts are hidden on purpose (privacy): never guess what they hide, and do not list them
+  in "unreadable" or "unreadable_parts".
 "differ": [{{"field": "amount|date|dose|time", "a": str, "a_doc": N, "b": str, "b_doc": N}}] only when two different files
   say different things about the same amount, date or dose ([] if none)."""
+
+
+REDACTED = re.compile(r"black(?:ed)?[- ]?(?:box|out)|redact|hidden (?:on purpose|for privacy)|covered (?:up|over)", re.I)
+
+
+def writer_facts(facts: dict, dates: list[dict] | None = None) -> dict:
+    """What the Easy Read writer sees: the facts, the dates printed on the paper (each marked past or not), and the
+    unreadable notes without blacked-out parts (hidden on purpose: the guide never mentions or guesses them)."""
+    out = {**facts, "unreadable": [u for u in facts.get("unreadable") or [] if not REDACTED.search(u)]}
+    if dates:
+        out["dates"] = paperguard.for_writer(dates)
+    return out
 
 
 def with_technique(facts: dict) -> dict:
@@ -217,23 +239,32 @@ def summary_line_en(guide: dict) -> str:
 
 
 async def translate_summary(guide: dict, language: str):
-    """The dose / when line on the summary card, translated like the steps. The English original is kept in summary_line_en."""
+    """The dose / when line on the summary card and the short guide title, translated like the steps (one call).
+    The English originals are kept in summary_line_en and title_en."""
     en = guide.get("summary_line_en") or summary_line_en(guide)
-    if not en:
+    title_en = guide.get("title_en")
+    if en:
+        guide["summary_line_en"] = en
+    if language == "en" or not llm.available():
+        if en:
+            guide["summary_line"] = en if language == "en" else guide.get("summary_line") or en
+        if title_en:
+            guide["title"] = title_en if language == "en" else guide.get("title") or title_en
         return
-    guide["summary_line_en"] = en
-    if language == "en":
-        guide["summary_line"] = en
-        return
-    if not llm.available():
-        guide.setdefault("summary_line", en)
+    todo = [x for x in (en, title_en) if x]
+    if not todo:
         return
     try:
         out = await llm.complete_json(
-            f"Translate this medicine dose line into {langs.name_of(language)}. Keep it short and simple, keep numbers as digits, "
-            "never change doses or timings. Return a JSON array with one string.", json.dumps([en], ensure_ascii=False))
-        if isinstance(out, list) and len(out) == 1 and isinstance(out[0], str) and out[0].strip():
-            guide["summary_line"] = out[0]
+            f"Translate each short line (a medicine dose line, a guide title) into {langs.name_of(language)}. Keep it short "
+            "and simple, keep numbers as digits, keep medicine and brand names as printed, never change doses or timings. "
+            f"Return a JSON array with {len(todo)} string(s), same order.", json.dumps(todo, ensure_ascii=False))
+        if isinstance(out, list) and len(out) == len(todo) and all(isinstance(x, str) and x.strip() for x in out):
+            got = dict(zip(todo, out))
+            if en:
+                guide["summary_line"] = got[en]
+            if title_en:
+                guide["title"] = got[title_en]
     except Exception:
         log.warning("summary line translation failed")
 
@@ -443,7 +474,8 @@ async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
         locate.ground_urgency(guide["steps"], locate.page_words(pages, pdfs))
         stats = locate.attach(guide, form_label_quotes(ex), pages)
         ocr_ok = any(p is not None for p in pages) or any(pdfs)
-        guide["dates"] = locate.check_dates(ex.get("dates") or [], pages, pdfs, ocr_ok)
+        # Remind me only for days still to come; a past date (last issued, an old due date) stays a fact in the steps.
+        guide["dates"] = paperguard.future_only(locate.check_dates(ex.get("dates") or [], pages, pdfs, ocr_ok))
         guide["unreadable_regions"] = locate.unreadable_regions(pages, ex.get("unreadable_parts") or [])
         log.info("located %d/%d quotes; %d/%d dates kept; ocr wait %d ms", stats["located"], stats["quotes"],
                  len(guide["dates"]), len(ex.get("dates") or []), wait_ms)
@@ -488,14 +520,23 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                     facts["device_type"] = dev
             guide.update(doc_type=dt, domain=domain, content=ex["content"], facts=facts, safety_lines=[],
                          sender=ex.get("sender"))
+            title = paperguard.short_title(ex.get("short_title"), facts)
+            if title:
+                guide["title_en"] = guide["title"] = title
             status("writing")
             if ex["content"] is not None:
                 raw = ensure_content_facts(await write_typed(facts, language, dt, ex["content"]), dt, ex["content"])
             elif domain != "medicine":
-                raw = await write_generic_howto(facts, language)
+                raw = await write_generic_howto(writer_facts(facts, ex.get("dates")), language)
             else:
-                raw = await write_easy_read(with_technique(facts), language)
+                raw = await write_easy_read(with_technique(writer_facts(facts, ex.get("dates"))), language)
+            # Only what the paper says: no app-added "ask your pharmacist", no filler "the paper does not say",
+            # no dose the paper does not print.
+            raw = paperguard.guard_steps(raw, facts, ex["content"], dt, domain,
+                                         extra_printed=" ".join(technique.outline_for_prompt(facts.get("device_type"))))
             raw = finish_steps(raw, dt, domain, facts["conflicts"], facts.get("device_type"))
+            if ex["content"] is None:
+                raw = paperguard.ensure_paper_facts(raw, facts, ex.get("dates"))
             # What the reader noted as blank, in its notes or in the content lines it wrote (the writer may drop the
             # "this paper does not show the date" sentence, or the step cap may trim it).
             notes = [u.get("note") or "" for u in ex.get("unreadable_parts") or []] + list(facts.get("unreadable") or [])
@@ -507,6 +548,7 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
                                "technique_clip_id": None, "status": "pending", "visual": r.get("visual")} for i, r in enumerate(raw)]
             await place_on_paper(guide, ex, files, ocr_task)
             await translate_steps(guide["steps"], language, guide.get("dates"))
+            paperguard.guard_translated(guide["steps"], facts, ex["content"])
             await translate_safety(guide, language)
             await translate_summary(guide, language)
         elif os.environ.get("EASYREAD_ALLOW_FIXTURE") != "1":

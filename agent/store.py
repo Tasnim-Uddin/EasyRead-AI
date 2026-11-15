@@ -17,7 +17,11 @@ def summary(g: dict) -> dict:
     facts = g.get("facts") or {}
     content = g.get("content") or {}
     steps = g.get("steps") or []
-    title = (g.get("title_override") or facts.get("medicine") or (content.get("what_this_is") if isinstance(content, dict) else None)
+    # The user's own name, else the short plain title (guide language), else short medicine names (never the full
+    # formal string with strengths and makers), else what the paper is.
+    from .paperguard import short_medicine
+    title = (g.get("title_override") or g.get("title") or short_medicine(facts.get("medicine"))
+             or (content.get("what_this_is") if isinstance(content, dict) else None)
              or facts.get("title") or (steps[0].get("text") if steps else None) or "")
     thumb = next((s.get("image_url") for s in steps if s.get("image_url")), None)
     return {"id": g["id"], "title": title, "language": g.get("language", "en"), "doc_type": g.get("doc_type", "how_to"),
