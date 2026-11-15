@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Guide } from "../types";
-import { isFallback, t } from "../i18n";
+import { t } from "../i18n";
 import { CountThen } from "../bidi";
 import { canSpeak } from "../languages";
 import Icon, { GuideFace } from "../icons";
@@ -20,14 +20,8 @@ export function kindOf(g: Guide): Kind {
 }
 
 /* ---------- 4. summary first ---------- */
-const FALLBACK_SAFETY: Record<Kind, string> = {
-  medicine: "Not sure? Ask your pharmacist. For advice, call 111.",
-  howto: "If something breaks or feels unsafe, stop and ask for help.",
-  letter: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
-  form: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
-};
-export const safetyLines = (g: Guide, lang = "en") =>
-  g.safety_lines && g.safety_lines.length ? g.safety_lines : [isFallback(lang, "safe_" + kindOf(g)) ? FALLBACK_SAFETY[kindOf(g)] : t(lang, "safe_" + kindOf(g))];
+/** Only lines the server sent from the paper itself; the app never adds advice lines of its own. */
+export const safetyLines = (g: Guide, _lang = "en"): string[] => g.safety_lines ?? [];
 
 export function summaryText(g: Guide): string {
   const k = kindOf(g);
@@ -221,13 +215,11 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
       </div>
 
       {guide.source.is_sample && k === "medicine" && <p className="safe">{t(lang, "sampleNote")}</p>}
-      <p className="safe" dir="auto">
-        {safetyLines(guide, lang).map((l, i) => (
-          <span key={i}>
-            {l}{" "}
-          </span>
-        ))}
-      </p>
+      {safetyLines(guide, lang).length > 0 && (
+        <p className="safe" dir="auto">
+          {safetyLines(guide, lang).join(" ")}
+        </p>
+      )}
 
       <div className="foot sticky">
         {onStartGuide && (

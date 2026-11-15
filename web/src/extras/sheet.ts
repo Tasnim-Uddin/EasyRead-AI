@@ -38,7 +38,12 @@ export function sheetData(g: Guide, english = false): SheetData {
     : call && /[£$€¥₹]|\d/.test(call.value) && !dated
     ? { label: call.sub ?? "", value: call.value }
     : null;
-  const date = dated ? { label: english ? dated.what_en || dated.what : dated.what, value: dated.quote || dated.date, iso: dated.date } : null;
+  const by = g.content?.by_when?.[0];
+  const date = dated
+    ? { label: english ? dated.what_en || dated.what : dated.what, value: dated.quote || dated.date, iso: dated.date }
+    : by
+    ? { label: by.what, value: by.date, iso: null } // a printed date we could not read as a calendar date: shown as printed
+    : null;
   const sender = g.sender ? [g.sender.name, g.sender.contact].filter(Boolean).join(" · ") : null;
   return { title: guideTitle(g, english), steps, amount, date, sender, made: g.created_at ?? null };
 }

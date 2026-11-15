@@ -84,10 +84,10 @@ export function RemindMe({ guide, lang, dateIndex = 0, onClose }: { guide: Guide
             <div className="x-radios" role="radiogroup" aria-label={t(lang, "xWhenRemind")}>
               {choices.map((n) => (
                 <button key={n} role="radio" aria-checked={pick === n} className={"x-radio" + (pick === n ? " on" : "")} onClick={() => setPick(n)}>
-                  <span className="dot" aria-hidden="true">
+                  <span className="x-dot" aria-hidden="true">
                     {pick === n && <XIcon name="check" />}
                   </span>
-                  <span className="txt">
+                  <span className="x-txt">
                     <b>{label(n)}</b>
                     <small>
                       <bdi>{fmtDay(lang, minusDays(d.date, n))}</bdi>

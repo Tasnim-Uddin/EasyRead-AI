@@ -168,10 +168,10 @@ export function TellBack({
           const cls = !answered ? "" : i === q.correct ? " right" : i === pick ? " wrong" : " dim";
           return (
             <button key={i} role="radio" aria-checked={pick === i} className={"x-answer" + cls} onClick={() => choose(i)} disabled={answered && i !== pick && i !== q.correct}>
-              <span className={"pic" + (hasCloseUp(q.visuals[i]) ? " cu" : "")}>
+              <span className={"x-pic" + (hasCloseUp(q.visuals[i]) ? " cu" : "")}>
                 {hasCloseUp(q.visuals[i]) ? <CloseUpPic id={q.visuals[i]} playing={!answered || i === q.correct} /> : <XIcon name={q.icons[i] ?? "doc"} />}
               </span>
-              <span className="txt">
+              <span className="x-txt">
                 <span dir="auto">{o}</span>
                 {answered && i === q.correct && (
                   <em className="ok">

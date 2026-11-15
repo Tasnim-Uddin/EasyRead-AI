@@ -54,7 +54,6 @@ export function buildQuestions(g: Guide, lang = "en"): Question[] {
   const firstHow = g.steps.find((s) => s.kind === "how");
 
   if (k === "medicine") {
-    if ((f?.conflicts?.length ?? 0) > 0) mk(T("qConflict"), T("aPharm"), "chat", [[T("dBigger"), "plus"], [T("dPick"), "hand"]], 1, null);
     if (f?.frequency) mk(T("qWhen"), f.frequency, "clock", [[T("dMorning"), "sun"], [T("dNight"), "moon"]], 1, stepFor(g, f.frequency));
     if (f?.dose) mk(T("qHowMuch"), f.dose, "pill", [[T("dAsMuch"), "plus"], [T("dHalf"), "half"]], 0, stepFor(g, f.dose));
   }
@@ -62,28 +61,28 @@ export function buildQuestions(g: Guide, lang = "en"): Question[] {
     const todo = c?.what_to_do?.[0] ?? firstHow?.text;
     if (todo) {
       const st = stepFor(g, todo) ?? firstHow?.index ?? null;
-      mk(T("qLetterFirst"), todo, "check", [[T("dIgnoreLetter"), "x"], [T("dThrow"), "trash"]], 1, st, vis(st));
+      mk(T("qLetterFirst"), todo, "doc", [[T("dIgnoreLetter"), "moon"], [T("dThrow"), "trash"]], 1, st, vis(st));
     }
     const by = c?.by_when?.[0];
     const dated = g.dates?.[0];
-    if (by) mk(tf(lang, "qByWhen", { what: by.what }), by.date, "calendar", [[T("dNoDate"), "x"], [T("dNextYear"), "calendar"]], 2, stepFor(g, by.date));
-    else if (dated) mk(tf(lang, "qByWhen", { what: dated.what }), dated.quote || dated.date, "calendar", [[T("dNoDate"), "x"], [T("dNextYear"), "calendar"]], 2, stepFor(g, dated.quote));
+    if (by) mk(tf(lang, "qByWhen", { what: by.what }), by.date, "calendar", [[T("dNoDate"), "calendar"], [T("dNextYear"), "calendar"]], 2, stepFor(g, by.date));
+    else if (dated) mk(tf(lang, "qByWhen", { what: dated.what }), dated.quote || dated.date, "calendar", [[T("dNoDate"), "calendar"], [T("dNextYear"), "calendar"]], 2, stepFor(g, dated.quote));
     const amt = c?.amounts?.[0];
-    if (amt) mk(tf(lang, "qAmount", { what: amt.what }), amt.amount, "coin", [[T("dNoPay"), "x"], [T("dAnyAmount"), "hand"]], 0, stepFor(g, amt.amount));
+    if (amt) mk(tf(lang, "qAmount", { what: amt.what }), amt.amount, "coin", [[T("dNoPay"), "coin"], [T("dAnyAmount"), "coin"]], 0, stepFor(g, amt.amount));
   }
-  if (k === "form" && c?.fields?.[0]) mk(tf(lang, "qBox", { label: c.fields[0].label }), c.fields[0].what_to_write, "pen", [[T("dEmpty"), "x"], [T("dAnything"), "hand"]], 0, stepFor(g, c.fields[0].label));
+  if (k === "form" && c?.fields?.[0]) mk(tf(lang, "qBox", { label: c.fields[0].label }), c.fields[0].what_to_write, "pen", [[T("dEmpty"), "doc"], [T("dAnything"), "pen"]], 0, stepFor(g, c.fields[0].label));
   if ((k === "howto" || k === "medicine" || k === "form") && firstHow) {
     // Picture answers: the first step against two later steps of the same paper, each with its close-up when it has one.
     const later = g.steps.filter((s) => s.kind === "how" && s.index > firstHow.index).slice(-2);
-    const wrong: Opt[] = later.length === 2 ? later.reverse().map((s) => [s.text, "list", vis(s.index)]) : [[T("dSkip"), "x"], [T("dAskElse"), "hand"]];
-    mk(T("qHowFirst"), firstHow.text, "check", wrong, 1, firstHow.index, vis(firstHow.index));
+    const wrong: Opt[] = later.length === 2 ? later.reverse().map((s) => [s.text, "list", vis(s.index)]) : [[T("dSkip"), "arrow"], [T("dAskElse"), "chat"]];
+    mk(T("qHowFirst"), firstHow.text, "list", wrong, 1, firstHow.index, vis(firstHow.index));
   }
   const warn = g.steps.find((s) => s.kind === "warning");
-  if (warn) mk(T("qWarn"), warn.text, "alert", [[T("dNothing"), "x"], [T("dIgnore"), "hand"]], 2, warn.index);
+  if (warn) mk(T("qWarn"), warn.text, "alert", [[T("dNothing"), "eye"], [T("dIgnore"), "hand"]], 2, warn.index);
   // Any paper: at least two questions when it has steps to ask about.
   if (out.length < 2) {
     const other = g.steps.find((s) => (s.kind === "how" || s.kind === "when") && !seen.has(norm(s.text)));
-    if (other) mk(T("qWhichStep"), other.text, "check", [[T("dSkip"), "x"], [T("dAskElse"), "hand"]], 0, other.index, vis(other.index));
+    if (other) mk(T("qWhichStep"), other.text, "list", [[T("dSkip"), "arrow"], [T("dAskElse"), "chat"]], 0, other.index, vis(other.index));
   }
   return out.slice(0, 3);
 }

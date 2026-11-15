@@ -3,22 +3,26 @@
 export async function sheetPdf(el: HTMLElement, name: string): Promise<File> {
   const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
   await document.fonts?.ready;
-  const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
-  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
-  const pageW = 210;
-  const pageH = 297;
-  const margin = 10;
-  const w = pageW - margin * 2;
-  const pxPerMm = canvas.width / w;
-  const sliceH = Math.floor((pageH - margin * 2) * pxPerMm);
-  for (let y = 0, page = 0; y < canvas.height; y += sliceH, page++) {
-    const part = document.createElement("canvas");
-    part.width = canvas.width;
-    part.height = Math.min(sliceH, canvas.height - y);
-    part.getContext("2d")!.drawImage(canvas, 0, y, canvas.width, part.height, 0, 0, canvas.width, part.height);
-    if (page > 0) pdf.addPage();
-    pdf.addImage(part.toDataURL("image/jpeg", 0.92), "JPEG", margin, margin, w, part.height / pxPerMm);
+  // Lay the sheet out at paper proportions (not phone width) off screen, so it fills one A4 page.
+  const clone = el.cloneNode(true) as HTMLElement;
+  clone.classList.add("x-pdf");
+  Object.assign(clone.style, { position: "fixed", left: "-10000px", top: "0", width: "720px", fontSize: "20px" });
+  document.body.appendChild(clone);
+  let canvas: HTMLCanvasElement;
+  try {
+    canvas = await html2canvas(clone, { scale: 2, backgroundColor: "#ffffff", useCORS: true, logging: false });
+  } finally {
+    clone.remove();
   }
+  const pdf = new jsPDF({ unit: "mm", format: "a4", orientation: "portrait" });
+  const margin = 12;
+  const maxW = 210 - margin * 2;
+  const maxH = 297 - margin * 2;
+  // One page: as wide as the page, or smaller when the sheet is long.
+  const k = Math.min(maxW / canvas.width, maxH / canvas.height);
+  const w = canvas.width * k;
+  const h = canvas.height * k;
+  pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (210 - w) / 2, margin, w, h);
   const blob = pdf.output("blob");
   return new File([blob], name, { type: "application/pdf" });
 }

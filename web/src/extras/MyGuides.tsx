@@ -137,8 +137,8 @@ export function MyGuides({ lang, rows, failed, onBack, onOpen, onDelete, onRenam
     }
   }
 
-  const countText =
-    active === "all" ? (all.length === 1 ? t(lang, "xOneGuide") : tf(lang, "xNGuides", { n: all.length })) : `${shown.length} ${t(lang, CHIP_WORD[active]).toLowerCase()}`;
+  const n = active === "all" && !q ? all.length : shown.length;
+  const countText = n === 1 ? t(lang, "xOneGuide") : tf(lang, "xNGuides", { n });
 
   return (
     <div className="screen x-guides">
