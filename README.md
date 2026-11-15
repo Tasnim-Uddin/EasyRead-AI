@@ -70,9 +70,9 @@ Every step has a picture. The pictures carry the meaning, so they work in any la
 
 | fal model | Where it is used | Status |
 |---|---|---|
-| `fal-ai/flux/dev` | Live step pictures for every uploaded paper. One shared style prompt: soft realistic photos of one consistent person on a plain cream backdrop, so the pictures match the real-person live guide (before/after: `design/style-v2/before-after.png`). No text inside the image | Live, needs `FAL_KEY` |
-| `fal-ai/flux/schnell` | Pictures for the council letter and bookshelf sample guides, made once and stored in `demo/fixtures/img/` (the inhaler sample is `flux/dev`, in the photo style). Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
-| `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | 3 technique clips made from the step pictures: shake, press and breathe in, hold your breath (`library/clips/`). All 3 are in the photo style | Made offline. Not checked by a pharmacist, so shown only in demo mode (`SHOW_UNCHECKED_CLIPS=1`) with a "not yet checked" badge |
+| `fal-ai/flux/dev` | Live step pictures for every uploaded paper. One shared style prompt (the app palette, one character), no text inside the image. Also the cartoon portrait the Anam guide avatar is made from (`design/guide-cartoon/`) | Live, needs `FAL_KEY` |
+| `fal-ai/flux/schnell` | Pictures for the sample guides, made once and stored in `demo/fixtures/img/`. Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
+| `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | 3 technique clips made from the step pictures: shake, press and breathe in, hold your breath (`library/clips/`) | Made offline. Not checked by a pharmacist, so shown only in demo mode (`SHOW_UNCHECKED_CLIPS=1`) with a "not yet checked" badge |
 | `fal-ai/flux-kontext/dev` | Labels on the user's own device photo (cap, mouthpiece, canister) | Built (`label_device_photo` in `agent/pipeline.py`). Off by default (`DEVICE_PHOTO_LABELS=1` turns it on), because live tests put the labels beside the parts, not on them |
 
 Step pictures from the sample guides (inhaler, council letter, bookshelf) and a clip poster:
@@ -96,7 +96,7 @@ Why fal is central:
 
 - Every step has a picture. Without fal, a guide is only text, which is the problem we are solving.
 - The pictures have no words in them. The same picture works in every language, and it can never show a wrong dose. Captions come from the app in the chosen language.
-- One style prompt keeps every picture in one look across a guide: soft realistic photos of the same person, so they sit well next to the real-person live guide.
+- One style prompt keeps every picture in one look across a guide.
 - Pictures are made 6 at a time and stream in, so the user starts reading straight away.
 - We chain 4 fal models: text-to-image (two models), image-to-video from those pictures, and image edit on the user's own photo.
 
@@ -106,7 +106,7 @@ The avatar talks you through the guide and drives the app with client tools. Cod
 
 **Persona.**
 
-- Avatar "Liv" (`cara-4`). Anam's built-in LLM (GPT OSS 120B). We keep Anam's own LLM because the tool calls are the point.
+- Avatar: our own cartoon guide, a custom `cara-4` avatar made from one `fal-ai/flux/dev` portrait in the same flat style as the step pictures (`design/guide-cartoon/chosen.png`), so the guide and the pictures look like one product. `ANAM_AVATAR_ID` overrides it (the realistic stock avatar "Liv" is the fallback, see `.env.example`). Anam's built-in LLM (GPT OSS 120B). We keep Anam's own LLM because the tool calls are the point.
 - Voice "Amanda - Warm Guide" by default. Anam voices are single-language, so `ANAM_VOICE_ID_<LANG>` (for example `ANAM_VOICE_ID_ES`) sets a voice per language. `tools/anam_voices.py` lists candidates.
 - Speech recognition is set to the user's language when Anam supports it. Otherwise the user can type.
 - The server builds the persona and asks Anam for a session token. The browser gets only the token, never the key.

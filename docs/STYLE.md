@@ -19,13 +19,15 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 | Payment must be remitted within 14 days of the date of issue. | Pay by Friday 12 December. |
 | Contact your GP should symptoms persist. | Still not better? Tell your doctor. |
 
-## 1b. Step pictures (generated, `media/fal.py` STYLE and CHARACTER)
-- Soft realistic photo, so pictures match the real-person live guide. Natural light, plain light cream backdrop, shallow depth of field, close on the hands and face doing the action.
+## 1b. Step pictures and the guide (generated, `media/fal.py` STYLE and CHARACTER)
+- Simple flat friendly vector illustration, thick dark brown outlines, plain solid cream background.
+- Palette only: cream #FFF6E9, ink #3A2A20, orange #FF9B3D, sage #C9E2D2, butter #FFE49A.
 - One clear action per picture. Uncluttered: no busy room, no extra objects.
-- The same person in every picture of a guide (a friendly man in his thirties, short dark hair, short beard, sage green sweater).
-- Warm palette: cream, sage green, small orange accents.
+- The same person in every picture of a guide (a friendly adult with short dark hair and a sage green sweater).
 - No text, letters or numbers anywhere, including clock faces, phone screens and labels on objects. Captions come from the app.
 - Name objects in the step's picture prompt, not in the shared CHARACTER line, or the model puts them in every picture.
+- The live guide (Anam avatar) is drawn in the same style, so the guide and the pictures look like one product:
+  `design/guide-cartoon/chosen.png` (made with `fal-ai/flux/dev`, 1152x1152, cream background, sage top).
 
 ## 2. UI copy
 - Buttons are verbs, 1 to 3 words: "Take a photo", "Use this", "Make my guide".
