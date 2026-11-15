@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { installAccess, setAccessCode } from "./access";
+import { initialDemo } from "./mode";
 import "./styles.css";
 
 installAccess();
@@ -48,10 +49,20 @@ function AccessGate({ children }: { children: React.ReactNode }) {
   );
 }
 
+// Close-up library review page (demo mode only): #/closeups, or #/closeups/<id> for one at phone size.
+const closeups = location.hash.match(/^#\/closeups(?:\/(\w+))?/);
+const CloseUpGallery = React.lazy(() => import("./closeups/gallery"));
+
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AccessGate>
-      <App />
-    </AccessGate>
+    {closeups && (import.meta.env.DEV || initialDemo()) ? (
+      <React.Suspense fallback={null}>
+        <CloseUpGallery only={closeups[1]} />
+      </React.Suspense>
+    ) : (
+      <AccessGate>
+        <App />
+      </AccessGate>
+    )}
   </React.StrictMode>,
 );
