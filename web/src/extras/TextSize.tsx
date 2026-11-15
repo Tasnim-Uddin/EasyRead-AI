@@ -20,7 +20,7 @@ export function TextSizeControl({ lang, scale, onScale, preview }: { lang: strin
         <p dir="auto">{preview?.text ?? t(lang, "xPreviewText")}</p>
       </div>
       <div className="x-size-row">
-        <button className="x-a minus" onClick={() => set(i - 1)} disabled={i === 0} aria-label={t(lang, "xSmaller")}>
+        <button dir="ltr" className="x-a minus" onClick={() => set(i - 1)} disabled={i === 0} aria-label={t(lang, "xSmaller")}>
           A−
         </button>
         <div className="x-stops" role="radiogroup" aria-label={t(lang, "textSize")}>
@@ -38,7 +38,7 @@ export function TextSizeControl({ lang, scale, onScale, preview }: { lang: strin
             />
           ))}
         </div>
-        <button className="x-a plus" onClick={() => set(i + 1)} disabled={i === SIZES.length - 1} aria-label={t(lang, "xBigger")}>
+        <button dir="ltr" className="x-a plus" onClick={() => set(i + 1)} disabled={i === SIZES.length - 1} aria-label={t(lang, "xBigger")}>
           A+
         </button>
       </div>
