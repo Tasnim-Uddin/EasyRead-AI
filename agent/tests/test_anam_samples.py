@@ -30,7 +30,10 @@ def test_per_language_voice(monkeypatch):
         return persona.persona_config({"steps": []}, lang)["voiceId"]
 
     assert pc("es") == "voice-es" and pc("ar") == "voice-ar"
-    assert pc("pl") == persona.DEFAULTS["voiceId"] and pc("en") == persona.DEFAULTS["voiceId"]
+    # No voice of its own: a multilingual voice, never the English-only default (it would be silent).
+    assert pc("pl") == "voice-es" and pc("ur") == "voice-es" and pc("en") == persona.DEFAULTS["voiceId"]
+    monkeypatch.setenv("ANAM_VOICE_ID_MULTI", "voice-multi")
+    assert pc("bn") == "voice-multi" and pc("es") == "voice-es"
     monkeypatch.setenv("ANAM_VOICE_ID", "generic")
-    assert pc("pl") == "generic" and pc("es") == "voice-es"
+    assert pc("en") == "generic" and pc("es") == "voice-es"
     assert persona.voice_id("../x") == "generic"

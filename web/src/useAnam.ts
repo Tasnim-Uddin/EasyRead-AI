@@ -383,6 +383,18 @@ export function useAnam(
     }
   }, []);
 
+  /** The guide's voice and speaking language are fixed when a session starts, so a new language needs a new session
+   *  (same guide, same step). Call it after the guide's words are translated, so the new session reads them. */
+  const relanguage = useCallback(async (code: string, stepIndex: number) => {
+    const last = lastStartRef.current;
+    if (!last || last.language === code) return;
+    if (!clientRef.current && !startingRef.current) {
+      lastStartRef.current = { ...last, language: code };
+      return;
+    }
+    await restartRef.current({ guideId: last.guideId, language: code, stepIndex });
+  }, []);
+
   /** Typed message to the avatar, for people who cannot or prefer not to speak. The avatar answers and can call tools. */
   const send = useCallback((text: string) => {
     const msg = text.trim();
@@ -454,5 +466,5 @@ export function useAnam(
     setState((s) => (s === "error" || s === "standin" ? "idle" : s));
   }, []);
 
-  return { needsTap, unlock, state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, setMic, toggleSound, setSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, userCaption, userSeq, lastReply, resetError, replySeq, replyDone };
+  return { needsTap, unlock, state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, setMic, toggleSound, setSound, setLanguage, relanguage, send, talk, interrupt, quiet, activity, liveCaption, userCaption, userSeq, lastReply, resetError, replySeq, replyDone };
 }
