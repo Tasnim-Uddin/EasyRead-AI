@@ -1,9 +1,11 @@
-// Look options for comparing UI directions: `?theme=calm|fresh|warm-modern|default`, `?density=compact|regular`, `?dock=1|0`.
-// The theme is remembered (localStorage); the new themes turn on the compact scale and the guide dock unless the URL says otherwise.
-export const THEMES = ["default", "calm", "fresh", "warm-modern"] as const;
+// Look options: `?theme=default|classic|calm|fresh|warm-modern`, `?density=compact|regular`, `?dock=1|0`.
+// "default" is the v2 design (Figma "v2 redesign", Direction C "Original, next level"); "classic" is the first
+// approved look. The theme is remembered (localStorage). The guide dock is on unless the URL says `?dock=0`.
+export const THEMES = ["default", "classic", "calm", "fresh", "warm-modern"] as const;
 export type Theme = (typeof THEMES)[number];
 export const THEME_KEY: Record<Theme, string> = {
   default: "themeDefault",
+  classic: "themeClassic",
   calm: "themeCalm",
   fresh: "themeFresh",
   "warm-modern": "themeWarm",
@@ -30,9 +32,8 @@ export function applyTheme(theme: Theme) {
   const root = document.documentElement;
   if (theme === "default") delete root.dataset.theme;
   else root.dataset.theme = theme;
-  const d = params.get("density");
-  const compact = d ? d === "compact" : theme !== "default";
-  if (compact) root.dataset.density = "compact";
+  // The v2 sizes are the regular scale now; `?density=compact` is an extra, smaller option.
+  if (params.get("density") === "compact") root.dataset.density = "compact";
   else delete root.dataset.density;
   try {
     localStorage.setItem("er.theme", theme);
@@ -41,9 +42,8 @@ export function applyTheme(theme: Theme) {
   }
 }
 
-/** The docked guide panel on step / ask / clip screens. */
-export function dockOn(theme: Theme): boolean {
+/** The guide dock on step / ask / clip screens: on by default, `?dock=0` turns it off. */
+export function dockOn(): boolean {
   const q = params.get("dock");
-  if (q !== null) return q !== "0";
-  return theme !== "default";
+  return q === null ? true : q !== "0";
 }

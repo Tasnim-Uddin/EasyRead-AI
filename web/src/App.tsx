@@ -4,7 +4,7 @@ import type { Clip, Guide, ToolLogEntry } from "./types";
 import { LANGUAGES, t } from "./i18n";
 import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
 import { useAnam, type ToolHandler } from "./useAnam";
-import { speak, stopSpeaking, voiceSettings } from "./speech";
+import { audioOwner, claimAudio, onAudioChange, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
 import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
 import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
 import {
@@ -12,6 +12,7 @@ import {
   AVATAR_VIDEO_ID,
   AvatarHost,
   LiveContext,
+  NavContext,
   type LiveInfo,
   CheckPhoto,
   ClipScreen,
@@ -70,7 +71,8 @@ function keepNewer(cur: Guide, next: Guide): Guide {
 const fileUrl = (f: File) => (f.type.startsWith("image/") ? URL.createObjectURL(f) : null);
 
 export default function App() {
-  const [lang, setLang] = useState(() => load("er.lang", "en"));
+  // `?lang=ar` opens the app in that language (demo and screenshot links); otherwise the remembered one.
+  const [lang, setLang] = useState(() => cleanLanguage(new URLSearchParams(location.search).get("lang") ?? "") || load("er.lang", "en"));
   const [screen, setScreen] = useState<Screen>("home");
   const [prevScreen, setPrevScreen] = useState<Screen>("home");
   const [guide, setGuide] = useState<Guide | null>(null);
@@ -89,6 +91,11 @@ export default function App() {
   const [scale, setScale] = useState(() => load("er.scale", 1));
   const [rate, setRate] = useState(() => load("er.rate", 1));
   const [voice, setVoice] = useState(() => load("er.voice", true));
+  // Guide-led: the live guide is on by default (it still needs one tap to start, browsers block audio before that).
+  const [guideOn, setGuideOn] = useState(() => (/[?&]guide=0/.test(location.search) ? false : load("er.guideOn", true)));
+  const [moved, setMoved] = useState<number | null>(null); // "Your guide moved you to step N"
+  const movedFrom = useRef(0);
+  const [askOpen, setAskOpen] = useState(() => import.meta.env.DEV && /[?&]asksheet/.test(location.search)); // screenshot hook
   // Customer mode by default; demo mode (?demo=1, the Settings switch, or a #/sample link) shows samples and dev tools.
   const [demo, setDemo] = useState(initialDemo);
   const [mine, setMine] = useState<string[]>(myGuideIds);
@@ -113,11 +120,37 @@ export default function App() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const uploadRef = useRef<HTMLInputElement>(null);
 
-  const go = useCallback((s: Screen) => {
+  const screenRef = useRef<Screen>("home");
+  screenRef.current = screen;
+  // Each screen change is a browser history entry, so the phone's Back button moves within the app.
+  const go = useCallback((s: Screen, replace = false) => {
     stopSpeaking();
+    if (s !== "step") setAskOpen(false);
+    if (s !== screenRef.current) {
+      try {
+        // Same URL, screen kept in history state: writing the hash would fire hashchange, which reloads (main.tsx).
+        if (replace) history.replaceState({ screen: s }, "");
+        else history.pushState({ screen: s }, "");
+      } catch {
+        /* history blocked: still change screen */
+      }
+    }
+    screenRef.current = s;
     setScreen(s);
     window.scrollTo(0, 0);
   }, []);
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      const s = (e.state as { screen?: Screen } | null)?.screen ?? "home";
+      stopSpeaking();
+      setAskOpen(false);
+      screenRef.current = s;
+      setScreen(s);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  useEffect(() => save("er.guideOn", guideOn), [guideOn]);
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -192,8 +225,12 @@ export default function App() {
     }
     if (guide.status === "failed") {
       const code = guide.error_code;
-      setError({ title: t(langRef.current, code === "not_a_document" ? "notAPaper" : "couldNotRead"),
-                 detail: code === "unreadable" ? t(langRef.current, "clearerPhoto") : null });
+      const L = langRef.current;
+      // Photo tips only for photo problems; server faults get a plain, translated line.
+      setError({
+        title: t(L, code === "not_a_document" ? "notAPaper" : code === "ai_timeout" ? "errTimeout" : code === "demo_mode_no_key" ? "errDemoKey" : code === "image_unreadable" ? "errImage" : "couldNotRead"),
+        detail: code === "unreadable" || code === "image_unreadable" ? t(L, "clearerPhoto") : null,
+      });
       go("error");
     }
   }, [screen, guide?.status, textDone, go]);
@@ -201,7 +238,9 @@ export default function App() {
   /* ---- client tools, CONTRACTS.md section 3. Each returns the short `say` text for the avatar ---- */
   const goto = useCallback((i: number) => {
     const total = guideRef.current?.steps.length ?? 0;
-    const clamped = Math.max(0, Math.min(total - 1, i));
+    if (total === 0) return 0;
+    const n = Number.isFinite(i) ? Math.round(i) : indexRef.current; // a missing or bad index keeps the current step
+    const clamped = Math.max(0, Math.min(total - 1, n));
     setIndex(clamped);
     return clamped;
   }, []);
@@ -217,24 +256,30 @@ export default function App() {
       if (!g() || isSample(g())) return SAFE_FALLBACK;
       return (await api.postTool(name, g()!.id, args)).say;
     };
+    // The guide may only move the steps while the user is looking at them; elsewhere it is ignored, never yanking the user.
+    const offSteps = () => screenRef.current !== "step" && screenRef.current !== "clip";
+    const OFF = "The user is on another screen, so the step was not changed. Talk with them about what they are looking at.";
+    const guideMove = (i: number) => {
+      const before = indexRef.current;
+      const to = goto(i);
+      if (to !== before) {
+        movedFrom.current = before;
+        setMoved(to + 1);
+      }
+      if (screenRef.current === "clip") go("step");
+      return stepSay(to);
+    };
     return {
-      show_step: ({ index: i }) => {
-        setScreen("step");
-        return stepSay(goto(Number(i)));
-      },
-      next_step: () => {
-        setScreen("step");
-        return indexRef.current >= (g()?.steps.length ?? 1) - 1 ? "That was the last step." : stepSay(goto(indexRef.current + 1));
-      },
-      previous_step: () => {
-        setScreen("step");
-        return indexRef.current <= 0 ? "This is the first step." : stepSay(goto(indexRef.current - 1));
-      },
+      show_step: ({ index: i }) => (offSteps() ? OFF : guideMove(Number(i))),
+      next_step: () =>
+        offSteps() ? OFF : indexRef.current >= (g()?.steps.length ?? 1) - 1 ? "That was the last step." : guideMove(indexRef.current + 1),
+      previous_step: () => (offSteps() ? OFF : indexRef.current <= 0 ? "This is the first step." : guideMove(indexRef.current - 1)),
       play_technique: ({ step_index }) => {
+        if (offSteps()) return OFF;
         const i = goto(Number(step_index));
         const step = g()?.steps[i];
         const clip = clips.find((c) => c.id === step?.technique_clip_id);
-        setScreen("clip");
+        if (clip) go("clip");
         return clip
           ? `${clip.unchecked ? "Playing a demo video that a pharmacist has not checked yet." : "Playing the checked video."} ${clip.caption_en}`
           : "I don't have a checked video for this step. Please ask your pharmacist to show you.";
@@ -255,7 +300,9 @@ export default function App() {
       },
       check_understanding: (args) =>
         isSample(g())
-          ? args.answer
+          ? typeof args.correct === "boolean"
+            ? t(langRef.current, args.correct ? "tbRight" : "tbWrong")
+            : args.answer
             ? "Thank you. If you are not sure, go back through the steps or ask your pharmacist."
             : `In your own words, how do you use ${g()!.facts?.medicine ?? "your medicine"}?`
           : server("check_understanding", args),
@@ -278,10 +325,25 @@ export default function App() {
         return `Switched to ${languageLabel(code)}.`;
       },
     };
-  }, [clips, goto]);
+  }, [clips, goto, go]);
 
   const anam = useAnam(AVATAR_VIDEO_ID, handlers, addLog);
   anamLangRef.current = anam.setLanguage;
+  setGuideQuiet(anam.quiet);
+  const fakeLiveEarly = import.meta.env.DEV && demo && location.search.includes("fakelive");
+  const isLive = fakeLiveEarly || anam.state === "live";
+  const [owner, setOwner] = useState(audioOwner());
+  useEffect(() => onAudioChange(() => setOwner(audioOwner())), []);
+  const liveRef = useRef(isLive);
+  liveRef.current = isLive;
+  useEffect(() => {
+    if (anam.state === "live") claimAudio("guide");
+  }, [anam.state]);
+  useEffect(() => {
+    if (moved === null) return;
+    const timer = setTimeout(() => setMoved(null), 3500);
+    return () => clearTimeout(timer);
+  }, [moved]);
 
   // The same client tools the avatar uses, driven by on-screen buttons. Logged to the dev
   // panel and read aloud, so the app works without Anam.
@@ -295,10 +357,13 @@ export default function App() {
         say = SAFE_FALLBACK;
       }
       addLog(name, args, Math.round(performance.now() - t0), say);
-      if (voiceRef.current) void speak(say, langRef.current);
+      // One voice: while the guide is live it speaks; read-aloud stays quiet.
+      if (liveRef.current) {
+        if (name === "check_understanding" && typeof args.correct === "boolean") anam.talk(say);
+      } else if (voiceRef.current) void speak(say, langRef.current);
       return say;
     },
-    [handlers, addLog],
+    [handlers, addLog, anam.talk],
   );
 
   /* ---- adding papers ---- */
@@ -325,6 +390,12 @@ export default function App() {
     if (checking) addFiles([checking.file]);
     setChecking(null);
     go("tray");
+  }
+
+  // Summary back keeps the paper and the guide: back to where the user came from.
+  function leaveSummary() {
+    if (window.history.state?.screen && window.history.length > 1) window.history.back();
+    else go("home");
   }
 
   function startOver() {
@@ -376,6 +447,12 @@ export default function App() {
       .then((rows) => setPapers(rows))
       .catch(() => setPapersFailed(true));
   }, []);
+
+  // Home shows the newest paper as "Last paper": the same list call My papers makes, only when there are papers.
+  useEffect(() => {
+    if (screen === "home" && mine.length > 0 && !papers?.some((p) => p.id === mine[0])) loadPapers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, mine.length]);
 
   function openPapers() {
     loadPapers();
@@ -433,7 +510,10 @@ export default function App() {
   /* ---- hash routes, so each screen can be opened directly (demo and screenshots) ---- */
   useEffect(() => {
     const parts = location.hash.replace(/^#\/?/, "").split("/");
-    if (!parts[0]) return;
+    if (!parts[0]) {
+      window.history.replaceState({ screen: "home" }, "");
+      return;
+    }
     if (parts[0] === "sample") {
       const to = (parts[2] as Screen) || "summary";
       openSample(parts[1], to, Number(parts[3] ?? 0));
@@ -455,6 +535,7 @@ export default function App() {
       setError({ title: t(langRef.current, "couldNotRead"), detail: "This file is not a photo of a paper. Try another." });
       go("error");
     } else if (parts[0] === "settings") go("settings");
+    else if (parts[0] === "papers") openPapers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -485,13 +566,43 @@ export default function App() {
     else window.open(`/api/guides/${guide.id}/sheet`, "_blank");
   }
 
+  // The user moved: change the step, then tell the live guide (it reads the new step) or read it aloud.
   function setStep(i: number) {
     if (!guide) return;
-    void runTool(i === index + 1 ? "next_step" : i === index - 1 ? "previous_step" : "show_step", { index: i });
+    const to = goto(i);
+    setMoved(null);
+    addLog(to === index + 1 ? "next_step" : to === index - 1 ? "previous_step" : "show_step", { index: to }, 0, "user tap");
+    if (liveRef.current) {
+      anam.interrupt();
+      anam.send(`User moved to step ${to + 1}`);
+    } else if (voiceRef.current && guideOn) void speak(guide.steps[to]?.text ?? "", lang);
+  }
+
+  // Live: the guide answers out loud (one voice); the sheet shows the grounded answer from the document,
+  // fetched in parallel, so the text never depends on the avatar's speech stream.
+  async function askOnStep(q: string) {
+    const text = q.trim();
+    if (!text || !guide) return;
+    setQuestion(text);
+    setAnswer(null);
+    if (liveRef.current && anam.send(text)) {
+      try {
+        setAnswer(await runTool("answer_from_document", { question: text }));
+      } catch {
+        setAnswer(anam.liveCaption || null);
+      }
+      return;
+    }
+    await onAsk(text);
+  }
+
+  function hideGuide() {
+    void anam.stop();
+    setGuideOn(false);
   }
 
   // `?fakelive` (dev builds, demo mode only) shows the live layout without a real Anam session, for screenshots.
-  const fakeLive = import.meta.env.DEV && demo && location.search.includes("fakelive");
+  const fakeLive = fakeLiveEarly;
   const status = uploading ? "uploading" : guide?.status ?? "uploading";
   const lastSay = log.find((l) => l.say)?.say ?? "";
   const liveState = fakeLive ? "live" : anam.state;
@@ -504,14 +615,39 @@ export default function App() {
     onToggleMic: anam.toggleMic,
     onToggleSound: anam.toggleSound,
     onSend: anam.send,
-    dock: dockOn(theme),
-    caption: lastSay,
+    dock: dockOn(),
+    caption: anam.liveCaption || lastSay,
+    status: anam.soundOff
+      ? "stSoundOff"
+      : owner === "clip"
+      ? "stClip"
+      : owner === "tts"
+      ? "stReading"
+      : anam.activity === "paused"
+      ? "stPaused"
+      : anam.activity === "listening"
+      ? "stListening"
+      : anam.activity === "talking" || fakeLiveEarly
+      ? "stTalking"
+      : "stReady",
+    onAsk: () => setAskOpen(true),
     onTalk: () => go("talk"),
+    state: liveState,
+    // "Talk to your guide" on a step opens the live avatar in the dock, on that step. Only ever on a tap.
+    onStartHere: guide ? () => { stopSpeaking(); claimAudio("guide"); setGuideOn(true); void anam.start(guide.id, lang, index); } : undefined,
+    guideOn,
+    onHide: hideGuide,
+    onShow: () => setGuideOn(true),
+    onPause: anam.interrupt,
   };
+  const debug = demo && /[?&]debug=1/.test(location.search);
+  const toHome = () => go("home");
+  const toSummary = guide ? () => go("summary") : undefined;
 
 
   return (
     <LiveContext.Provider value={liveInfo}>
+      <NavContext.Provider value={{ onHome: screen === "home" ? undefined : toHome, onSummary: screen === "summary" || screen === "step" ? undefined : toSummary }}>
       <div className="phone">
         <input ref={cameraRef} hidden type="file" accept="image/*" capture="environment" onChange={(e) => { onCamera(e.target.files); e.target.value = ""; }} />
         <input ref={uploadRef} hidden multiple type="file" accept="application/pdf,image/*" onChange={(e) => { onUpload(e.target.files); e.target.value = ""; }} />
@@ -526,6 +662,8 @@ export default function App() {
             onSample={demo ? (n) => openSample(n) : undefined}
             onPapers={openPapers}
             hasPapers={mine.length > 0}
+            lastPaper={papers?.find((p) => p.id === mine[0]) ?? null}
+            onOpenPaper={(id) => void openPaper(id)}
           />
         )}
         {screen === "check" && checking && (
@@ -563,7 +701,14 @@ export default function App() {
             onMake={() => void makeGuide()}
           />
         )}
-        {screen === "reading" && <Reading lang={lang} status={status} />}
+        {screen === "reading" && (
+          <Reading
+            lang={lang}
+            status={status}
+            onCancel={() => { setGuide(null); go(items.length ? "tray" : "home"); }}
+            onRetry={items.length ? () => void makeGuide() : undefined}
+          />
+        )}
         {screen === "summary" && guide && (
           <Summary
             guide={guide}
@@ -571,8 +716,9 @@ export default function App() {
             onLanguage={changeLanguage}
             onSettings={openSettings}
             onPapers={openPapers}
-            onBack={startOver}
+            onBack={leaveSummary}
             onStart={() => { setIndex(0); go("step"); }}
+            onStartGuide={guideOn ? () => { setIndex(0); stopSpeaking(); claimAudio("guide"); void anam.start(guide.id, lang, 0); go("step"); } : undefined}
             onListen={() => void speak(summaryText(guide), lang)}
           />
         )}
@@ -584,8 +730,16 @@ export default function App() {
             clips={clips}
             onClose={() => go("summary")}
             onIndex={setStep}
-            onFinish={() => go("ask")}
+            onFinish={() => { go("tellback"); }}
             onShowHow={() => void runTool("play_technique", { step_index: index })}
+            moved={moved}
+            onUndoMove={() => setStep(movedFrom.current)}
+            askOpen={askOpen}
+            onAskOpen={setAskOpen}
+            onAsk={(q) => void askOnStep(q)}
+            answer={answer}
+            busy={busy}
+            onCheck={() => { go("tellback"); }}
           />
         )}
         {screen === "clip" && guide && <ClipScreen guide={guide} index={index} lang={lang} clips={clips} onBack={() => go("step")} />}
@@ -599,7 +753,7 @@ export default function App() {
             onQuestion={setQuestion}
             onAsk={(q) => void onAsk(q)}
             onTalk={() => go("talk")}
-            onTellBack={() => { void runTool("check_understanding", {}); go("tellback"); }}
+            onTellBack={() => { go("tellback"); }}
             onPrint={print}
             onBack={() => go("step")}
           />
@@ -612,7 +766,7 @@ export default function App() {
             sttMissing={anam.sttMissing}
             caption={lastSay}
             onLanguage={changeLanguage}
-            onBack={() => { void anam.stop(); go("ask"); }}
+            onBack={() => go("ask")}
             onStart={() => void anam.start(guide.id, lang, index)}
             onStop={() => void anam.stop()}
             micMuted={anam.micMuted}
@@ -624,7 +778,12 @@ export default function App() {
           />
         )}
         {screen === "tellback" && guide && (
-          <TellBack guide={guide} lang={lang} onCheck={(a) => void runTool("check_understanding", { answer: a })} onClose={() => go("ask")} />
+          <TellBack
+            guide={guide}
+            lang={lang}
+            onCheck={(a, correct) => void runTool("check_understanding", { answer: a, correct })}
+            onClose={() => go("ask")}
+          />
         )}
         {screen === "error" && (
           <ErrorScreen
@@ -673,8 +832,9 @@ export default function App() {
             {t(lang, "changingLanguage")}
           </p>
         )}
-        {demo && <DevPanel log={log} lang={lang} />}
+        {debug && <DevPanel log={log} lang={lang} />}
       </div>
+      </NavContext.Provider>
       {guide && <PrintSheet guide={guide} lang={lang} />}
       <AvatarHost live={liveInfo.live} screen={screen} />
     </LiveContext.Provider>
