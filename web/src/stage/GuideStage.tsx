@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useId, useLayoutEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { Guide, Highlight, Step } from "../types";
 import { t, tf } from "../i18n";
 import { findWorld, languageLabel } from "../languages";
@@ -9,7 +9,7 @@ import { CloseUp, hasCloseUp } from "../closeups";
 import type { useAnam } from "../useAnam";
 import { prefersReducedMotion } from "../motion";
 import { avatarBig, initialStage, narrationTimeoutMs, stageReducer, tailCaption, whoToAsk, type Phase, type StageEvent } from "./machine";
-import { chooseVisual, conflictStepIndex, dateIndexFor, quadsBox, zoomTo, type StepVisual } from "./visual";
+import { chooseVisual, conflictStepIndex, dateIndexFor, maxScaleFor, planHighlight, primaryHighlight, type StepVisual } from "./visual";
 import { openRemindMe, openShare } from "../extras/bus";
 import { ConflictCard } from "../extras/ConflictCard";
 import { TextSizeSheet } from "../extras/TextSize";
@@ -125,7 +125,7 @@ function Toggle({ on, label, icon, onClick, disabled }: { on: boolean; label: st
 /* ---------------------------------------------------------------- the step visual */
 type CalloutT = { value: string; sub?: string };
 /** The big number/date card. When the step has a date, tapping it opens Remind me. */
-function CalloutCard({ c, on, onRemind }: { c: CalloutT; on: boolean; onRemind?: () => void }) {
+const CalloutCard = forwardRef<HTMLElement, { c: CalloutT; on: boolean; onRemind?: () => void }>(function CalloutCard({ c, on, onRemind }, ref) {
   const inner = (
     <>
       <b>{c.value}</b>
@@ -133,69 +133,92 @@ function CalloutCard({ c, on, onRemind }: { c: CalloutT; on: boolean; onRemind?:
     </>
   );
   return onRemind ? (
-    <button type="button" className={"gs-callout tap" + (on ? " on" : "")} dir="auto" onClick={onRemind}>
+    <button ref={ref as React.Ref<HTMLButtonElement>} type="button" className={"gs-callout tap" + (on ? " on" : "")} dir="auto" onClick={onRemind}>
       {inner}
     </button>
   ) : (
-    <div className={"gs-callout" + (on ? " on" : "")} dir="auto">
+    <div ref={ref as React.Ref<HTMLDivElement>} className={"gs-callout" + (on ? " on" : "")} dir="auto">
       {inner}
     </div>
   );
-}
-function HighlightPhoto({ url, highlights, callout, playing, onRemind }: { url: string; highlights: Highlight[]; callout: { value: string; sub?: string } | null; playing: boolean; onRemind?: () => void }) {
+});
+/** The guide's circle sits in the stage's top corner in guide mode (88px + 12px margin). */
+const CIRCLE_RESERVE = 108;
+/** The Remind me chip at the bottom (44px + 12px margin). */
+const REMIND_RESERVE = 64;
+function HighlightPhoto({ url, highlights, callout, playing, circle, onRemind }: { url: string; highlights: Highlight[]; callout: { value: string; sub?: string } | null; playing: boolean; circle: boolean; onRemind?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
+  const img = useRef<HTMLImageElement>(null);
+  const card = useRef<HTMLElement>(null);
+  const markerId = "gs-head-" + useId().replace(/:/g, "");
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [aspect, setAspect] = useState<number | null>(null);
+  const [natW, setNatW] = useState(0);
+  const [cardRect, setCardRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [zoomed, setZoomed] = useState(false);
   useLayoutEffect(() => {
     const el = box.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setSize({ w: el.clientWidth, h: el.clientHeight }));
+    const measure = () => setSize({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+  // A photo already in the cache may finish loading before the handler is attached.
+  const onImg = useCallback(() => {
+    const im = img.current;
+    if (im && im.complete && im.naturalWidth > 0) {
+      setAspect(im.naturalWidth / Math.max(1, im.naturalHeight));
+      setNatW(im.naturalWidth);
+    }
+  }, []);
+  useLayoutEffect(onImg, [url, onImg]);
+  useLayoutEffect(() => {
+    const c = card.current;
+    setCardRect(c ? { x: c.offsetLeft, y: c.offsetTop, w: c.offsetWidth, h: c.offsetHeight } : null);
+  }, [callout?.value, callout?.sub, size?.w, size?.h]);
   useEffect(() => {
     if (!aspect) return;
     const tm = setTimeout(() => setZoomed(true), prefersReducedMotion() ? 0 : 250);
     return () => clearTimeout(tm);
   }, [aspect]);
-  const bb = useMemo(() => quadsBox(highlights), [highlights]);
-  const z = size && aspect ? zoomTo(bb, size.w, size.h, aspect) : null;
-  const tr = z && zoomed ? `translate(${z.tx}px, ${z.ty}px) scale(${z.scale})` : "none";
-  // Arrow from the callout card down to the top of the highlight (in stage pixels).
-  let arrow: { x1: number; y1: number; x2: number; y2: number } | null = null;
-  if (z && callout && zoomed) {
-    const s = z.scale;
-    const hx = (bb.x + bb.w / 2) * z.iw * s + z.tx;
-    const hy = bb.y * z.ih * s + z.ty;
-    const rtl = document.documentElement.dir === "rtl";
-    const cx = rtl ? size!.w - 90 : 90;
-    if (hy > 120) arrow = { x1: cx, y1: 104, x2: Math.max(24, Math.min(size!.w - 24, hx)), y2: hy - 8 };
-  }
+  const primary = useMemo(() => primaryHighlight(highlights, callout), [highlights, callout]);
+  const plan =
+    size && aspect && size.w > 0 && size.h > 0
+      ? planHighlight({
+          highlights,
+          primary,
+          cw: size.w,
+          ch: size.h,
+          imgAspect: aspect,
+          reserveTop: Math.max(circle ? CIRCLE_RESERVE : 0, cardRect ? cardRect.y + cardRect.h + 8 : 0),
+          reserveBottom: onRemind ? REMIND_RESERVE : 0,
+          callout: callout ? cardRect : null,
+          maxScale: maxScaleFor(natW, size.w),
+        })
+      : null;
+  const tr = plan && zoomed ? `translate(${plan.tx}px, ${plan.ty}px) scale(${plan.scale})` : "none";
+  const show = !!plan && zoomed;
   return (
     <div className="gs-photo" ref={box}>
-      <div
-        className="gs-photo-in"
-        style={{ width: z ? z.iw : "100%", height: z ? z.ih : undefined, transform: tr }}
-      >
-        <img src={url} alt="" onLoad={(e) => setAspect(e.currentTarget.naturalWidth / Math.max(1, e.currentTarget.naturalHeight))} />
-        <svg className="gs-quads" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
-          {highlights.map((h, i) => (
-            <polygon key={i} className={"gs-quad" + (zoomed ? " on" : "")} points={h.quad.map(([x, y]) => `${x},${y}`).join(" ")} />
-          ))}
-        </svg>
+      <div className="gs-photo-in" style={{ width: plan ? plan.iw : "100%", height: plan ? plan.ih : undefined, transform: tr }}>
+        <img ref={img} src={url} alt="" onLoad={onImg} />
       </div>
-      {arrow && (
-        <svg className="gs-arrow" width={size!.w} height={size!.h} aria-hidden="true">
+      {plan && (
+        <svg className={"gs-mark" + (show ? " on" : "")} width={size!.w} height={size!.h} aria-hidden="true">
           <defs>
-            <marker id="gs-head" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" refX="8" refY="8" orient="auto">
-              <path d="M0,0 L16,8 L0,16 z" fill="var(--warn-accent)" />
+            <marker id={markerId} markerUnits="userSpaceOnUse" markerWidth="18" markerHeight="18" refX="15" refY="9" orient="auto">
+              <path d="M0,0 L18,9 L0,18 z" fill="var(--warn-accent)" stroke="none" />
             </marker>
           </defs>
-          <line x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} markerEnd="url(#gs-head)" />
+          {plan.polys.map((q, i) => (
+            <polygon key={i} className={"gs-box" + (i === plan.primary ? " main" : "")} points={q.map(([x, y]) => `${x},${y}`).join(" ")} />
+          ))}
+          {plan.arrow && <line className="gs-arrow-line" x1={plan.arrow.x1} y1={plan.arrow.y1} x2={plan.arrow.x2} y2={plan.arrow.y2} markerEnd={`url(#${markerId})`} />}
         </svg>
       )}
-      {callout && <CalloutCard c={callout} on={zoomed} onRemind={onRemind} />}
+      {callout && <CalloutCard ref={card} c={callout} on={zoomed} onRemind={onRemind} />}
       {!playing && <span className="sr">paused</span>}
     </div>
   );
@@ -203,7 +226,7 @@ function HighlightPhoto({ url, highlights, callout, playing, onRemind }: { url: 
 
 const KIND_ICON: Record<string, string> = { what: "doc", when: "sun", how: "hand", warning: "alert", get_help: "alert" };
 
-function StepVisualView({ v, step, playing, onRemind }: { v: StepVisual; step: Step; playing: boolean; onRemind?: () => void }) {
+function StepVisualView({ v, step, playing, circle = false, onRemind }: { v: StepVisual; step: Step; playing: boolean; circle?: boolean; onRemind?: () => void }) {
   if (v.kind === "closeup")
     return (
       <div className="gs-closeup">
@@ -211,7 +234,7 @@ function StepVisualView({ v, step, playing, onRemind }: { v: StepVisual; step: S
         {v.callout && <CalloutCard c={v.callout} on onRemind={onRemind} />}
       </div>
     );
-  if (v.kind === "highlight") return <HighlightPhoto url={v.url} highlights={v.highlights} callout={v.callout} playing={playing} onRemind={onRemind} />;
+  if (v.kind === "highlight") return <HighlightPhoto url={v.url} highlights={v.highlights} callout={v.callout} playing={playing} circle={circle} onRemind={onRemind} />;
   if (v.kind === "image") return <img className="gs-img" src={v.url} alt="" />;
   return (
     <div className={"gs-textonly" + (step.kind === "warning" || step.kind === "get_help" ? " warn" : "")}>
@@ -828,7 +851,7 @@ export function GuideStage(p: GuideStageProps) {
             {/* the step visual: under the avatar, shown when she is the small circle */}
             {(s.phase === "step" || s.phase === "ask") && step && (
               <div className={"gs-visual" + (visual.kind === "text" ? " textonly" : "")} key={s.index} data-dir={s.dir}>
-                <StepVisualView v={visual} step={step} playing={!paused} onRemind={onRemind} />
+                <StepVisualView v={visual} step={step} playing={!paused} circle onRemind={onRemind} />
                 {onRemind && !paused && <RemindChip lang={lang} onClick={onRemind} />}
                 {goingBack && (
                   <span className="gs-chip back">
@@ -860,6 +883,12 @@ export function GuideStage(p: GuideStageProps) {
               {!live && <img src={big ? "/guide-cartoon.jpg" : "/guide-face.jpg"} alt="" />}
               {connecting && big && <span className="gs-joining">{t(lang, "gs_joining")}</span>}
             </button>
+            {live && anam.needsTap && (
+              <button type="button" className={"gs-taphear" + (big ? "" : " small")} onClick={() => anam.unlock()}>
+                <SpeakerIcon />
+                {t(lang, "gs_tapToHear")}
+              </button>
+            )}
             <Talking on={talking} small={!big} />
           </div>
 
@@ -1033,7 +1062,8 @@ function AskPanel(props: {
           {t(lang, "gs_you")}: “{s.question}”
         </p>
         <div className="gs-caption">
-          <small>{t(lang, "gs_willAnswerRead")}</small>
+          {/* "The answer comes from your paper" only when it does: a not-on-your-paper answer says who to ask below. */}
+          {props.grounded !== false && <small>{t(lang, "gs_willAnswerRead")}</small>}
           <p dir="auto">{props.answer ?? t(lang, "gs_thinking")}</p>
         </div>
         {props.answer && props.grounded !== null && (
