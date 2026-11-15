@@ -29,6 +29,12 @@ DARK = 100.0
 LOW_CONTRAST = 35.0
 LOW_CONTRAST_MAX_LUMA = 200.0
 GLARE_FRAC = 0.25
+# Glare washes the print out: a bright patch only counts when it holds under GLARE_INK of the page's usual ink.
+# (A plain white page in good light is mostly 250+ too, but its words are still there.)
+GLARE_INK = 0.2
+# Motion blur smears every edge the same way: the gradients line up (structure-tensor coherence near 1).
+# Sharp print has strokes in all directions (0.0-0.45 on letters, bills, forms and tables).
+MOTION_COHERENCE = 0.6
 
 
 class ScanError(ValueError):
@@ -165,7 +171,7 @@ def quality(img: np.ndarray, quad_px, found: bool = True) -> dict:
     luma = float(g[m].mean())
     p5, p95 = np.percentile(g[m], [5, 95])
     contrast = float(p95 - p5)
-    if lap_var < BLUR_WARN:
+    if lap_var < BLUR_WARN or motion_blur(g, m):
         issues.append("blurry")
     if luma < DARK:
         issues.append("dark")
@@ -173,10 +179,14 @@ def quality(img: np.ndarray, quad_px, found: bool = True) -> dict:
         issues.append("low_contrast")
     if found:
         blown = ((g >= 250) & m).astype(np.uint8)
-        nb, _lab, st, _ = cv2.connectedComponentsWithStats(blown)
+        # Close the gaps that letters leave in a bright page, so "is there print inside?" can be asked of the patch.
+        blown = cv2.morphologyEx(blown, cv2.MORPH_CLOSE, np.ones((11, 11), np.uint8)) & m.astype(np.uint8)
+        nb, lab, st, _ = cv2.connectedComponentsWithStats(blown)
         if nb > 1:
             k = 1 + int(np.argmax(st[1:, cv2.CC_STAT_AREA]))
-            if st[k, cv2.CC_STAT_AREA] / m.sum() >= GLARE_FRAC:
+            ink = (g < np.median(g[m]) - 60) & m
+            washed = ink[lab == k].mean() < GLARE_INK * ink[m].mean()
+            if st[k, cv2.CC_STAT_AREA] / m.sum() >= GLARE_FRAC and washed:
                 issues.append("glare")
                 x, y, bw, bh = (int(v) for v in st[k, :4])
                 region = [round(x / ww, 4), round(y / hh, 4), round(bw / ww, 4), round(bh / hh, 4)]
@@ -189,6 +199,17 @@ def quality(img: np.ndarray, quad_px, found: bool = True) -> dict:
     if region:
         out["region"] = region
     return out
+
+
+def motion_blur(g: np.ndarray, m: np.ndarray) -> bool:
+    """True when the page's edges all run one way (a shaken phone): structure-tensor coherence >= MOTION_COHERENCE."""
+    if m.sum() < 1000:
+        return False
+    f = g.astype(np.float64)
+    gx, gy = cv2.Sobel(f, cv2.CV_64F, 1, 0), cv2.Sobel(f, cv2.CV_64F, 0, 1)
+    jxx, jyy, jxy = (gx * gx)[m].mean(), (gy * gy)[m].mean(), (gx * gy)[m].mean()
+    coh = np.sqrt((jxx - jyy) ** 2 + 4 * jxy ** 2) / (jxx + jyy + 1e-9)
+    return bool(coh >= MOTION_COHERENCE)
 
 
 def scan(data: bytes, quad=None) -> dict:

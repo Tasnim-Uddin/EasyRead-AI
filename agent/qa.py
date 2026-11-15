@@ -36,10 +36,15 @@ def ask_who(guide: dict, lang: str) -> str:
     s = guide.get("sender") or {}
     table = WHO.get(lang, WHO["en"])
     kind, name = s.get("kind"), (s.get("name") or "").strip()
+    if guide.get("domain") == "medicine" and guide.get("doc_type") == "how_to" and kind in (None, "company", "other"):
+        return table["pharmacy"]  # a medicine label or leaflet names its maker; the person to ask is the pharmacist
     if kind in table:
         return table[kind]
     if name:
+        # "HM Revenue & Customs, Accounts Office Cumbernauld" -> its first part
         return short_name(name)
+    if not s and guide.get("domain") in table:
+        return table[guide["domain"]]  # an unsigned school form: ask the school
     return table["unknown"]
 
 

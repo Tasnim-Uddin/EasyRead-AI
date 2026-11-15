@@ -3,7 +3,7 @@ import asyncio, base64, copy, json, os, pathlib, re, datetime as dt, logging
 from . import langs, llm, locate, postprocess, technique
 from .docs import ROLES
 from .rewriter import write_easy_read, write_generic_howto
-from .doctypes import STYLE_RULES, content_to_steps, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
+from .doctypes import STYLE_RULES, content_to_steps, ensure_blank_date_step, ensure_content_facts, finish_steps, normalise, nothing_read, safety_lines
 
 log = logging.getLogger("agent.pipeline")
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -16,6 +16,15 @@ EXTRACT_SYSTEM = f"""You read photos and PDFs the user uploaded (one or several:
 a photo of their own device) and extract facts in ONE pass. Each file is introduced by a line "Document N (role: ...)".
 If the role says "detect", decide it: one of label, leaflet, device_photo, letter, form, other.
 Copy only what is in the documents; never invent. Use null for anything absent. Put anything you cannot read in "unreadable".
+A blank box or a template placeholder (for example «Amount», [date], [time], DD/MM/YYYY, XX.XX, ______) is NOT a value:
+never copy it as one and never guess it. Keep the action and say plainly that the paper does not show the value, for
+example "Pay by the date on your letter. This paper does not show the date." Give no "dates" entry for it, and in
+"amounts" write "not shown on the paper" as the amount. Never add urgency the paper does not print ("now", "today",
+"straight away"): if the paper gives no date, do not make one up. Only say a value is not shown when the paper itself
+has a blank or a placeholder for it; do not list values the paper never asks for.
+If the paper is written to someone else (for example a clinic's letter to a GP), say so in "what_this_is" and give in
+"what_to_do" only what the paper asks the reader (the patient or carer) to do or expect; do not turn the writer's
+clinical notes into instructions.
 
 First decide if this is a paper at all. Set "is_document": false only when NO file is a document, label, leaflet, letter,
 bill, form, instructions or a medicine or device (for example a drawing, a selfie, a pet, a view). Otherwise true.
@@ -42,7 +51,7 @@ Then, by doc_type:
   "label": {{"dose", "frequency"}} and "leaflet": {{"dose", "frequency"}} exactly as each one says. Do not merge them yourself.
 - how_to (not medicine, for example furniture, a phone, a boiler): "title", "source_steps": [the document's own steps, in order,
   one action each, copied faithfully], "warnings": [str], "get_help": [str]. Leave the medicine fields null.
-- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 5 short action sentences, action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts;
+- letter, bill, other: "what_this_is": one Easy Read sentence; "what_to_do": [at most 8 short action sentences (if the paper has more, keep the 8 that matter most), action first, in the order to do them; never repeat a date or amount that is already in by_when or amounts;
   keep any exception the paper gives, for example "You can drink water"; for a list of medicine changes (stop, start, change a dose)
   give one sentence per medicine with its name and dose, up to 10];
   "by_when": [{{"date": str, "what": str}}]; "amounts": [{{"what": str, "amount": str}}] (at most 3, the total to pay first, then fees; leave out line items)
@@ -347,6 +356,22 @@ def not_readable(ex: dict) -> str | None:
     return None
 
 
+def form_label_quotes(ex: dict) -> list[dict]:
+    """The quotes to place on the paper. On a form, every box label the reader listed is a quote as well: the
+    model's 12 quotes often skip some boxes. A label that is not printed is simply not found by OCR (no box)."""
+    quotes = list(ex.get("quotes") or [])
+    if ex.get("doc_type") != "form":
+        return quotes
+    have = {q["t"].strip(" :").lower() for q in quotes}
+    pages = len(ex.get("documents") or []) or 1
+    for f in (ex.get("content") or {}).get("fields") or []:
+        label = (f.get("label") or "").split(" (")[0].strip(" :")
+        if label and len(label) <= 80 and label.lower() not in have:
+            have.add(label.lower())
+            quotes.append({"t": label, "page": 0 if pages == 1 else None})
+    return quotes
+
+
 async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
     """Highlights, number cards, checked dates and unreadable regions from the OCR of the user's own pages.
     Never fails the guide: without OCR, steps simply have no highlights."""
@@ -359,8 +384,9 @@ async def place_on_paper(guide: dict, ex: dict, files, ocr_task) -> None:
         pages = [None] * len(files)
     wait_ms = int((time.perf_counter() - t) * 1000)
     try:
-        stats = locate.attach(guide, ex.get("quotes") or [], pages)
         pdfs = [locate.pdf_text(f[0]) if f[1] == "application/pdf" else "" for f in files]
+        locate.ground_urgency(guide["steps"], locate.page_words(pages, pdfs))
+        stats = locate.attach(guide, form_label_quotes(ex), pages)
         ocr_ok = any(p is not None for p in pages) or any(pdfs)
         guide["dates"] = locate.check_dates(ex.get("dates") or [], pages, pdfs, ocr_ok)
         guide["unreadable_regions"] = locate.unreadable_regions(pages, ex.get("unreadable_parts") or [])
@@ -415,6 +441,12 @@ async def run(store, gid: str, files, device_photo, language: str, image_urls: l
             else:
                 raw = await write_easy_read(with_technique(facts), language)
             raw = finish_steps(raw, dt, domain, facts["conflicts"], facts.get("device_type"))
+            # What the reader noted as blank, in its notes or in the content lines it wrote (the writer may drop the
+            # "this paper does not show the date" sentence, or the step cap may trim it).
+            notes = [u.get("note") or "" for u in ex.get("unreadable_parts") or []] + list(facts.get("unreadable") or [])
+            notes += [str(t) for t in ((ex["content"] or {}).get("what_to_do") or [])]
+            notes += [str(b.get("what") or "") for b in ((ex["content"] or {}).get("by_when") or []) if isinstance(b, dict)]
+            raw = ensure_blank_date_step(raw, notes, ex.get("sender"))
             guide["steps"] = [{"index": i, "text": r["text_en"], "text_en": r["text_en"], "kind": r["kind"],
                                "picture_prompt": r["picture_prompt"], "image_url": None,
                                "technique_clip_id": None, "status": "pending", "visual": r.get("visual")} for i, r in enumerate(raw)]

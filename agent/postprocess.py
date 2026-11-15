@@ -13,6 +13,12 @@ MONEY = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?")
 CAPS = {"letter": 10, "bill": 10, "other": 10, "form": 14, "medicine": 16, "how_to": 12}
 CONFLICT_TEXT = "Your label and leaflet say different things. Ask your pharmacist."
 RANK = {"what": 0, "how": 1, "when": 2, "warning": 3, "get_help": 4}
+# Template placeholders printed on a blank or sample paper: «PCN_Amount», <<Name>>, {{date}}, [date], DD/MM/CCYY,
+# £XX.XX, ______. They are not values: a step must never read one out as if it were the amount or the date.
+PLACEHOLDER = re.compile(r"«[^»]{1,60}»|<<[^>]{1,60}>>|\{\{[^}]{1,60}\}\}|\[[A-Za-z_]{2,20}(?: [A-Za-z_]{2,14})?\]"
+                         r"|\b(?:DD|dd)\s?[/.-]?\s?(?:MM|mm|Month|month)\s?[/.-]?\s?(?:CCYY|YYYY|yyyy|YY|yy)\b"
+                         r"|£\s?X+(?:\.X+)?\b|_{3,}")
+BLANK = "(blank on your paper)"
 
 
 def _norm(text: str) -> list[str]:
@@ -83,13 +89,24 @@ def split_technique(steps: list[dict], device_type: str | None) -> list[dict]:
     return out
 
 
+BACKREF = re.compile(r"^(?:it|this|that|these|those|they|them|doing this|otherwise|because|so)\b", re.I)
+
+
 def split_warnings(steps: list[dict]) -> list[dict]:
     """A warning step with several sentences becomes one step per sentence (one idea per step)."""
     out = []
     for s in steps:
         parts = [p.strip() for p in re.split(r"(?<=[.!?])\s+", s["text_en"].strip()) if p.strip()]
         if s["kind"] == "warning" and not is_conflict(s["text_en"]) and len(parts) > 1 and all(len(p.split()) >= 3 for p in parts):
-            out += [{**s, "text_en": p} for p in parts]
+            # A sentence that starts "It ..." / "This ..." explains the one before ("Never use a drill. It can damage
+            # the parts."): it stays with it, never as a step of its own.
+            groups = [[parts[0]]]
+            for p in parts[1:]:
+                if BACKREF.match(p):
+                    groups[-1].append(p)
+                else:
+                    groups.append([p])
+            out += [{**s, "text_en": " ".join(g)} for g in groups]
         else:
             out.append(s)
     return out
@@ -118,7 +135,7 @@ def drop_restated(steps: list[dict], doc_type: str) -> list[dict]:
             if money and all(m.replace(" ", "") in before for m in money):
                 continue
             if not money:
-                dates = re.findall(r"\b\d{1,2} [A-Z][a-z]+(?: \d{4})?", s["text_en"])
+                dates = re.findall(r"\b\d{1,2} [A-Z][a-z]+(?: \d{4})?|\b\d+ (?:working )?(?:days?|weeks?|months?)\b", s["text_en"])
                 # Same date is not the same fact: "pay by 30 Nov" does not cover "return the form by 30 Nov".
                 if dates and all(d.replace(" ", "") in before for d in dates) and any(
                         all(d in k["text_en"] for d in dates) and _same_action(s["text_en"], k["text_en"]) for k in out):
@@ -234,7 +251,7 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
         # A step holding a date, time or amount no other step has is a fact; keep it unless the guide is far too long.
         keep = len(steps) <= limit + EXTRA_FOR_FACTS
         def droppable(i, s):
-            return i > 0 and not (keep and unique_numbers(s, steps))
+            return i > 0 and not (keep and unique_numbers(s, steps)) and not SIGN.search(s["text_en"])
         cands = [i for i, s in enumerate(steps) if s["kind"] == "what" and droppable(i, s)] or \
                 [i for i, s in enumerate(steps) if s["kind"] in ("how", "when") and droppable(i, s)
                  and not s.get("technique")]  # a checked technique line is never trimmed
@@ -245,6 +262,8 @@ def cap(steps: list[dict], doc_type: str, domain: str) -> list[dict]:
 
 
 EXTRA_FOR_FACTS = 4
+# The step where the reader signs or gives consent is the point of a form: never trimmed by the cap.
+SIGN = re.compile(r"\bsign(?:ature|ed)?\b(?! (?:up|in)\b)|\bconsent\b|\bI (?:agree|confirm|give permission)\b", re.I)
 NUM = re.compile(r"£\s?\d[\d,]*(?:\.\d+)?|\d+(?:[:.]\d+)?")
 
 
@@ -374,9 +393,26 @@ def fit_warnings(steps: list[dict], limit: int = TARGET_STEPS) -> list[dict]:
     return out
 
 
+def honest_blanks(steps: list[dict]) -> list[dict]:
+    """A placeholder copied into a step ("Pay by DD/MM/CCYY", "Fine: «PCN_Amount»") is said as what it is:
+    "(blank on your paper)". Never a made-up value, never the template code."""
+    out = []
+    for s in steps:
+        t = s["text_en"]
+        if PLACEHOLDER.search(t):
+            t = PLACEHOLDER.sub(BLANK, t)
+            t = re.sub(r"\(\s*\(blank on your paper\)\s*\)", BLANK, t)
+            t = re.sub(r"\bnot filled in\s*\(blank on your paper\)", BLANK, t, flags=re.I)
+            t = re.sub(r"\s{2,}", " ", t).strip()
+        out.append({**s, "text_en": t})
+    return out
+
+
 def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None = None, has_conflict: bool = False) -> list[dict]:
-    steps = drop_know(steps)
-    steps = dedupe(drop_restated(split_warnings(dedupe(normalise_conflict(steps))), doc_type))
+    steps = drop_know(honest_blanks(steps))
+    # A form's steps are one box each ("Find the box called Signed. Sign your name."): never split into several.
+    split = (lambda x: x) if doc_type == "form" else split_warnings
+    steps = dedupe(drop_restated(split(dedupe(normalise_conflict(steps))), doc_type))
     steps = merge_dose_limits(steps)
     if doc_type == "how_to" and domain == "medicine":
         if technique.outline(device_type):
