@@ -56,6 +56,8 @@ export interface GuideStageProps {
 }
 
 /** What the guide is told after each step: say it, then stop (no "Ready to move on?" check-in). */
+/** The finish caption: without the check, she does not offer it. */
+const FINISH_LINE = SHOW_CHECK ? "gs_finishLine" : "gs_finishDone";
 const THEN_WAIT = `Then stop talking and wait. Do not ask if they are ready or if they have questions: the screen shows Back, Next, Speak and Type.`;
 
 function stepTitle(s: Step | undefined) {
@@ -657,7 +659,7 @@ export function GuideStage(p: GuideStageProps) {
   else if (s.phase === "step") {
     caption = (!paused && liveText.trim()) || stepWords;
     captionIsStep = caption === stepWords;
-  } else if (s.phase === "finish") caption = live && anam.replySeq > narrBase.current && anam.liveCaption ? anam.liveCaption : t(lang, "gs_finishLine");
+  } else if (s.phase === "finish") caption = live && anam.replySeq > narrBase.current && anam.liveCaption ? anam.liveCaption : t(lang, FINISH_LINE);
   let answerText: string | null = null;
   if (s.phase === "answer") {
     captionLabel = t(lang, "gs_answering");
@@ -682,7 +684,7 @@ export function GuideStage(p: GuideStageProps) {
       {!readMode && live && (
         <button
           type="button"
-          className={"gs-mictoggle" + (anam.micMuted ? " off" : "")}
+          className={"gs-mictoggle" + (anam.micMuted ? " off" : "") + (s.phase === "intro" ? " compact" : "")}
           role="switch"
           aria-checked={!anam.micMuted}
           title={t(lang, anam.micMuted ? "gs_micOffHint" : "gs_micOnHint")}
@@ -702,7 +704,7 @@ export function GuideStage(p: GuideStageProps) {
           <BookIcon />
         </button>
       ) : (
-        <span className="gs-grow" />
+        !live && <span className="gs-grow" />
       )}
     </header>
   );
@@ -783,7 +785,7 @@ export function GuideStage(p: GuideStageProps) {
         {conflictView ? (
           conflictView
         ) : finished ? (
-          <FinishBody lang={lang} total={total} caption={t(lang, "gs_finishLine")} label={t(lang, "gs_yourGuide")} p={p} onAgain={() => run({ type: "restart" })} />
+          <FinishBody lang={lang} total={total} caption={t(lang, FINISH_LINE)} label={t(lang, "gs_yourGuide")} p={p} onAgain={() => run({ type: "restart" })} />
         ) : s.phase === "ask" || s.phase === "answer" ? (
           <AskPanel
             lang={lang}
