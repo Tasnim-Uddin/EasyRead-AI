@@ -68,31 +68,9 @@ export default function Icon({ name, size, style, className }: { name: string; s
   );
 }
 
-/** Illustrated stand-in for the Anam avatar. Replaced by the live video when a session is running. */
+/** The cartoon guide (the same portrait the live Anam avatar is made from). Replaced by the live video when a
+ * session is running. Source: design/guide-cartoon/chosen.png. */
 export function GuideFace({ large }: { large?: boolean }) {
-  if (!large) {
-    return (
-      <svg viewBox="0 0 56 56" className="av" aria-hidden="true" style={{ stroke: "none" }}>
-        <rect width="56" height="56" rx="14" fill="var(--sage-deep)" />
-        <circle cx="28" cy="22" r="10" fill="var(--sage-fig)" />
-        <path d="M8 56c0-13 9-20 20-20s20 7 20 20z" fill="var(--sage-fig)" />
-      </svg>
-    );
-  }
-  return (
-    <svg viewBox="0 0 390 330" className="ill" preserveAspectRatio="xMidYMax slice" aria-hidden="true" style={{ stroke: "none" }}>
-      <circle cx="350" cy="30" r="90" fill="#B5D6C1" />
-      <circle cx="30" cy="300" r="70" fill="#B5D6C1" />
-      <path d="M95 330c0-55 45-80 100-80s100 25 100 80z" fill="#24503A" />
-      <path d="M170 252l25 40 25-40z" fill="#FFFDF9" />
-      <rect x="178" y="215" width="34" height="40" rx="14" fill="#E9B98F" />
-      <ellipse cx="195" cy="165" rx="64" ry="72" fill="#F4C9A0" />
-      <path d="M128 160c-8-62 30-92 70-92 44 0 72 34 62 92-12-30-30-46-62-46s-50 16-70 46z" fill="#3A2A20" />
-      <circle cx="172" cy="170" r="7" fill="#3A2A20" />
-      <circle cx="218" cy="170" r="7" fill="#3A2A20" />
-      <circle cx="150" cy="195" r="11" fill="#F0A98A" opacity=".7" />
-      <circle cx="240" cy="195" r="11" fill="#F0A98A" opacity=".7" />
-      <path d="M172 200q23 22 46 0" fill="none" stroke="#3A2A20" strokeWidth="5" strokeLinecap="round" />
-    </svg>
-  );
+  if (!large) return <img src="/guide-face.jpg" className="av guide-face" alt="" aria-hidden="true" width={56} height={56} />;
+  return <img src="/guide-cartoon.jpg" className="ill guide-ill" alt="" aria-hidden="true" />;
 }

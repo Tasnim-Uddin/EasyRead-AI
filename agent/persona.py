@@ -3,10 +3,12 @@ import json, os
 from . import langs
 
 # Public stock IDs from Anam's catalogue (GET /v1/avatars, /v1/voices, /v1/llms); override via env.
-# Avatar: "Liv" (home), a friendly woman, cara-4. Voice: "Amanda - Warm Guide" (Cartesia, English, warm and calm).
+# Avatar: our own cartoon guide (custom cara-4 avatar made from design/guide-cartoon/chosen.png, in the same flat
+# cartoon style as the step pictures). Fallback: set ANAM_AVATAR_ID=071b0286-4cce-4808-bee2-e642f1062de3 for the
+# realistic stock "Liv" (home). Voice: "Amanda - Warm Guide" (Cartesia, English, warm and calm).
 # LLM: GPT OSS 120B, Anam's built-in model, listed as strong at tool calling.
 DEFAULTS = {
-    "avatarId": "071b0286-4cce-4808-bee2-e642f1062de3",
+    "avatarId": "1ebfe4f8-d568-40d1-8e25-5605942050e1",  # cartoon guide; Liv: 071b0286-4cce-4808-bee2-e642f1062de3
     "avatarModel": "cara-4",
     "voiceId": "90313ddc-4fc0-11f1-84b0-52bacf74fa75",
     "llmId": "a7cf662c-2ace-4de1-a21e-ef0fbf144bb7",
@@ -86,7 +88,7 @@ def voice_id(language: str) -> str:
 def persona_config(guide: dict, language: str, step_index: int = 0) -> dict:
     env = os.environ.get
     cfg = {"name": "Easy Read guide",
-           "avatarId": env("ANAM_AVATAR_ID", DEFAULTS["avatarId"]),
+           "avatarId": env("ANAM_AVATAR_ID") or DEFAULTS["avatarId"],
            "avatarModel": env("ANAM_AVATAR_MODEL", DEFAULTS["avatarModel"]),
            "voiceId": voice_id(language),
            "llmId": env("ANAM_LLM_ID", DEFAULTS["llmId"]),
