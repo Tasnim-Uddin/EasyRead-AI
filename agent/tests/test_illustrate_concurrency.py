@@ -46,11 +46,11 @@ def test_all_steps_ready_and_bound_respected(monkeypatch):
     assert len(events) == 20 and all(e["type"] == "step_updated" for e in events)
 
 
-def test_default_concurrency_is_six(monkeypatch):
+def test_default_concurrency_is_nine(monkeypatch):
     monkeypatch.delenv("PICTURE_CONCURRENCY", raising=False)
     state = _fake_media(monkeypatch)
     _run(_guide(16))
-    assert state["max"] == 6
+    assert state["max"] == 9
 
 
 @pytest.mark.parametrize("bad", ["0", "-2", "abc"])

@@ -23,10 +23,10 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 - Simple flat friendly vector illustration, thick dark brown outlines, plain solid cream background.
 - Palette only: cream #FFF6E9, ink #3A2A20, orange #FF9B3D, sage #C9E2D2, butter #FFE49A.
 - One clear action per picture. Uncluttered: no busy room, no extra objects.
-- The same person in every picture of a guide (a friendly adult with short dark hair and a sage green sweater).
+- One character: the person in every picture is the live guide, the same woman as the Anam avatar (warm brown skin, black hair in a top bun, round orange earrings, sage green top). The guide portrait goes with every picture request as a reference image (`media/guide_ref.jpg`, model `fal-ai/nano-banana/edit`). Other people (a pharmacist, a doctor) may appear, but the main person is always the guide. Steps with no person stay without one.
 - No text, letters or numbers anywhere, including clock faces, phone screens and labels on objects. Captions come from the app.
 - Name objects in the step's picture prompt, not in the shared CHARACTER line, or the model puts them in every picture.
-- The live guide (Anam avatar) is drawn in the same style, so the guide and the pictures look like one product:
+- The live guide (Anam avatar) and the step pictures are one character in one style, so they look like one product:
   `design/guide-cartoon/chosen.png` (made with `fal-ai/flux/dev`, 1152x1152, cream background, sage top).
 
 ## 2. UI copy

@@ -98,7 +98,7 @@
       "text": "أخبر طبيبك العام إذا احتجت إليه أكثر من 3 مرات في الأسبوع.",
       "text_en": "Tell your GP if you need it more than 3 times a week.",
       "kind": "warning",
-      "picture_prompt": "a friendly doctor in a white coat with a stethoscope on the left, facing the man in the green sweater with short dark hair on the right who holds the blue inhaler, both smiling",
+      "picture_prompt": "a friendly doctor in a white coat with a stethoscope on the left, facing the guide woman on the right who holds the blue inhaler, both smiling",
       "image_url": "/fixtures/img/step_6.png",
       "technique_clip_id": null,
       "status": "ready"
