@@ -244,11 +244,11 @@ PICTURE_TIMEOUT_S = float(os.environ.get("PICTURE_TIMEOUT_S", "150"))
 
 
 def picture_concurrency() -> int:
-    """How many step pictures are made at once (PICTURE_CONCURRENCY, default 6, at least 1)."""
+    """How many step pictures are made at once (PICTURE_CONCURRENCY, default 9: a whole guide at once, at least 1)."""
     try:
-        return max(1, int(os.environ.get("PICTURE_CONCURRENCY", "6")))
+        return max(1, int(os.environ.get("PICTURE_CONCURRENCY", "9")))
     except ValueError:
-        return 6
+        return 9
 
 
 async def illustrate(guide: dict, emit):

@@ -43,7 +43,7 @@ flowchart TD
     A["Upload<br/>photos or PDFs, several files<br/>roles: label, leaflet, device photo, letter, form"] --> B["Claude vision: one call over all files<br/>doc type, facts, device type from the device photo"]
     B --> C["Easy Read rewrite<br/>one idea per sentence, 15 words or fewer"]
     C --> D["Safety post-processing<br/>label/leaflet conflict flag, 999/111 line,<br/>fact add-back for dates and amounts"]
-    D --> E["fal pictures<br/>6 at a time; the guide opens before they finish"]
+    D --> E["fal pictures<br/>all at once; the guide opens before they finish"]
     E --> F["Listen<br/>ElevenLabs read-aloud"]
     E --> G["Talk: Anam avatar<br/>drives the app with client tools"]
     G --> H["Tell me back<br/>short check question"]
@@ -57,7 +57,7 @@ flowchart TD
 2. **Read.** All files go to Claude in one vision call. It returns the document type (how-to, letter, bill, form), the facts, and anything it could not read. A device photo sets `device_type` (for example a pressurised inhaler is shaken; a dry-powder inhaler is not). That decides the technique steps. A photo that is not a paper, or cannot be read, stops with a clear message.
 3. **Rewrite.** Facts become Easy Read steps (`finetune/`, `agent/pipeline.py`). Letters, bills and forms get what it is, what to do, by when, and how much.
 4. **Post-process.** Pure Python checks tidy the steps (`agent/postprocess.py`, `agent/doctypes.py`). See [Safety](#safety).
-5. **Pictures.** fal draws one picture per step, 6 at a time (`PICTURE_CONCURRENCY`). The guide opens as soon as the steps are written. Pictures stream in over SSE.
+5. **Pictures.** fal draws one picture per step, all at once (`PICTURE_CONCURRENCY`, default 9; a 9-step guide took 12 s in our test). The guide opens as soon as the steps are written. Pictures stream in over SSE.
 6. **Listen and talk.** ElevenLabs reads each step aloud (`/api/tts`, browser voice as fallback). The Anam avatar talks you through the guide.
 7. **Check and take home.** "Tell me back" asks a short check question. `/api/guides/{id}/sheet` returns a printable page.
 8. **Any language.** Pick a language, or type one. Steps, safety lines and the avatar switch. Arabic, Urdu, Persian, Pashto, Hebrew and other right-to-left languages flip the layout. The interface is hand-translated in English, Spanish, Arabic, Urdu and Polish (Bengali is not finished).
@@ -70,8 +70,9 @@ Every step has a picture. The pictures carry the meaning, so they work in any la
 
 | fal model | Where it is used | Status |
 |---|---|---|
-| `fal-ai/flux/dev` | Live step pictures for every uploaded paper. One shared style prompt (the app palette, one character), no text inside the image. Also the cartoon portrait the Anam guide avatar is made from (`design/guide-cartoon/`) | Live, needs `FAL_KEY` |
-| `fal-ai/flux/schnell` | Pictures for the sample guides, made once and stored in `demo/fixtures/img/`. Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
+| `fal-ai/nano-banana/edit` | Live step pictures for every uploaded paper. One character: the guide portrait (`media/guide_ref.jpg`, from `design/guide-cartoon/chosen.png`) goes with every request as a reference image, so the woman in every step is the live guide. One shared style prompt (the app palette), no text inside the image. About 9 s per picture, all made in parallel. See `design/one-character/sheet.png` | Live, needs `FAL_KEY` |
+| `fal-ai/flux/dev` | The cartoon portrait the Anam guide avatar is made from (`design/guide-cartoon/`). Was the step-picture model before; it drew a different person in each step | Offline |
+| `fal-ai/flux/schnell` | Pictures for the council letter and bookshelf sample guides, made once and stored in `demo/fixtures/img/` (the inhaler sample uses the live model with the guide). Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
 | `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | 3 technique clips made from the step pictures: shake, press and breathe in, hold your breath (`library/clips/`) | Made offline. Not checked by a pharmacist, so shown only in demo mode (`SHOW_UNCHECKED_CLIPS=1`) with a "not yet checked" badge |
 | `fal-ai/flux-kontext/dev` | Labels on the user's own device photo (cap, mouthpiece, canister) | Built (`label_device_photo` in `agent/pipeline.py`). Off by default (`DEVICE_PHOTO_LABELS=1` turns it on), because live tests put the labels beside the parts, not on them |
 
@@ -97,7 +98,7 @@ Why fal is central:
 - Every step has a picture. Without fal, a guide is only text, which is the problem we are solving.
 - The pictures have no words in them. The same picture works in every language, and it can never show a wrong dose. Captions come from the app in the chosen language.
 - One style prompt keeps every picture in one look across a guide.
-- Pictures are made 6 at a time and stream in, so the user starts reading straight away.
+- Pictures are made all at once (about 12 s for 9) and stream in, so the user starts reading straight away.
 - We chain 4 fal models: text-to-image (two models), image-to-video from those pictures, and image edit on the user's own photo.
 
 ## Anam in EasyRead
@@ -252,7 +253,7 @@ Keys go in your own local `.env`, which is gitignored:
 | Variable | Unlocks |
 |---|---|
 | `ANTHROPIC_API_KEY` | Extraction, rewriting, translation, grounded answers. `ANTHROPIC_MODEL` overrides the model |
-| `FAL_KEY` | Step pictures. `PICTURE_CONCURRENCY` (default 6) sets how many are made at once |
+| `FAL_KEY` | Step pictures. `PICTURE_CONCURRENCY` (default 9) sets how many are made at once |
 | `ELEVENLABS_API_KEY` | Natural voice. `ELEVENLABS_VOICE_ID` and `ELEVENLABS_MODEL_ID` are optional |
 | `ANAM_API_KEY` | Live avatar. `ANAM_AVATAR_ID`, `ANAM_VOICE_ID`, `ANAM_LLM_ID` are optional. `ANAM_VOICE_ID_<LANG>` sets a voice per language |
 | `ADAPTION_API_KEY` and `ADAPTION_MODEL_ID` | Fine-tuned rewriter (also needs `pip install adaption`) |
@@ -274,7 +275,8 @@ cd web && npm run build                            # type-check and production b
 | Service | Model or ID | Used for | Where |
 |---|---|---|---|
 | Anthropic API (Claude) | `claude-sonnet-5-5` (default; `ANTHROPIC_MODEL` changes it) | Reading photos and PDFs, document and device type, Easy Read rewrite, translation, grounded Q&A, drafting training rows | `agent/llm.py` |
-| fal | `fal-ai/flux/dev` | Live step pictures | `media/fal.py` |
+| fal | `fal-ai/nano-banana/edit` | Live step pictures (guide portrait as reference) | `media/fal.py` |
+| fal | `fal-ai/flux/dev` | Guide avatar portrait | `design/guide-cartoon/` |
 | fal | `fal-ai/flux/schnell` | Sample-guide pictures (offline) and model comparison | `demo/fixtures/img/`, `media/samples/compare/` |
 | fal | `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | Technique clips, made offline | `media/fal.py`, `library/` |
 | fal | `fal-ai/flux-kontext/dev` | Labels on the device photo (off by default) | `media/fal.py`, `agent/pipeline.py` |
