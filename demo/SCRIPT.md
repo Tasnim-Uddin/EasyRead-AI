@@ -2,6 +2,8 @@
 
 **Round 1 is a video, not a live demo: see `demo/VIDEO.md`.** This script is for the live final (top 2 per panel). Set up with `demo/CHECKLIST.md` first. All papers and names are fictional (no real patient data).
 
+**Note:** the live script below was written for the v3 inhaler flow. The v4 flow (in-app camera, crop, live guide, highlight on your own photo) is in `demo/VIDEO.md`; use the inhaler steps here as plan B.
+
 Phone-sized app in a desktop browser. Dev panel = the "Tool calls (n)" button at the bottom of the app. Keep it open from the avatar part on.
 
 Legend for the key column: **LIVE** needs `ANTHROPIC_API_KEY` (+ `FAL_KEY` for pictures, `ANAM_API_KEY` for the real avatar, `ELEVENLABS_API_KEY` for natural voice). **OFFLINE** works with no keys and no wifi.
