@@ -6,6 +6,7 @@ import { initialDemo } from "./mode";
 import { t } from "./i18n";
 import { RTL_CODES } from "./languages";
 import "./styles.css";
+import "./layout.css";
 
 installAccess();
 

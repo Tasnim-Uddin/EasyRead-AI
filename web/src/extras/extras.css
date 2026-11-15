@@ -329,3 +329,6 @@ a.btn { text-decoration: none; }
 .x-stops { min-width: 0; }
 .x-stop { flex: 0 1 2.75rem; min-width: 1.75rem; }
 .x-stop.on::after { width: 1.5rem; height: 1.5rem; }
+.x-set-lang span { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+.x-set-lang b { font: 600 1.25rem var(--font-display); overflow-wrap: anywhere; }
+.x-set-lang small { font: 400 1rem var(--font-body); color: var(--muted); }

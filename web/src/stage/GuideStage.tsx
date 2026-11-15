@@ -244,7 +244,7 @@ function HighlightPhoto({ url, highlights, callout, playing, circle, onRemind }:
         </svg>
       )}
       {callout && <CalloutCard ref={card} c={callout} on={zoomed} onRemind={onRemind} />}
-      {!playing && <span className="sr">paused</span>}
+      {!playing && <span className="sr">{t(document.documentElement.lang || "en", "srPaused")}</span>}
     </div>
   );
 }

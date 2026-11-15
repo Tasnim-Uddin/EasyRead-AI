@@ -9,6 +9,7 @@ import council_ar from "../../demo/fixtures/i18n/guide_council_letter_ar.json";
 import flatpack_es from "../../demo/fixtures/i18n/guide_flatpack_es.json";
 import flatpack_ar from "../../demo/fixtures/i18n/guide_flatpack_ar.json";
 import { isFallback, t } from "./i18n";
+import "./errorStrings";
 import type { AskResult, Clip, Guide, ServerEvent } from "./types";
 
 export const sampleGuide = fixture as unknown as Guide;
@@ -55,6 +56,11 @@ const ERROR_KEYS: Record<string, string> = {
   image_unreadable: "errImage",
   demo_mode_no_key: "errDemoKey",
   client: "errGeneric",
+  access_code_required: "errAccess",
+  text_required: "errTextRequired",
+  text_too_long: "errTextLong",
+  tts_unavailable: "errVoiceUnavailable",
+  tts_failed: "errVoiceFailed",
 };
 
 /** The error text in the user's language when we have it; otherwise the server's English detail. */
