@@ -867,8 +867,8 @@ export default function App() {
             askInfo={askInfo}
             moveSeq={moveSeq}
             onIndex={(i) => { goto(i); setMoved(null); }}
-            onReadMode={(on) => { if (!on) setCantConnect(false); setReadMode(on); }}
-            onTryAgain={() => { setCantConnect(false); setReadMode(false); }}
+            onReadMode={(on) => { if (!on) { setCantConnect(false); anam.resetError(); } setReadMode(on); }}
+            onTryAgain={() => { anam.resetError(); setCantConnect(false); setReadMode(false); }}
             onHome={() => { stoppingRef.current = true; go("home"); }}
             onPapers={() => { stoppingRef.current = true; openPapers(); }}
             onCheck={() => go("tellback")}

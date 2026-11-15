@@ -164,8 +164,8 @@ function HighlightPhoto({ url, highlights, callout, playing }: { url: string; hi
       {arrow && (
         <svg className="gs-arrow" width={size!.w} height={size!.h} aria-hidden="true">
           <defs>
-            <marker id="gs-head" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
-              <path d="M0,0 L8,4 L0,8 z" fill="var(--warn-accent)" />
+            <marker id="gs-head" markerUnits="userSpaceOnUse" markerWidth="16" markerHeight="16" refX="8" refY="8" orient="auto">
+              <path d="M0,0 L16,8 L0,16 z" fill="var(--warn-accent)" />
             </marker>
           </defs>
           <line x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} markerEnd="url(#gs-head)" />
@@ -217,8 +217,8 @@ function AllSteps({ guide, index, lang, onPick, onClose }: { guide: Guide; index
               <button className={i === index ? "now" : i < index ? "done" : ""} onClick={() => onPick(i)} aria-current={i === index ? "step" : undefined}>
                 <span className="n">{i < index ? <Icon name="check" /> : i + 1}</span>
                 <span className="tx" dir="auto">{s.text}</span>
-                {i < index && <small className="tag d">{t(lang, "gs_doneTag")}</small>}
-                {i === index && <small className="tag n">{t(lang, "gs_nowTag")}</small>}
+                {i < index && <small className="gs-tag d">{t(lang, "gs_doneTag")}</small>}
+                {i === index && <small className="gs-tag n">{t(lang, "gs_nowTag")}</small>}
               </button>
             </li>
           ))}
@@ -395,6 +395,24 @@ export function GuideStage(p: GuideStageProps) {
   const askInfoBase = useRef(p.askInfo?.seq ?? 0);
   const [readAnswer, setReadAnswer] = useState<{ answer: string; grounded: boolean; askWho: string | null } | null>(null);
   const [asking, setAsking] = useState(false);
+  // Live: the guide speaks the answer; the "From your paper" / "Who to ask" chip comes from the same grounded
+  // check the server does (in case the avatar answered without calling its tool).
+  const [meta, setMeta] = useState<{ grounded: boolean; askWho: string | null } | null>(null);
+  const metaSeq = useRef(0);
+  const fetchMeta = useCallback(
+    (q: string) => {
+      const mine = ++metaSeq.current;
+      setMeta(null);
+      if (!q.trim()) return;
+      api
+        .ask(guide.id, q.trim(), lang)
+        .then((r) => {
+          if (mine === metaSeq.current) setMeta({ grounded: r.grounded, askWho: whoToAsk(guide.sender, r.ask_who) });
+        })
+        .catch(() => undefined);
+    },
+    [guide.id, guide.sender, lang],
+  );
 
   const startAsk = useCallback(
     (mode: "voice" | "type") => {
@@ -453,6 +471,7 @@ export function GuideStage(p: GuideStageProps) {
       if (liveRef.current) {
         anam.interrupt();
         anam.send(text);
+        fetchMeta(text);
         return;
       }
       setAsking(true);
@@ -480,6 +499,7 @@ export function GuideStage(p: GuideStageProps) {
     if (s.phase === "ask" && s.askMode === "voice" && live && anam.userCaption.trim()) {
       askInfoBase.current = p.askInfo?.seq ?? 0;
       dispatch({ type: "asked", question: anam.userCaption });
+      fetchMeta(anam.userCaption);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [anam.userSeq]);
@@ -567,8 +587,8 @@ export function GuideStage(p: GuideStageProps) {
   }
   if (paused) captionLabel = t(lang, "gs_pausedLabel");
   const info = p.askInfo && p.askInfo.seq > askInfoBase.current ? p.askInfo : null;
-  const grounded = live ? info?.grounded ?? null : readAnswer?.grounded ?? null;
-  const askWho = live ? whoToAsk(guide.sender, info?.askWho) : readAnswer?.askWho ?? null;
+  const grounded = live ? info?.grounded ?? meta?.grounded ?? null : readAnswer?.grounded ?? null;
+  const askWho = live ? whoToAsk(guide.sender, info?.askWho ?? meta?.askWho) : readAnswer?.askWho ?? null;
 
   const talking = live && anam.activity === "talking" && !paused;
   const userSaid = live ? anam.userCaption : recUser;

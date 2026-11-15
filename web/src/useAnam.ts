@@ -296,6 +296,11 @@ export function useAnam(
     [videoId],
   );
   const lastReply = useCallback(() => lastReplyRef.current, []);
+  /** "Try guide again": forget the last failure so a new session can start. */
+  const resetError = useCallback(() => {
+    setError(null);
+    setState((s) => (s === "error" || s === "standin" ? "idle" : s));
+  }, []);
 
-  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, setMic, toggleSound, setSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, userCaption, userSeq, lastReply, replySeq, replyDone };
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, setMic, toggleSound, setSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, userCaption, userSeq, lastReply, resetError, replySeq, replyDone };
 }
