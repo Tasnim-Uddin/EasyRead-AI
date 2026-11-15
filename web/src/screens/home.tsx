@@ -3,6 +3,8 @@ import Icon from "../icons";
 import type { PaperRow } from "./papers";
 import { RecentGuides } from "../extras/MyGuides";
 import { TopBar } from "./shared";
+import "./homeStrings";
+import "./home.css";
 
 /* ---------- 1. home ---------- */
 interface HomeProps {
@@ -25,26 +27,25 @@ export function Home({ lang, onLanguage, onSettings, onCamera, onUpload, onSampl
   return (
     <div className="screen">
       <TopBar lang={lang} onLanguage={onLanguage} onSettings={onSettings} onPapers={onPapers} />
-      <div className="hero">
-        <h1>
-          {t(lang, "homeTitleA")} {t(lang, "homeTitleB")}
-        </h1>
-        <p>{t(lang, "homeLead")}</p>
-        <div className="scan">
-          {/* The camera circle is a big extra tap target for touch; the button below is the one for keyboards and screen readers. */}
-          <div className="cam" onClick={onCamera} aria-hidden="true">
-            <Icon name="camera" />
+      <div className="hero home">
+        <section className="home-intro">
+          <div className="who">
+            <img src="/guide-face.jpg" alt="" aria-hidden="true" width={80} height={80} />
+            <div className="bubble">{t(lang, "hHi")}</div>
           </div>
-          <span className="lbl">{t(lang, "scanHint")}</span>
+          <h1>{t(lang, "hTitle")}</h1>
+          <p>{t(lang, "hLead")}</p>
+        </section>
+        <div className="home-cta">
           <button className="btn" onClick={onCamera}>
             <Icon name="camera" />
-            {t(lang, "takePhoto")}
+            {t(lang, "hTake")}
+          </button>
+          <button className="btn outline" onClick={onUpload}>
+            <Icon name="upload" />
+            {t(lang, "hChoose")}
           </button>
         </div>
-        <button className="btn soft" onClick={onUpload}>
-          <Icon name="upload" />
-          {t(lang, "upload")}
-        </button>
         <RecentGuides lang={lang} rows={recent ?? null} onOpen={(id) => onOpenPaper?.(id)} onAll={onPapers} />
         {/* History lives behind the labelled "My guides" button in the top bar, never on the main page. */}
         <p className="help">

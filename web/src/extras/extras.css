@@ -258,10 +258,14 @@ a.btn { text-decoration: none; }
 .x-quotes { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.875rem; }
 .x-quote { background: var(--white); border: 0.125rem solid var(--border); border-radius: var(--r-sm); padding: 0.625rem; display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
 .x-quote > small { font-size: 0.875rem; color: var(--ink-soft); }
-.x-quote > b { font: 600 1.0625rem var(--font-display); overflow-wrap: anywhere; }
+.x-quote > b { font: 600 1.0625rem var(--font-display); word-break: normal; overflow-wrap: break-word; hyphens: auto; }
 .x-quote .says { margin-top: 0.5rem; background: var(--primary-soft); border-radius: 0.75rem; padding: 0.5rem; flex: 1; }
 .x-quote .says small { display: block; font: 600 0.875rem var(--font-display); color: var(--primary-ink); }
-.x-quote .says span { font: 600 1rem/1.3 var(--font-display); word-break: normal; overflow-wrap: normal; hyphens: manual; }
+.x-quote .says span { font: 600 1rem/1.3 var(--font-display); word-break: normal; overflow-wrap: break-word; hyphens: auto; }
+@media (max-width: 359px) {
+  .x-quotes { grid-template-columns: 1fr; gap: 1.5rem; }
+  .x-quote .says span { font-size: 1.0625rem; }
+}
 .x-neq { position: absolute; inset-inline-start: 50%; top: 50%; transform: translate(-50%, -50%); width: 2.5rem; height: 2.5rem; border-radius: 50%; background: var(--white); border: 0.125rem solid var(--warn-accent); color: var(--warn-accent); display: grid; place-items: center; }
 [dir="rtl"] .x-neq { transform: translate(50%, -50%); }
 .x-neq svg { width: 1.25rem; height: 1.25rem; }

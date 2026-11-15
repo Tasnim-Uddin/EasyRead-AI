@@ -53,7 +53,7 @@ export const SheetCard = forwardRef<HTMLDivElement, { guide: Guide; lang: string
 ) {
   const L = english ? "en" : lang;
   const g = sheetGuide(guide, english);
-  const s = sheetData(g, english);
+  const s = sheetData(g, english, lang);
   const img = photo ? paperImages(guide)[0] : null;
   return (
     <div ref={ref} className={"x-sheetcard" + (print ? " print" : "")} dir={isRtl(L) ? "rtl" : "ltr"} lang={L}>
