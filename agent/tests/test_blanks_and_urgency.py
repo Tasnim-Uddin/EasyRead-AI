@@ -107,8 +107,8 @@ def test_page_words_reads_ocr_lines_and_pdf_text():
 
 @pytest.mark.parametrize("text,want", [
     ("Phone the HMRC Payment Helpline on 0345 302 1429. Do this to agree how to pay.", "phone_call"),
-    ("Have your National Insurance number, payment reference and sort code ready.", None),
-    ("Read the back of your ticket. It says how to pay or challenge the fine.", None),
+    ("Have your National Insurance number, payment reference and sort code ready.", "id_number_find"),
+    ("Read the back of your ticket. It says how to pay or challenge the fine.", "read_letter"),
     ("Send the slip back with your payment.", "post_letter"),
     ("To pay by post, tear off the payment slip.", "post_letter"),
     ("Pay the full fine within 28 days.", "pay_card"),
@@ -274,8 +274,8 @@ def test_form_box_step_is_not_split():
 
 
 @pytest.mark.parametrize("text,want", [
-    ("Think about switching to a cheaper tariff. A tariff is the price plan you pay for your gas.", None),
-    ("Have your National Insurance number and payment reference ready when you phone.", None),
+    ("Think about switching to a cheaper tariff. A tariff is the price plan you pay for your gas.", "decide"),
+    ("Have your National Insurance number and payment reference ready when you phone.", "id_number_find"),
     ("Phone HMRC even if you cannot pay in full.", "phone_call"),
     ("Pay the bill. The bill is due on 5 May.", "pay_card"),
 ])
