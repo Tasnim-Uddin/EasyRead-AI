@@ -9,6 +9,10 @@ from agent import doctypes, postprocess
 DATA = pathlib.Path(__file__).parent / "data" / "realistic"
 
 
+# The app-added medicine line the saved runs were made with (it no longer adds the 999 sentence).
+OLD_SAFETY_MEDICINE = "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP."
+
+
 def load(name: str) -> dict:
     return json.loads((DATA / f"{name}.json").read_text())
 
@@ -16,7 +20,7 @@ def load(name: str) -> dict:
 def model_steps(g: dict) -> list[dict]:
     """The saved steps minus the safety line (finish_steps adds it back)."""
     return [{k: s[k] for k in ("text_en", "kind", "picture_prompt")} for s in g["steps"]
-            if not (s["kind"] == "get_help" and ("999" in s["text_en"] or "free advice" in s["text_en"]))]
+            if not (s["kind"] == "get_help" and (s["text_en"] in (OLD_SAFETY_MEDICINE, doctypes.SAFETY_MEDICINE) or "free advice" in s["text_en"]))]
 
 
 def replay(name: str) -> list[dict]:
@@ -85,7 +89,7 @@ def test_medicine_guide_fits_by_joining_short_warnings():
     assert len(out) < 14
     for fact in ("1 drop", "both eyes", "4 times a day", "5 days", "28 days", "01632 960 777"):
         assert fact in t
-    assert "999" in t and "111" in t
+    assert "111" in t and "pharmacist" in t
 
 
 def test_inhaler_and_gp_letter_unchanged():
@@ -93,7 +97,7 @@ def test_inhaler_and_gp_letter_unchanged():
     out = replay("c_gp_letter")
     t = text(out)
     assert len(out) == len(load("c_gp_letter")["steps"])
-    for fact in ("1 December 2026", "8:40am", "Room 4", "water", "999", "111"):
+    for fact in ("1 December 2026", "8:40am", "Room 4", "water", "111"):
         assert fact in t
 
 

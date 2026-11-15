@@ -151,16 +151,13 @@ def test_medicine_safety_line(mocked):
     g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
     assert g["safety_lines"] == [doctypes.SAFETY_MEDICINE]
     assert "111" in doctypes.SAFETY_MEDICINE and "pharmacist" in doctypes.SAFETY_MEDICINE
-    assert any("999" in s["text_en"] for s in g["steps"])
+    assert any("pharmacist" in s["text_en"] for s in g["steps"])
 
 
-def test_999_guard_still_first(mocked, monkeypatch):
-    from agent import llm
+def test_no_999_guard(mocked, monkeypatch):
     g = post(mocked, [("document", ("a.jpg", JPEG, "image/jpeg"))])
-    n = len(mocked["calls"])
     r = mocked["client"].post(f"/api/guides/{g['id']}/ask", json={"question": "I have chest pain", "language": "en"}).json()
-    assert r["escalate"] == "999" and "999" in r["answer"]
-    assert len(mocked["calls"]) == n  # no model call before the deterministic guard answers
+    assert r["escalate"] != "999" and "Call 999" not in r["answer"]
 
 
 def test_letter_guide_ask_uses_content(mocked):

@@ -75,7 +75,7 @@ The extraction step classifies the whole upload set into `doc_type`. **`steps` i
 For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields `null` and empty lists.
 
 **Safety lines** (`guide.safety_lines`, also added as a final `get_help` step if not already there):
-- medicine: "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP." (the deterministic 999 guard in `/ask` still runs before any model call)
+- medicine: "For advice, call 111 or ask your pharmacist or GP." (the app adds no 999 line or link; a 999 line printed on the paper itself is kept)
 - how_to, not medicine (furniture, a phone, a boiler; `domain` "other"): "If something breaks or feels unsafe, stop and ask for help." Facts carry `title` and `source_steps`; steps use kinds `what|how|warning|get_help`.
 - everything else: "Get free advice before you sign or pay. For example, Citizens Advice."
 
@@ -100,7 +100,7 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
   { "type": "tool_log", "tool": "next_step", "args": {…}, "ms": 12 }   // dev panel
   ```
 - `POST /api/guides/{id}/language` `{ language }` → re-translates the step texts (pictures are reused) → Guide.
-- `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none"|"pharmacist"|"111"|"999" }`. Answers come only from `facts` + the library.
+- `POST /api/guides/{id}/ask` `{ question, language }` → `{ answer, grounded: bool, escalate: "none"|"pharmacist"|"111" }`. Answers come only from `facts` + the library.
 - `POST /api/anam/session` `{ guide_id, language, step_index? }` → `{ sessionToken }` (502 `{detail}` if Anam refuses; web/ then keeps the stand-in). Creates an Anam session token server-side; the persona's system prompt includes the guide's facts and steps plus the ground rules.
 - `POST /api/tools/{name}` `{ guide_id, ...args }` → `{ say, ... }` for the server-handled tools `answer_from_document`, `check_understanding`, `set_language` (`set_language` also returns the updated `guide`). `POST /api/guides/{id}/check_understanding` `{ answer? }` → `{ say, correct }` is the same logic.
 - `POST /api/anam/session` without `ANAM_API_KEY` returns `{ sessionToken: "dev-mock-token", mock: true, personaConfig }` so the UI can integrate.

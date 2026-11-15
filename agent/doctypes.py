@@ -6,7 +6,7 @@ DOC_TYPES = ["how_to", "letter", "bill", "form", "other"]
 DOMAINS = ["medicine", "money", "legal", "school", "council", "other"]
 
 CONFLICT_TEXT = postprocess.CONFLICT_TEXT
-SAFETY_MEDICINE = "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP."
+SAFETY_MEDICINE = "For advice, call 111 or ask your pharmacist or GP."
 SAFETY_HOWTO = "If something breaks or feels unsafe, stop and ask for help."
 SAFETY_ADVICE = "Get free advice before you sign or pay. For example, Citizens Advice."
 
@@ -265,7 +265,7 @@ def finish_steps(steps: list[dict], doc_type: str, domain: str, conflicts: list,
     if conflicts and not any(postprocess.is_conflict(s["text_en"]) for s in steps):
         steps.insert(0, _step("warning", CONFLICT_TEXT, "a person holding a medicine box and a leaflet, looking unsure"))
     for line in safety_lines(doc_type, domain):
-        key = "999" if domain == "medicine" else "ask for help" if doc_type == "how_to" else "free advice"
+        key = "pharmacist" if domain == "medicine" else "ask for help" if doc_type == "how_to" else "free advice"
         if not any(key in s["text_en"] for s in steps):
             steps.append(_step("get_help", line, "a person on the phone talking to a helper"))
     if doc_type == "how_to":
