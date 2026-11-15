@@ -198,6 +198,20 @@ def test_form_step_highlights_only_its_own_box():
     assert locate.quotes_for_step(step3, quotes, form=True)[0]["t"] == "Home Address:"
 
 
+@pytest.mark.parametrize("guide,who", [
+    ({"doc_type": "how_to", "domain": "medicine", "sender": {"name": "Flamingo Pharma (UK) Ltd", "kind": "company"}},
+     "the pharmacy"),
+    ({"doc_type": "letter", "domain": "medicine",
+      "sender": {"name": "Community Nutrition and Dietetics Department, Adobe Health Centre (Susan Blight)", "kind": "other"}},
+     "Community Nutrition and Dietetics Department"),
+    ({"doc_type": "form", "domain": "school", "sender": None}, "the school"),
+    ({"doc_type": "how_to", "domain": "other", "sender": {"name": "Dunelm", "kind": "company"}}, "Dunelm"),
+])
+def test_ask_who_for_new_papers(guide, who):
+    from agent import qa
+    assert qa.ask_who(guide, "en") == who
+
+
 FORM = {"doc_type": "form", "domain": "school", "facts": {}}
 MED = {"doc_type": "how_to", "domain": "medicine", "facts": {"device_type": "unknown"}}
 
