@@ -67,3 +67,14 @@ def test_summary_line_has_no_stray_capital():
     assert pipeline.summary_line_en({"facts": RUN["facts"]}) == \
         "2 puffs, when needed for wheeze or breathlessness. Maximum 4 times in 24 hours."
     assert pipeline.summary_line_en({"facts": {"dose": "1 tablet", "frequency": "NHS advice"}}) == "1 tablet, NHS advice"
+
+
+def test_second_conflict_in_other_words_is_dropped():
+    # Live verification run 2026-11-15: the model still wrote 'The paper does not agree with itself.' as a warning.
+    steps = [{"text_en": t, "kind": k, "picture_prompt": "x"} for k, t in [
+        ("warning", postprocess.CONFLICT_TEXT), ("what", "Use this inhaler when you wheeze."),
+        ("warning", "The paper does not agree with itself."), ("warning", "Use your inhaler only when you need it."),
+        ("warning", "Tell your doctor if your usual dose stops working."), ("get_help", "Call 999 if you cannot breathe.")]]
+    out = texts(finish_steps(steps, "how_to", "medicine", RUN["facts"]["conflicts"], "inhaler_mdi"))
+    assert "The paper does not agree with itself." not in out
+    assert "Use your inhaler only when you need it." in out and "Tell your doctor if your usual dose stops working." in out

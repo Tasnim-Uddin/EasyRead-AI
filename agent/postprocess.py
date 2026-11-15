@@ -293,7 +293,7 @@ def use_checked_technique(steps: list[dict], device_type: str | None) -> list[di
     return keep_before + checked + extra_how + others
 
 
-RESTATES_DOSE = re.compile(r"\b(label|leaflet)\b|how many|how much|usual dose is|may take up to", re.I)
+RESTATES_DOSE = re.compile(r"\b(label|leaflet)\b|not agree|disagree|different things|how many|how much|usual dose is|may take up to", re.I)
 MAX_WARNINGS = 4
 
 
