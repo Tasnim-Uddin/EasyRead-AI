@@ -192,6 +192,35 @@ def test_distinct_warnings_stay_apart():
     assert len(pg.merge_related(steps)) == 2
 
 
+# ---------- from live run 1: dates crammed in one step, technique repeated as warnings ----------
+
+LIVE_DATES = ("Flutiform was last issued on Tuesday 21 June 2022. Flutiform next issue was due Friday 1 July 2022. "
+              "Ventolin was last issued on Tuesday 21 June 2022. Ventolin next issue is due Tuesday 16 August 2022. "
+              "The year in the date at the top right is cut off.")
+
+
+def test_dates_split_per_medicine():
+    out = pg.split_dates([{"text_en": LIVE_DATES, "kind": "when", "picture_prompt": "p"}])
+    assert texts(out) == [
+        "Flutiform was last issued on Tuesday 21 June 2022. Flutiform next issue was due Friday 1 July 2022.",
+        "Ventolin was last issued on Tuesday 21 June 2022. Ventolin next issue is due Tuesday 16 August 2022. "
+        "The year in the date at the top right is cut off."]
+
+
+def test_two_dates_stay_in_one_step():
+    s = [{"text_en": "Pay by 1 December. Return the form by 5 December.", "kind": "when"}]
+    assert pg.split_dates(s) == s
+
+
+def test_technique_line_not_repeated_as_warning():
+    steps = [{"text_en": "If your inhaler has a steroid in it, rinse your mouth with water after your last puff. Spit the water out.",
+              "kind": "how", "technique": True},
+             {"text_en": "If your inhaler has a steroid in it, rinse your mouth with water after your last puff.", "kind": "warning"},
+             {"text_en": "Spit the water out.", "kind": "warning"},
+             {"text_en": "Read the notes on the back of the paper.", "kind": "get_help"}]
+    assert texts(pg.drop_repeated_sentences(steps)) == [steps[0]["text_en"], "Read the notes on the back of the paper."]
+
+
 # ---------- titles ----------
 
 def test_short_titles():

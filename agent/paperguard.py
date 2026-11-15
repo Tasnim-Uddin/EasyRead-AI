@@ -304,3 +304,54 @@ def short_title(raw_title: str | None, facts: dict | None, max_words: int = 6) -
         t = short_medicine((facts or {}).get("medicine")) or (facts or {}).get("title") or ""
     words = t.split()
     return " ".join(words[:max_words]) if words else None
+
+
+# ---------- dates told one or two at a time; no sentence said twice ----------
+
+_DATE_IN = re.compile(r"\b\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b"
+                      r"|\b(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2}\b|\b\d{1,2}/\d{1,2}/\d{2,4}\b", re.I)
+
+
+def split_dates(steps: list[dict]) -> list[dict]:
+    """A when/what step with 3 or more dated sentences ("Flutiform was last issued ... Flutiform is due ... Ventolin
+    ...") becomes one step per subject: consecutive dated sentences that start with the same word stay together (at
+    most 2), and a sentence without a date stays with the one before it."""
+    out = []
+    for s in steps:
+        parts = sentences(s.get("text_en") or "")
+        if s.get("kind") not in ("when", "what") or sum(bool(_DATE_IN.search(p)) for p in parts) < 3:
+            out.append(s)
+            continue
+        groups: list[list[str]] = []
+        for p in parts:
+            if groups and (not _DATE_IN.search(p) or _joins(groups[-1], p)):
+                groups[-1].append(p)
+            else:
+                groups.append([p])
+        out += [{**s, "text_en": " ".join(g)} for g in groups]
+    return out
+
+
+def _joins(group: list[str], p: str) -> bool:
+    dated = [q for q in group if _DATE_IN.search(q)]
+    return len(dated) < 2 and bool(dated) and p.split()[0].lower() == dated[-1].split()[0].lower()
+
+
+def drop_repeated_sentences(steps: list[dict]) -> list[dict]:
+    """A sentence already said in an earlier step, or in a checked technique step, is not said again (a warning that
+    repeats the technique's 'rinse your mouth' line). Technique steps and fixed app lines are never changed; a step
+    left empty is dropped."""
+    from .postprocess import similar
+    said = [p for s in steps if s.get("technique") for p in sentences(s.get("text_en") or "")]
+    out = []
+    for s in steps:
+        if s.get("technique") or appstrings.fixed(s.get("text_en") or "", "es"):
+            out.append(s)
+            continue
+        parts = sentences(s.get("text_en") or "")
+        keep = [p for p in parts if not any(p == q or similar(p, q) for q in said)]
+        said += parts
+        if not keep:
+            continue
+        out.append(s if len(keep) == len(parts) else {**s, "text_en": " ".join(keep)})
+    return out

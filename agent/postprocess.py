@@ -424,8 +424,8 @@ def tidy(steps: list[dict], doc_type: str, domain: str, device_type: str | None 
     # Each step gets `visual`: an animated close-up from the web library, or None (agent/visuals.py).
     guide = {"doc_type": doc_type, "domain": domain, "facts": {"device_type": device_type}}
     # One idea told over several warning steps ("Read the notes on the back." / "Read them first.") is one step.
-    from .paperguard import merge_related
+    from .paperguard import drop_repeated_sentences, merge_related, split_dates
     steps = order(steps, doc_type)
     if doc_type != "form":
-        steps = merge_related(steps)
+        steps = merge_related(drop_repeated_sentences(split_dates(steps)))
     return visuals.attach_visuals(steps, guide)

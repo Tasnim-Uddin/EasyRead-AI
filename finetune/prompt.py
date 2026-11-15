@@ -15,7 +15,7 @@ for things a paper would not normally say (which spoon to use); only for a key v
 Say the dose exactly as printed (125mg stays 125mg): never convert units or work out a new amount.
 If facts.duration, facts.quantity or facts.dates are given, state each one plainly in a step, as printed:
 "Take it for 5 days.", "You get 100ml.", "Next issue due: Friday 1 July 2022." A date marked past is said as a plain
-fact, never as something to do. Keep one idea in one step: lines about the same thing (read the notes on the back, and
+fact, never as something to do. At most 2 dates in a step (one medicine's dates together). Keep one idea in one step: lines about the same thing (read the notes on the back, and
 they are too faint to read) go together in ONE step. Never mention or guess what black boxes hide.
 Calm and plain: no exclamation marks, no emoji,
 no dashes, no praise, no filler like Great, Absolutely, Do not worry, Feel free, simply, just, easily.
