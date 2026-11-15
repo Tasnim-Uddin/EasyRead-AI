@@ -1,0 +1,69 @@
+/* Layout safety at every text size (--scale up to 1.45), 360px wide and RTL.
+   Rule of thumb: text grows with the text size; touch-sized chrome (round buttons, switches, slider dots)
+   keeps a fixed size, and rows wrap instead of overflowing. Loaded last so it wins over the screen CSS. */
+
+/* fixed-size chrome */
+.round, .gs-round { width: 44px; height: 44px; }
+.round svg, .gs-round svg { width: 22px; height: 22px; }
+.round.back-named { width: auto; max-width: 100%; }
+.lang { height: 44px; min-width: 0; }
+.lang svg { width: 20px; height: 20px; }
+.lang .lang-name { max-width: none; min-width: 0; }
+.gs-mictoggle { height: 44px; min-width: 44px; }
+.tg { width: 76px; height: 44px; border-radius: 22px; }
+.tg:after { left: 5px; top: 5px; width: 34px; height: 34px; }
+.tg.on:after { left: 37px; }
+[dir="rtl"] .tg:after { left: auto; right: 5px; }
+[dir="rtl"] .tg.on:after { right: 37px; }
+
+/* top bars wrap rather than push controls off screen */
+.top { flex-wrap: nowrap; min-width: 0; align-items: flex-start; }
+.top > .brand { flex: none; min-height: 44px; }
+.brand i { width: 32px; height: 32px; }
+.top-right { flex: 1 1 0; min-width: 0; flex-wrap: wrap; justify-content: flex-end; row-gap: 0.5rem; }
+.top-right .papers-btn { min-height: 44px; min-width: 0; max-width: 100%; }
+.title-top, .title-top:has(.title-end > *) { display: flex; flex-wrap: wrap; row-gap: 0.5rem; align-items: center; }
+.title-top > * { min-width: 0; }
+.title-top h1, .title-top:has(.title-end > *) h1 { flex: 1 1 6rem; }
+.title-end { margin-inline-start: auto; flex-wrap: wrap; justify-content: flex-end; }
+.title-top h1, .title-top:has(.title-end > *) h1 { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; hyphens: auto; }
+.title-end { gap: 0.5rem; }
+.gs-top { min-width: 0; flex-wrap: wrap; row-gap: 0.5rem; }
+.gs-top .gs-count { flex: 1 1 auto; white-space: nowrap; }
+.gs-mictoggle { flex: none; }
+
+/* text size slider: dots keep a pixel size so the dot can never pass A+ */
+.x-size-row { gap: 6px; }
+.x-a { width: 44px; height: 44px; font-size: 18px; }
+.x-a.plus { font-size: 22px; }
+.x-stops { height: 44px; }
+.x-track { inset-inline: 18px; height: 6px; margin-top: -3px; }
+.x-stop { flex: none; width: 36px; height: 44px; min-width: 0; }
+.x-stop::after { width: 12px; height: 12px; }
+.x-stop.on::after { width: 24px; height: 24px; box-shadow: 0 0 0 4px var(--white); }
+
+/* button rows */
+.row2, .actions { flex-wrap: wrap; }
+.row2 .btn, .actions .btn { min-width: min(100%, 9rem); height: auto; min-height: var(--tap); padding-block: 0.5rem; white-space: normal; }
+.btn, .gs-btn { height: auto; padding-block: 0.375rem; text-wrap: balance; overflow-wrap: break-word; }
+.pair { flex-wrap: wrap; }
+.pair .btn { flex: 1 1 9rem; }
+.pair .btn.soft { flex: 1 1 9rem; }
+.chip { max-width: 100%; }
+.tag { max-width: 100%; white-space: normal; }
+.set .sec h3 { overflow-wrap: anywhere; }
+.toggle > :first-child { min-width: 0; }
+.x-set-link > span { min-width: 0; overflow-wrap: break-word; }
+
+/* pictures keep a pixel size so rows keep room for their text */
+.x-thumb { width: 60px; height: 76px; }
+.x-thumb svg { width: 28px; height: 28px; }
+.item .th, .cap-tray.v4 .item .th { width: 60px; height: 76px; }
+.item .th svg { width: 34px; height: 34px; }
+.this-is .thumb { width: 64px; height: 64px; }
+.cap-tray.v4 .item { flex-wrap: wrap; }
+.cap-tray.v4 .item .meta { flex: 1 1 7rem; }
+.cap-tray.v4 .ctrls button, .cap-tray.v4 .rm { width: 44px; height: 44px; }
+.cap-tray.v4 .ctrls svg, .cap-tray.v4 .rm svg { width: 20px; height: 20px; }
+.x-card-meta { flex: 1; }
+@media (max-width: 440px) { .gs-mictoggle { width: 44px; } .gs-top { gap: 0.375rem; } }

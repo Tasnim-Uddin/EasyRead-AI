@@ -1,10 +1,10 @@
 import { useState } from "react";
 import type { ToolLogEntry } from "../types";
-import { LANGUAGES, t } from "../i18n";
+import { t } from "../i18n";
 import { Counted } from "../bidi";
 import { isRtl, languageLabel } from "../languages";
 import { THEMES, THEME_KEY, type Theme } from "../look";
-import { isPreset, LanguageDialog, TitleBar } from "./shared";
+import { TitleBar } from "./shared";
 import { TextSizeControl } from "../extras/TextSize";
 import { openLanguagePicker, openPrivacy } from "../extras/bus";
 import { XIcon } from "../extras/icons";
@@ -27,7 +27,6 @@ interface SettingsProps {
   onDemo?: (on: boolean) => void;
 }
 export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onVoice, onTheme, onLanguage, onBack, demo, onDemo }: SettingsProps) {
-  const [other, setOther] = useState(false);
   return (
     <div className="screen">
       <TitleBar title={t(lang, "settings")} lang={lang} onBack={onBack} />
@@ -49,27 +48,14 @@ export function Settings({ lang, scale, rate, voice, theme, onScale, onRate, onV
         </div>
         <div className="sec">
           <h3>{t(lang, "language")}</h3>
-          <div className="langs">
-            {LANGUAGES.map((l) => (
-              <button key={l.code} className={"chip" + (l.code === lang ? " on" : "")} aria-pressed={l.code === lang} onClick={() => onLanguage(l.code)}>
-                {l.label}
-              </button>
-            ))}
-            {!isPreset(lang) && (
-              <button className="chip on" aria-pressed="true">
-                {languageLabel(lang)}
-              </button>
-            )}
-            <button className="chip" onClick={() => setOther(true)}>
-              {t(lang, "otherLanguage")}
-            </button>
-          </div>
-          <button className="x-set-link" onClick={openLanguagePicker}>
+          <button className="x-set-link x-set-lang" onClick={openLanguagePicker} aria-label={t(lang, "xChooseLanguage") + ": " + languageLabel(lang)}>
             <XIcon name="globe" />
-            <span>{t(lang, "xChooseLanguage")}</span>
+            <span>
+              <b dir="auto">{languageLabel(lang)}</b>
+              <small>{t(lang, "xChooseLanguage")}</small>
+            </span>
             <XIcon name="chevRight" />
           </button>
-          {other && <LanguageDialog lang={lang} onClose={() => setOther(false)} onPick={(c) => { setOther(false); onLanguage(c); }} />}
           {isRtl(lang) && (
             <div className="rtlnote">
               <span>{languageLabel(lang)}</span>
