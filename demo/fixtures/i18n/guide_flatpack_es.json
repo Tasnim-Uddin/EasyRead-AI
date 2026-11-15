@@ -42,9 +42,7 @@
     "conflicts": []
   },
   "content": null,
-  "safety_lines": [
-    "Si algo se rompe o parece peligroso, pare y pida ayuda."
-  ],
+  "safety_lines": [],
   "steps": [
     {
       "index": 0,
@@ -113,16 +111,6 @@
       "kind": "get_help",
       "picture_prompt": "a person on the phone holding a screw",
       "image_url": "/fixtures/img/flatpack_step_6.jpg",
-      "technique_clip_id": null,
-      "status": "ready"
-    },
-    {
-      "index": 7,
-      "text": "Si algo se rompe o parece peligroso, pare y pida ayuda.",
-      "text_en": "If something breaks or feels unsafe, stop and ask for help.",
-      "kind": "get_help",
-      "picture_prompt": "a person on the phone talking to a helper",
-      "image_url": "/fixtures/img/flatpack_step_7.jpg",
       "technique_clip_id": null,
       "status": "ready"
     }

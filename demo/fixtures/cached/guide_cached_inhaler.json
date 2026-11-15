@@ -27,9 +27,7 @@
   "doc_type": "how_to",
   "domain": "medicine",
   "content": null,
-  "safety_lines": [
-    "In an emergency, call 999. For advice, call 111 or ask your pharmacist or GP."
-  ],
+  "safety_lines": [],
   "facts": {
     "medicine": "Salbutamol 100 micrograms Evohaler (pressurised inhaler)",
     "dose": "TWO puffs when needed for wheeze or breathlessness",

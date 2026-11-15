@@ -29,7 +29,7 @@ def test_sse(client):
 def test_no_app_added_999(client, q, lang):
     g = make_guide(client)
     r = client.post(f"/api/guides/{g['id']}/ask", json={"question": q, "language": lang}).json()
-    assert r["escalate"] in ("none", "pharmacist", "111") and "Call 999" not in r["answer"]
+    assert r["escalate"] == "none" and "Call 999" not in r["answer"] and "111" not in r["answer"]
 
 
 def test_ask_grounded_and_ungrounded(client):
@@ -37,7 +37,8 @@ def test_ask_grounded_and_ungrounded(client):
     r = client.post(f"/api/guides/{g['id']}/ask", json={"question": "how many puffs of the inhaler", "language": "en"}).json()
     assert r["grounded"] is True
     r = client.post(f"/api/guides/{g['id']}/ask", json={"question": "can I drink wine", "language": "en"}).json()
-    assert r["grounded"] is False and r["escalate"] == "pharmacist"
+    assert r["grounded"] is False and r["escalate"] == "none"
+    assert r["answer"].startswith("That's not on your paper.") and r["ask_who"]
 
 
 def test_anam_mock_and_persona(client):

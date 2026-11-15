@@ -58,9 +58,7 @@
       }
     ]
   },
-  "safety_lines": [
-    "Pida consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice."
-  ],
+  "safety_lines": [],
   "steps": [
     {
       "index": 0,
@@ -139,16 +137,6 @@
       "kind": "what",
       "picture_prompt": "a hand holding a few coins",
       "image_url": "/fixtures/img/council_step_7.jpg",
-      "technique_clip_id": null,
-      "status": "ready"
-    },
-    {
-      "index": 8,
-      "text": "Pida consejo gratis antes de firmar o pagar. Por ejemplo, en Citizens Advice.",
-      "text_en": "Get free advice before you sign or pay. For example, Citizens Advice.",
-      "kind": "get_help",
-      "picture_prompt": "a person on the phone talking to a helper",
-      "image_url": "/fixtures/img/council_step_8.jpg",
       "technique_clip_id": null,
       "status": "ready"
     }
