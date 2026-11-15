@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { avatarBig, initialStage, narrationTimeoutMs, stageReducer as r, tailCaption, whoToAsk, type StageState } from "./machine";
-import { chooseVisual, PAPER_ACTION_CLOSEUPS, quadsBox, zoomTo } from "./visual";
+import { chooseVisual, conflictStepIndex, dateIndexFor, PAPER_ACTION_CLOSEUPS, quadsBox, zoomTo } from "./visual";
 import type { Step } from "../types";
 
 const s0 = () => initialStage(3);
@@ -164,5 +164,21 @@ describe("visual priority", () => {
     expect(z.scale).toBeGreaterThanOrEqual(1);
     expect(z.scale).toBeLessThanOrEqual(3);
     expect(z.tx).toBeLessThanOrEqual(0);
+  });
+});
+
+describe("extras hooks", () => {
+  const facts = { medicine: null, dose: null, frequency: null, route: null, device_type: "", device_confidence: 0, warnings: [], get_help: [], unreadable: [] };
+  it("puts the conflict card before the step about it", () => {
+    const steps = [step({ text_en: "This is your inhaler." }), step({ index: 1, text_en: "Take 2 puffs each time." })];
+    expect(conflictStepIndex({ facts: { ...facts, conflicts: [{ field: "dose", label: "Take 2 puffs", leaflet: "Take 1 puff" }] }, steps })).toBe(1);
+    expect(conflictStepIndex({ facts, steps })).toBe(-1);
+  });
+  it("finds the date a step is about", () => {
+    const dates = [{ what: "Pay £212.50", what_en: "Pay £212.50", date: "2026-11-17", quote: "by 17 November 2026", amount: "£212.50" }];
+    expect(dateIndexFor(step({ highlights: [{ page: 0, text: "by 17 November 2026", quad }] }), { dates })).toBe(0);
+    expect(dateIndexFor(step({ callout: { value: "£212.50", sub: "by 17 Nov" } }), { dates })).toBe(0);
+    expect(dateIndexFor(step({ text: "Keep it safe." }), { dates })).toBe(-1);
+    expect(dateIndexFor(step(), {})).toBe(-1);
   });
 });

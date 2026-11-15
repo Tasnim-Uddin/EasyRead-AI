@@ -9,7 +9,11 @@ import { CloseUp, hasCloseUp } from "../closeups";
 import type { useAnam } from "../useAnam";
 import { prefersReducedMotion } from "../motion";
 import { avatarBig, initialStage, narrationTimeoutMs, stageReducer, tailCaption, whoToAsk, type Phase, type StageEvent } from "./machine";
-import { chooseVisual, quadsBox, zoomTo, type StepVisual } from "./visual";
+import { chooseVisual, conflictStepIndex, dateIndexFor, quadsBox, zoomTo, type StepVisual } from "./visual";
+import { openRemindMe, openShare } from "../extras/bus";
+import { ConflictCard } from "../extras/ConflictCard";
+import { TextSizeSheet } from "../extras/TextSize";
+import { hasDates } from "../extras/RemindMe";
 import "./strings";
 import "./stage.css";
 
@@ -44,8 +48,9 @@ export interface GuideStageProps {
   onHome: () => void;
   onPapers: () => void;
   onCheck: () => void;
-  /** Opens a text-size control, when the app has one (hidden otherwise). */
-  onTextSize?: () => void;
+  /** Text size (Aa in the guide controls). */
+  scale?: number;
+  onScale?: (v: number) => void;
 }
 
 const CHECKIN_EN = "Ready to move on, or any questions?";
@@ -118,7 +123,26 @@ function Toggle({ on, label, icon, onClick, disabled }: { on: boolean; label: st
 }
 
 /* ---------------------------------------------------------------- the step visual */
-function HighlightPhoto({ url, highlights, callout, playing }: { url: string; highlights: Highlight[]; callout: { value: string; sub?: string } | null; playing: boolean }) {
+type CalloutT = { value: string; sub?: string };
+/** The big number/date card. When the step has a date, tapping it opens Remind me. */
+function CalloutCard({ c, on, onRemind }: { c: CalloutT; on: boolean; onRemind?: () => void }) {
+  const inner = (
+    <>
+      <b>{c.value}</b>
+      {c.sub && <span>{c.sub}</span>}
+    </>
+  );
+  return onRemind ? (
+    <button type="button" className={"gs-callout tap" + (on ? " on" : "")} dir="auto" onClick={onRemind}>
+      {inner}
+    </button>
+  ) : (
+    <div className={"gs-callout" + (on ? " on" : "")} dir="auto">
+      {inner}
+    </div>
+  );
+}
+function HighlightPhoto({ url, highlights, callout, playing, onRemind }: { url: string; highlights: Highlight[]; callout: { value: string; sub?: string } | null; playing: boolean; onRemind?: () => void }) {
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
   const [aspect, setAspect] = useState<number | null>(null);
@@ -171,12 +195,7 @@ function HighlightPhoto({ url, highlights, callout, playing }: { url: string; hi
           <line x1={arrow.x1} y1={arrow.y1} x2={arrow.x2} y2={arrow.y2} markerEnd="url(#gs-head)" />
         </svg>
       )}
-      {callout && (
-        <div className={"gs-callout" + (zoomed ? " on" : "")} dir="auto">
-          <b>{callout.value}</b>
-          {callout.sub && <span>{callout.sub}</span>}
-        </div>
-      )}
+      {callout && <CalloutCard c={callout} on={zoomed} onRemind={onRemind} />}
       {!playing && <span className="sr">paused</span>}
     </div>
   );
@@ -184,25 +203,29 @@ function HighlightPhoto({ url, highlights, callout, playing }: { url: string; hi
 
 const KIND_ICON: Record<string, string> = { what: "doc", when: "sun", how: "hand", warning: "alert", get_help: "alert" };
 
-function StepVisualView({ v, step, playing }: { v: StepVisual; step: Step; playing: boolean }) {
+function StepVisualView({ v, step, playing, onRemind }: { v: StepVisual; step: Step; playing: boolean; onRemind?: () => void }) {
   if (v.kind === "closeup")
     return (
       <div className="gs-closeup">
         <CloseUp id={v.id} playing={playing} />
-        {v.callout && (
-          <div className="gs-callout on" dir="auto">
-            <b>{v.callout.value}</b>
-            {v.callout.sub && <span>{v.callout.sub}</span>}
-          </div>
-        )}
+        {v.callout && <CalloutCard c={v.callout} on onRemind={onRemind} />}
       </div>
     );
-  if (v.kind === "highlight") return <HighlightPhoto url={v.url} highlights={v.highlights} callout={v.callout} playing={playing} />;
+  if (v.kind === "highlight") return <HighlightPhoto url={v.url} highlights={v.highlights} callout={v.callout} playing={playing} onRemind={onRemind} />;
   if (v.kind === "image") return <img className="gs-img" src={v.url} alt="" />;
   return (
     <div className={"gs-textonly" + (step.kind === "warning" || step.kind === "get_help" ? " warn" : "")}>
       <Icon name={KIND_ICON[step.kind] ?? "doc"} />
     </div>
+  );
+}
+
+function RemindChip({ lang, onClick }: { lang: string; onClick: () => void }) {
+  return (
+    <button type="button" className="gs-remind" onClick={onClick}>
+      <Icon name="sun" />
+      {t(lang, "gs_remind")}
+    </button>
   );
 }
 
@@ -294,7 +317,13 @@ export function GuideStage(p: GuideStageProps) {
   const step = guide.steps[s.index];
   const [paused, setPaused] = useState(false);
   const [slow, setSlow] = useState(false);
-  const [sheet, setSheet] = useState<"none" | "steps" | "controls">("none");
+  const [sheet, setSheet] = useState<"none" | "steps" | "controls" | "text">("none");
+  // "Your two papers say different things" (27a): shown once, before the step it is about.
+  const conflictAt = useMemo(() => conflictStepIndex(guide), [guide]);
+  const [conflictOpen, setConflictOpen] = useState(false);
+  const conflictSeen = useRef(false);
+  const dateIdx = useMemo(() => dateIndexFor(guide.steps[s.index], guide), [guide, s.index]);
+  const onRemind = dateIdx >= 0 ? () => openRemindMe(guide, dateIdx) : undefined;
   const [typed, setTyped] = useState("");
   const [goingBack, setGoingBack] = useState(false);
   const [recUser, setRecUser] = useState(""); // browser speech recognition (no avatar)
@@ -346,7 +375,11 @@ export function GuideStage(p: GuideStageProps) {
       if (after.index !== before.index) p.onIndex(after.index);
       if (after.phase === "step" && (before.phase !== "step" || after.index !== before.index) && (e.type === "start" || e.type === "next" || e.type === "back" || e.type === "jump" || e.type === "restart")) {
         setPaused(false);
-        narrate(after.index, e.type === "start" ? "start" : e.type === "back" ? "back" : "move");
+        if (after.index === conflictAt && !conflictSeen.current) {
+          conflictSeen.current = true;
+          setConflictOpen(true);
+          tell(`Before this step, say in one short sentence: "Your two papers say different things." The screen shows both quotes. Ask the user to check with whoever gave them the papers. Do not choose one. Do not call a tool.`);
+        } else narrate(after.index, e.type === "start" ? "start" : e.type === "back" ? "back" : "move");
       }
       if (after.phase === "finish" && before.phase !== "finish") {
         tell(`The user finished all ${total} steps. In one short sentence say they did it, then ask if they would like to check they have got it. Do not call a tool.`);
@@ -354,7 +387,7 @@ export function GuideStage(p: GuideStageProps) {
       if (e.type === "back" && after.index < before.index) setGoingBack(true);
       return after;
     },
-    [p, narrate, tell, total],
+    [p, narrate, tell, total, conflictAt],
   );
 
   // The avatar moved the step with a tool (or the index changed from outside): follow it.
@@ -378,7 +411,7 @@ export function GuideStage(p: GuideStageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s.phase, s.index]);
   useEffect(() => {
-    if (readMode || paused || s.phase !== "step") return;
+    if (readMode || paused || conflictOpen || s.phase !== "step") return;
     if (anam.replySeq <= narrBase.current) return;
     const tm = setTimeout(() => dispatch({ type: "narrated" }), 700);
     return () => clearTimeout(tm);
@@ -387,7 +420,7 @@ export function GuideStage(p: GuideStageProps) {
   }, [anam.replyDone]);
   // Fallback: the check-in buttons always come, even if the "done talking" event never does.
   useEffect(() => {
-    if (readMode || paused || s.phase !== "step") return;
+    if (readMode || paused || conflictOpen || s.phase !== "step") return;
     let tm: ReturnType<typeof setTimeout>;
     const wait = (ms: number) => {
       tm = setTimeout(() => {
@@ -397,7 +430,7 @@ export function GuideStage(p: GuideStageProps) {
     };
     wait(narrationTimeoutMs(`${step?.text ?? ""} ${step?.say ?? ""}`));
     return () => clearTimeout(tm);
-  }, [readMode, paused, s.phase, s.index, step?.text, step?.say]);
+  }, [readMode, paused, conflictOpen, s.phase, s.index, step?.text, step?.say]);
   const activityRef = useRef(anam.activity);
   activityRef.current = anam.activity;
 
@@ -658,11 +691,30 @@ export function GuideStage(p: GuideStageProps) {
         />
       )}
       {sheet === "controls" && (
-        <Controls lang={lang} slow={slow} paused={paused} onAgain={sayAgain} onSlow={toggleSlow} onPause={togglePause} onTextSize={p.onTextSize} onClose={() => setSheet("none")} />
+        <Controls lang={lang} slow={slow} paused={paused} onAgain={sayAgain} onSlow={toggleSlow} onPause={togglePause} onTextSize={p.onScale ? () => setSheet("text") : undefined} onClose={() => setSheet("none")} />
+      )}
+      {sheet === "text" && p.onScale && (
+        <TextSizeSheet lang={lang} scale={p.scale ?? 1} onScale={p.onScale} onClose={() => setSheet("none")} preview={step ? { title: stepTitle(step), text: stepBody(step) || stepTitle(step) } : undefined} />
       )}
     </>
   );
 
+  const conflictView = conflictOpen && (s.phase === "step" || readMode) && s.phase !== "finish" && (
+    <div className="gs-conflict">
+      <ConflictCard
+        guide={guide}
+        lang={lang}
+        onOk={() => {
+          setConflictOpen(false);
+          narrate(s.index, "move");
+        }}
+        onAsk={() => {
+          setConflictOpen(false);
+          startAsk(readMode ? "type" : "voice");
+        }}
+      />
+    </div>
+  );
   /* ================================================================ Read mode (12, 19a) */
   if (readMode) {
     const finished = s.phase === "finish";
@@ -683,7 +735,9 @@ export function GuideStage(p: GuideStageProps) {
             {t(lang, "gs_readBadge")}
           </span>
         )}
-        {finished ? (
+        {conflictView ? (
+          conflictView
+        ) : finished ? (
           <FinishBody lang={lang} total={total} caption={t(lang, "gs_finishLine")} label={t(lang, "gs_yourGuide")} p={p} onAgain={() => run({ type: "restart" })} />
         ) : s.phase === "ask" || s.phase === "answer" ? (
           <AskPanel
@@ -705,7 +759,8 @@ export function GuideStage(p: GuideStageProps) {
           <>
             {progress}
             <div className={"gs-visual read" + (visual.kind === "text" ? " textonly" : "")} key={s.index} data-dir={s.dir}>
-              {step && <StepVisualView v={visual} step={step} playing />}
+              {step && <StepVisualView v={visual} step={step} playing onRemind={onRemind} />}
+              {onRemind && <RemindChip lang={lang} onClick={onRemind} />}
             </div>
             <h2 className="gs-title" dir="auto">{stepTitle(step)}</h2>
             {stepBody(step) && <p className="gs-body" dir="auto">{stepBody(step)}</p>}
@@ -739,7 +794,9 @@ export function GuideStage(p: GuideStageProps) {
       {s.phase === "finish" ? null : progress}
       {s.phase === "ask" || (s.phase === "answer" && !live) ? null : null}
 
-      {s.phase === "finish" ? (
+      {conflictView ? (
+        conflictView
+      ) : s.phase === "finish" ? (
         <FinishBody
           lang={lang}
           total={total}
@@ -764,7 +821,8 @@ export function GuideStage(p: GuideStageProps) {
             {/* the step visual: under the avatar, shown when she is the small circle */}
             {(s.phase === "step" || s.phase === "ask") && step && (
               <div className={"gs-visual" + (visual.kind === "text" ? " textonly" : "")} key={s.index} data-dir={s.dir}>
-                <StepVisualView v={visual} step={step} playing={!paused} />
+                <StepVisualView v={visual} step={step} playing={!paused} onRemind={onRemind} />
+                {onRemind && !paused && <RemindChip lang={lang} onClick={onRemind} />}
                 {goingBack && (
                   <span className="gs-chip back">
                     <Chev back />
@@ -1111,10 +1169,22 @@ function FinishBody({ lang, total, caption, label, p, onAgain, avatar }: { lang:
           <Icon name="check" />
           {t(lang, "gs_checkGotIt")}
         </button>
-        <button className="gs-btn ghost" onClick={p.onPapers}>
-          <Icon name="doc" />
-          {t(lang, "gs_myGuides")}
-        </button>
+        <div className="gs-two">
+          <button className="gs-btn ghost" onClick={() => openShare(p.guide)}>
+            <Icon name="send" />
+            {t(lang, "gs_share")}
+          </button>
+          <button className="gs-btn ghost" onClick={p.onPapers}>
+            <Icon name="doc" />
+            {t(lang, "gs_myGuides")}
+          </button>
+        </div>
+        {hasDates(p.guide) && (
+          <button className="gs-btn sage" onClick={() => openRemindMe(p.guide, 0)}>
+            <Icon name="sun" />
+            {t(lang, "gs_remind")}
+          </button>
+        )}
         <button className="gs-link" onClick={onAgain}>
           <Icon name="history" />
           {t(lang, "gs_again")}

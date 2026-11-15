@@ -1,11 +1,15 @@
 import { useState } from "react";
 import type { Guide } from "../types";
-import { isFallback, t } from "../i18n";
+import { t } from "../i18n";
 import { CountThen } from "../bidi";
 import { canSpeak } from "../languages";
 import Icon, { GuideFace } from "../icons";
 import { roleName } from "./capture";
 import { LangPill, TitleBar } from "./shared";
+import { ConflictCard } from "../extras/ConflictCard";
+import { hasDates } from "../extras/RemindMe";
+import { openRemindMe, openShare } from "../extras/bus";
+import { XIcon } from "../extras/icons";
 
 export type Kind = "medicine" | "howto" | "letter" | "form";
 export function kindOf(g: Guide): Kind {
@@ -16,14 +20,8 @@ export function kindOf(g: Guide): Kind {
 }
 
 /* ---------- 4. summary first ---------- */
-const FALLBACK_SAFETY: Record<Kind, string> = {
-  medicine: "Not sure? Ask your pharmacist. For advice, call 111.",
-  howto: "If something breaks or feels unsafe, stop and ask for help.",
-  letter: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
-  form: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848.",
-};
-export const safetyLines = (g: Guide, lang = "en") =>
-  g.safety_lines && g.safety_lines.length ? g.safety_lines : [isFallback(lang, "safe_" + kindOf(g)) ? FALLBACK_SAFETY[kindOf(g)] : t(lang, "safe_" + kindOf(g))];
+/** Only lines the server sent from the paper itself; the app never adds advice lines of its own. */
+export const safetyLines = (g: Guide, _lang = "en"): string[] => g.safety_lines ?? [];
 
 export function summaryText(g: Guide): string {
   const k = kindOf(g);
@@ -86,8 +84,8 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
   const sources = docs.length ? docs.map((d) => roleName(lang, d.role)) : [];
   const conflicts = f?.conflicts ?? [];
   const warnings = (f?.warnings ?? []).filter((w) => !w.startsWith("Your label and leaflet say different"));
-  const title =
-    k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper");
+  const title = guide.title_override ||
+    (k === "letter" ? c?.what_this_is : k === "form" ? f?.title ?? t(lang, "boxByBox") : f?.medicine ?? f?.title ?? t(lang, "yourPaper"));
   const subline = k === "medicine" ? guide.summary_line || [f?.dose, f?.frequency].filter(Boolean).join(", ") : "";
   const thumb = guide.steps.find((s) => s.image_url)?.image_url;
   return (
@@ -113,28 +111,8 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
       <DeviceCard guide={guide} lang={lang} />
 
       {conflicts.length > 0 && (
-        <div className="card warn" role="alert">
-          <div className="warn-head">
-            <span className="warn-ico">
-              <Icon name="alert" />
-            </span>
-            <div>
-              <b>{t(lang, "conflictTitle")}</b>
-              <p>{t(lang, "conflictAsk")}</p>
-            </div>
-          </div>
-          {conflicts.map((x, i) => (
-            <div className="quotes" key={i}>
-              <div className="quote">
-                <b>{t(lang, "labelSays")}</b>
-                <span dir="auto">“{x.label}”</span>
-              </div>
-              <div className="quote">
-                <b>{t(lang, "leafletSays")}</b>
-                <span dir="auto">“{x.leaflet}”</span>
-              </div>
-            </div>
-          ))}
+        <div className="x-summary-conflict">
+          <ConflictCard guide={guide} lang={lang} />
         </div>
       )}
 
@@ -223,14 +201,25 @@ export function Summary({ guide, lang, onLanguage, onBack, onStart, onListen, on
         </div>
       )}
 
+      <div className="x-sum-actions">
+        {hasDates(guide) && (
+          <button className="btn sage" onClick={() => openRemindMe(guide, 0)}>
+            <XIcon name="bell" />
+            {t(lang, "xRemindMe")}
+          </button>
+        )}
+        <button className="btn quiet" onClick={() => openShare(guide)}>
+          <XIcon name="share" />
+          {t(lang, "xSaveOrShare")}
+        </button>
+      </div>
+
       {guide.source.is_sample && k === "medicine" && <p className="safe">{t(lang, "sampleNote")}</p>}
-      <p className="safe" dir="auto">
-        {safetyLines(guide, lang).map((l, i) => (
-          <span key={i}>
-            {l}{" "}
-          </span>
-        ))}
-      </p>
+      {safetyLines(guide, lang).length > 0 && (
+        <p className="safe" dir="auto">
+          {safetyLines(guide, lang).join(" ")}
+        </p>
+      )}
 
       <div className="foot sticky">
         {onStartGuide && (

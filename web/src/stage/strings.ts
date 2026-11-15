@@ -3,6 +3,8 @@ import { extendStrings } from "../i18n";
 // Guide stage strings (prefix gs_). {n} {m} {who} are filled with tf().
 extendStrings({
   en: {
+    gs_share: "Save or share",
+    gs_remind: "Remind me",
     gs_qaFailed: "Sorry, I couldn't answer that. Try again.",
     gs_readMode: "Read mode",
     gs_guide: "Guide",
@@ -71,6 +73,8 @@ extendStrings({
     gs_seeAllSteps: "See all steps",
   },
   es: {
+    gs_share: "Guardar o compartir",
+    gs_remind: "Recuérdamelo",
     gs_qaFailed: "Lo siento, no he podido responder. Inténtalo otra vez.",
     gs_readMode: "Modo lectura",
     gs_guide: "Guía",
@@ -139,6 +143,8 @@ extendStrings({
     gs_seeAllSteps: "Ver todos los pasos",
   },
   ar: {
+    gs_share: "حفظ أو مشاركة",
+    gs_remind: "ذكّرني",
     gs_qaFailed: "عذرًا، لم أستطع الإجابة. حاول مرة أخرى.",
     gs_readMode: "وضع القراءة",
     gs_guide: "المرشدة",
@@ -207,6 +213,8 @@ extendStrings({
     gs_seeAllSteps: "عرض كل الخطوات",
   },
   ur: {
+    gs_share: "محفوظ کریں یا شیئر کریں",
+    gs_remind: "مجھے یاد دلائیں",
     gs_qaFailed: "معاف کیجیے، میں اس کا جواب نہیں دے سکی۔ دوبارہ کوشش کریں۔",
     gs_readMode: "پڑھنے کا موڈ",
     gs_guide: "گائیڈ",
@@ -275,6 +283,8 @@ extendStrings({
     gs_seeAllSteps: "تمام مراحل دیکھیں",
   },
   pl: {
+    gs_share: "Zapisz lub udostępnij",
+    gs_remind: "Przypomnij mi",
     gs_qaFailed: "Przepraszam, nie udało mi się odpowiedzieć. Spróbuj jeszcze raz.",
     gs_readMode: "Tryb czytania",
     gs_guide: "Przewodniczka",
@@ -343,6 +353,8 @@ extendStrings({
     gs_seeAllSteps: "Zobacz wszystkie kroki",
   },
   bn: {
+    gs_share: "সংরক্ষণ বা শেয়ার",
+    gs_remind: "আমাকে মনে করিয়ে দিন",
     gs_qaFailed: "দুঃখিত, আমি এর উত্তর দিতে পারিনি। আবার চেষ্টা করুন।",
     gs_readMode: "পড়ার মোড",
     gs_guide: "গাইড",

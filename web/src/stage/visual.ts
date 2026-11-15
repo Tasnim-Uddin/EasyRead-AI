@@ -72,3 +72,48 @@ export function zoomTo(box: { x: number; y: number; w: number; h: number }, cw: 
   ty = Math.min(0, Math.max(Math.min(0, ch - ih * scale), ty));
   return { scale, tx, ty, iw, ih };
 }
+
+const words = (s: string) =>
+  new Set((s.toLowerCase().match(/[\p{L}\p{N}£$€.,]+/gu) ?? []).map((w) => w.replace(/[.,]+$/, "")).filter((w) => w.length > 1));
+
+/** The step the "two papers disagree" card goes before: the step sharing most words with a conflicting quote
+ *  (else step 1). -1 when the papers agree. */
+export function conflictStepIndex(guide: Pick<Guide, "facts" | "steps">): number {
+  const cs = guide.facts?.conflicts ?? [];
+  if (!cs.length) return -1;
+  let best = 0;
+  let bestScore = 0;
+  guide.steps.forEach((s, i) => {
+    const sw = words(`${s.text_en} ${s.text}`);
+    let score = 0;
+    for (const c of cs)
+      for (const w of words(`${c.label} ${c.leaflet}`)) {
+        if (!sw.has(w)) continue;
+        score += /\d/.test(w) ? 2 : w.length > 3 ? 1 : 0;
+      }
+    if (score > bestScore) {
+      bestScore = score;
+      best = i;
+    }
+  });
+  return best;
+}
+
+/** Which of `guide.dates` this step is about (its highlighted words, callout or text), or -1. */
+export function dateIndexFor(step: Step | undefined, guide: Pick<Guide, "dates">): number {
+  const dates = guide.dates ?? [];
+  if (!step || !dates.length) return -1;
+  const norm = (s: string | null | undefined) => (s ?? "").toLowerCase().replace(/\s+/g, " ").trim();
+  const hs = (step.highlights ?? []).map((h) => norm(h.text)).filter(Boolean);
+  const text = norm(`${step.text} ${step.text_en} ${step.callout?.value ?? ""} ${step.callout?.sub ?? ""}`);
+  for (let i = 0; i < dates.length; i++) {
+    const q = norm(dates[i].quote);
+    if (q && hs.some((h) => h.includes(q) || q.includes(h))) return i;
+  }
+  for (let i = 0; i < dates.length; i++) {
+    const d = dates[i];
+    if (d.amount && step.callout?.value && norm(step.callout.value).includes(norm(d.amount))) return i;
+    if (norm(d.what) && text.includes(norm(d.what))) return i;
+  }
+  return -1;
+}
