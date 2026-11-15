@@ -264,8 +264,50 @@ def picture_concurrency() -> int:
         return 9
 
 
+def picture_cap() -> int:
+    """Most fal pictures per guide (PICTURE_CAP, default 4; 0 turns them off). Keeps cost and wait low."""
+    try:
+        return max(0, int(os.environ.get("PICTURE_CAP", "4")))
+    except ValueError:
+        return 4
+
+
+# Concrete things a hands-and-object close-up can show. A step whose picture prompt names more of these is a better
+# picture than "a person doing one simple task".
+_OBJECTS = re.compile(r"\b(?:letter|envelope|paper|page|form|box|pen|pencil|diary|calendar|phone|mobile|card|bank|"
+                      r"cash|coin|money|wallet|purse|bill|receipt|key|door|computer|laptop|tablet|screen|keyboard|"
+                      r"inhaler|spacer|bottle|pill|pills|tablets|capsule|spoon|cup|glass|water|cream|tube|drops|"
+                      r"spray|plaster|bag|clock|watch|alarm|bin|meter|charger|plug|switch|parcel|stamp|post|ticket|"
+                      r"passport|photo|folder|file|scissors|glue|thermometer|syringe|needle|plate|food|label)s?\b", re.I)
+
+
+def needs_picture(s: dict) -> bool:
+    """A step gets a fal picture only when nothing better shows it: no animated close-up (step.visual) and no
+    words found on the user's own photo (step.highlights). Steps that already have a picture are not redone."""
+    return bool((s.get("picture_prompt") or "").strip()) and not s.get("visual") and not s.get("highlights") \
+        and not s.get("image_url")
+
+
+def pick_picture_steps(steps: list[dict], cap: int | None = None) -> list[dict]:
+    """The steps to draw, at most `cap`: those that need a picture, the most concrete first (number of objects in
+    the picture prompt; the opening 'what this is' step gets one extra, so the paper itself is shown).
+    Ties keep step order. Returned in step order."""
+    cap = picture_cap() if cap is None else cap
+    cand = [s for s in steps if needs_picture(s)]
+    first = steps[0] if steps else None
+
+    def score(s):
+        n = len(_OBJECTS.findall(s.get("picture_prompt") or ""))
+        return n + (1 if s is first and s.get("kind") == "what" else 0)
+    chosen = sorted(cand, key=lambda s: -score(s))[:cap]
+    ids = {id(s) for s in chosen}
+    return [s for s in steps if id(s) in ids]
+
+
 async def illustrate(guide: dict, emit):
-    """Make step pictures concurrently (bounded). Each step goes generating -> ready/failed and emits step_updated."""
+    """Make step pictures concurrently (bounded). Each picked step goes generating -> ready/failed and emits
+    step_updated. Steps with a close-up or a highlight on the user's photo, and steps over the cap, are skipped:
+    the UI shows the close-up, the highlighted photo, or the text."""
     try:
         from media import make_step_picture  # type: ignore
     except ImportError:
@@ -282,15 +324,14 @@ async def illustrate(guide: dict, emit):
                 s["status"] = "failed"
             emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
 
-    todo = []
+    online = bool(make_step_picture and os.environ.get("FAL_KEY"))
+    todo = pick_picture_steps(guide["steps"]) if online else []
+    queued = {id(s) for s in todo}
     for s in guide["steps"]:
-        if s.get("image_url"):
-            s["status"] = "ready"  # already illustrated (fixture or earlier run)
-        elif not make_step_picture or not os.environ.get("FAL_KEY"):
-            s["status"] = "skipped"  # offline: no media module or no key, not an error
-        else:
-            todo.append(s)
+        if id(s) in queued:
             continue
+        # Already illustrated (fixture or earlier run) is ready; everything else is skipped, not an error.
+        s["status"] = "ready" if s.get("image_url") else "skipped"
         emit({"type": "step_updated", "guide_id": guide["id"], "step": s})
     # Every queued step is "generating" up front, so the UI shows a placeholder for it straight away.
     for s in todo:

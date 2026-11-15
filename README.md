@@ -70,7 +70,7 @@ Every step has a picture. The pictures carry the meaning, so they work in any la
 
 | fal model | Where it is used | Status |
 |---|---|---|
-| `fal-ai/nano-banana/edit` | Live step pictures for every uploaded paper. One character: the guide portrait (`media/guide_ref.jpg`, from `design/guide-cartoon/chosen.png`) goes with every request as a reference image, so the woman in every step is the live guide. One shared style prompt (the app palette), no text inside the image. About 9 s per picture, all made in parallel. See `design/one-character/sheet.png` | Live, needs `FAL_KEY` |
+| `fal-ai/flux/schnell` | Live step pictures: close-ups of hands + the one object (no person; the live guide is the only person on screen), in the close-up palette, no text inside the image. Only for steps with no animated close-up and no highlight on the user's photo, at most 4 per guide. About $0.0008 and 1-3 s per picture | Live, needs `FAL_KEY` |
 | `fal-ai/flux/dev` | The cartoon portrait the Anam guide avatar is made from (`design/guide-cartoon/`). Was the step-picture model before; it drew a different person in each step | Offline |
 | `fal-ai/flux/schnell` | Pictures for the council letter and bookshelf sample guides, made once and stored in `demo/fixtures/img/` (the inhaler sample uses the live model with the guide). Also in the model comparison (`media/samples/compare/schnell.jpg`) | Offline, stored in the repo |
 | `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | 3 technique clips made from the step pictures: shake, press and breathe in, hold your breath (`library/clips/`) | Made offline. Not checked by a pharmacist, so shown only in demo mode (`SHOW_UNCHECKED_CLIPS=1`) with a "not yet checked" badge |
@@ -274,7 +274,7 @@ cd web && npm run build                            # type-check and production b
 | Service | Model or ID | Used for | Where |
 |---|---|---|---|
 | Anthropic API (Claude) | `claude-sonnet-5-5` (default; `ANTHROPIC_MODEL` changes it) | Reading photos and PDFs, document and device type, Easy Read rewrite, translation, grounded Q&A, drafting training rows | `agent/llm.py` |
-| fal | `fal-ai/nano-banana/edit` | Live step pictures (guide portrait as reference) | `media/fal.py` |
+| fal | `fal-ai/flux/schnell` | Live step pictures: close-ups of hands + the one object (no person; the live guide is the only person on screen), in the close-up palette, no text inside the image. Only for steps with no animated close-up and no highlight on the user's photo, at most 4 per guide. About $0.0008 and 1-3 s per picture | Live, needs `FAL_KEY` |
 | fal | `fal-ai/flux/dev` | Guide avatar portrait | `design/guide-cartoon/` |
 | fal | `fal-ai/flux/schnell` | Sample-guide pictures (offline) and model comparison | `demo/fixtures/img/`, `media/samples/compare/` |
 | fal | `fal-ai/kling-video/v2.5-turbo/standard/image-to-video` | Technique clips, made offline | `media/fal.py`, `library/` |

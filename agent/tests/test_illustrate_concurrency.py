@@ -25,6 +25,7 @@ def _fake_media(monkeypatch, fail_on=None, delay=0.02):
             state["now"] -= 1
     monkeypatch.setitem(sys.modules, "media", types.SimpleNamespace(make_step_picture=make_step_picture))
     monkeypatch.setenv("FAL_KEY", "test")
+    monkeypatch.setenv("PICTURE_CAP", "50")  # these tests are about concurrency, not the per-guide cap
     return state
 
 
@@ -92,10 +93,14 @@ def test_run_reaches_ready_with_concurrent_pictures(monkeypatch):
     monkeypatch.delenv("MONGODB_URI", raising=False)
     store = Store()
     store.put(pipeline.new_guide("g_run", "en"))
+    monkeypatch.setenv("PICTURE_CAP", "4")
     asyncio.run(pipeline.run(store, "g_run", [], None, "en", []))
     g = store.get("g_run")
     assert g["status"] == "ready"
-    assert all(s["status"] == "ready" and s["image_url"] for s in g["steps"])
+    drawn = [s for s in g["steps"] if s["status"] == "ready" and s["image_url"]]
+    assert 1 <= len(drawn) <= 4
+    # the rest are skipped (close-up, highlight or over the cap), never left pending
+    assert all(s["status"] in ("ready", "skipped") for s in g["steps"])
     statuses = [e["status"] for e in store.history["g_run"] if e["type"] == "guide_status"]
     assert statuses == ["extracting", "writing", "illustrating", "ready"]
 

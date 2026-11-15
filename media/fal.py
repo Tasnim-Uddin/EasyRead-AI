@@ -3,35 +3,37 @@
 FAL_KEY is read from the environment; if unset, from the repo root's local .env
 (python-dotenv). The key is never logged.
 """
-import base64
 import os
-from functools import lru_cache
+import re
 from pathlib import Path
 
 import httpx
 
 MODELS = {
-    # Reference-image model: each picture is drawn from the guide portrait, so the same woman is in every step.
-    # ~$0.04/image, 9-13 s each, all run in parallel. flux-kontext/dev was 4x faster but drew the inhaler as a cup.
-    "step_picture": "fal-ai/nano-banana/edit",
+    # Plain text-to-image: step pictures are close-ups of hands + the one object, so no person reference is needed
+    # (the live guide avatar is the only person on screen). flux/schnell: about $0.003 per 1 MP image, 1-3 s.
+    # Before: fal-ai/nano-banana/edit with the guide portrait as reference (~$0.04, 9-13 s), which drew the whole guide.
+    "step_picture": "fal-ai/flux/schnell",
     "annotate": "fal-ai/flux-kontext/dev",        # instruction-based image edit
     "clip": "fal-ai/kling-video/v2.5-turbo/standard/image-to-video",  # offline library building only, ~$0.21 per 5 s clip
 }
 
-# Approved palette: cream #FFF6E9 background, ink #3A2A20 outlines, orange #FF9B3D accent, sage #C9E2D2 and butter #FFE49A fills.
-PALETTE = ("flat colour palette of only warm cream background (#FFF6E9), dark brown ink outlines (#3A2A20), "
-           "bright orange accent (#FF9B3D), pale sage green (#C9E2D2) and soft butter yellow (#FFE49A) shapes")
-STYLE = (f"simple flat friendly vector illustration in the same flat cartoon style as the reference picture, "
-         f"thick dark brown outlines, {PALETTE}, "
-         "plain solid cream background, one clear action, no text, no letters, no numbers")
-# One character: the main person in every picture is the live guide (the Anam avatar is made from this portrait,
-# design/guide-cartoon/chosen.png). A 512 px copy is sent as the reference image with every step picture.
-GUIDE_REF = Path(__file__).resolve().parent / "guide_ref.jpg"
-# Kept free of objects: naming one here (we used to name the inhaler) makes the model draw it in every picture,
-# even "hold your breath" or a council letter. Objects come from the step's own picture_prompt.
-CHARACTER = ("If a person is shown, the main person is the same woman as in the reference picture (the guide): same face, warm brown skin, "
-             "black hair in a top bun, round orange earrings, sage green long-sleeved top. "
-             "Other people, if the step needs them, look different from her")
+# Same palette as the animated close-ups (web/src/closeups/parts.tsx): sand card, cream glow, orange accent,
+# warm brown skin, sage sleeve.
+PALETTE = ("flat colour palette of only warm sand background (#FCEBD6) with a soft cream glow (#FFF6EA), "
+           "dark brown ink outlines (#3A2A20), bright orange accent (#F5973F), pale sage green (#DCEBDF), "
+           "warm brown skin (#B5744A) and a sage green sleeve cuff (#93A27A)")
+# What the picture may and may not show. A person in the picture competes with the live guide on screen.
+CLOSEUP = ("Close-up view: only hands and the one object the step is about, filling the frame. "
+           "If hands are shown, they have warm brown skin and a sage green sleeve cuff at the wrist. "
+           "No person, no face, no head, no body, no shoulders, no people in the background, "
+           "no room, no furniture, no decoration")
+# Wordless: any paper, screen or page shows plain lines or blocks only (the model otherwise writes the
+# sender's name, badly spelt, on the letter).
+NO_TEXT = ("Wordless picture: no text, no letters, no numbers, no words, no title, no logos. "
+           "Any paper, page, card or screen shows only plain grey lines and small coloured blocks instead of writing")
+STYLE = (f"simple flat friendly vector illustration, thick dark brown outlines, {PALETTE}, "
+         "plain solid background, one clear action, no text, no letters, no numbers")
 
 _BASE = "https://fal.run/"
 _ENV_FILES = [Path(__file__).resolve().parent.parent / ".env"]
@@ -82,25 +84,52 @@ def _first_url(data: dict, field: str = "images") -> str:
         raise MediaError("fal response had no media url") from e
 
 
-@lru_cache(maxsize=1)
-def guide_ref_uri() -> str:
-    """The guide portrait as a data URI (about 24 KB), read once."""
-    return "data:image/jpeg;base64," + base64.b64encode(GUIDE_REF.read_bytes()).decode()
+# Words in the step prompt that make the model write on the paper ("a letter from the benefits office" puts
+# "Benefits office" on the letter; "write a date" puts "2023" in the diary). The object stays, the words go.
+_SENDER = re.compile(r"\s*\b(?:from|by|sent by)\s+(?:the\s+|a\s+|an\s+|your\s+)?[\w' -]*?"
+                     r"\b(?:office|council|hospital|surgery|school|college|company|bank|department|dwp|hmrc|nhs|gp|"
+                     r"pharmacy|clinic|jobcentre|centre|center|provider|landlord|agency|service)s?\b", re.I)
+_WORDY = re.compile(r"\b(?:(?:a|the|your|their|its)\s+)?(?:date|dates|name|names|number|numbers|address|title|"
+                    r"amount|reference|signature|words?|text|day|month|year|time|january|february|march|april|june|july|august|"
+                    r"september|october|november|december|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b"
+                    r"|\b(?:saying|that says|labelled|labeled|titled|with the words)\b[^,.]*", re.I)
+_QUOTED = re.compile(r"[\"\u201c\u201d'\u2018\u2019][^\"\u201c\u201d]{1,60}?[\"\u201c\u201d'\u2018\u2019]|\d+")
+
+
+# A named person becomes hands: the live guide is the only person on screen.
+_PERSON = re.compile(r"\b(?:an?|the|one|your)?\s*(?:old(?:er)?\s+|young\s+)?(?:person|woman|man|lady|patient|someone|"
+                     r"people|parent|child|doctor|nurse|pharmacist|guide|reader|user)\b(?:'s)?", re.I)
+
+
+def wordless(picture_prompt: str) -> str:
+    """The step prompt without the bits the model would write as text (senders, dates, names, quotes, digits)."""
+    t = _QUOTED.sub(" ", picture_prompt)
+    t = _SENDER.sub("", t)
+    t = _PERSON.sub(" hands", t)
+    t = _WORDY.sub("", t)
+    t = re.sub(r"\s+([,.])", r"\1", re.sub(r"\s{2,}", " ", t)).strip(" ,.")
+    return t or "two hands holding a sheet of paper"
+
+
+def step_picture_prompt(picture_prompt: str) -> str:
+    """The full prompt for a step picture: the step's own object/action, as a hands-and-object close-up."""
+    return f"{NO_TEXT}. Close-up picture: {wordless(picture_prompt)}. {CLOSEUP}. {STYLE}"
 
 
 async def make_step_picture(picture_prompt: str, seed: int | None = None) -> str:
-    """One wordless Easy Read picture for a step, with the guide as the person. Returns an image URL.
-
-    seed is kept for callers; the reference-image model takes none (the reference keeps the look stable).
-    """
+    """One wordless close-up picture for a step: hands + the object only, no person. Returns an image URL."""
     if not picture_prompt or not picture_prompt.strip():
         raise MediaError("empty picture_prompt")
     args = {
-        "prompt": f"New picture: {picture_prompt.strip()}. {CHARACTER}. {STYLE}",
-        "image_urls": [guide_ref_uri()],
+        "prompt": step_picture_prompt(picture_prompt),
+        "image_size": "square",  # 512x512: about a quarter of the 1 MP price, plenty for a phone card
+        "num_inference_steps": 4,
         "num_images": 1,
         "output_format": "png",
+        "enable_safety_checker": True,
     }
+    if seed is not None:
+        args["seed"] = seed
     return _first_url(await _run(MODELS["step_picture"], args))
 
 

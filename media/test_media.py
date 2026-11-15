@@ -26,11 +26,11 @@ def test_step_picture_prompt_forbids_text(monkeypatch):
     _mock(monkeypatch, handler)
     assert asyncio.run(fal.make_step_picture("a blue inhaler", seed=1)) == "https://x/y.png"
     assert fal.MODELS["step_picture"] in seen["url"]
-    assert "no text" in seen["body"]["prompt"] and "a blue inhaler" in seen["body"]["prompt"]
-    assert fal.CHARACTER in seen["body"]["prompt"]
-    # the guide portrait goes with every picture as the reference image
-    assert seen["body"]["image_urls"] == [fal.guide_ref_uri()]
-    assert seen["body"]["image_urls"][0].startswith("data:image/jpeg;base64,")
+    p = seen["body"]["prompt"]
+    assert "no text" in p and "a blue inhaler" in p
+    # plain text-to-image: no reference portrait goes with the request any more
+    assert "image_urls" not in seen["body"] and "image_url" not in seen["body"]
+    assert seen["body"]["seed"] == 1
 
 
 def test_errors_become_media_error(monkeypatch):
@@ -68,19 +68,40 @@ def test_live_step_picture():
     assert url.startswith("http")
 
 
-def test_style_is_wordless_and_character_names_no_object():
+def test_style_is_wordless():
     assert "no text" in fal.STYLE and "no numbers" in fal.STYLE
-    # An object named in CHARACTER gets drawn in every picture (e.g. an inhaler on a council letter).
-    assert "inhaler" not in fal.CHARACTER.lower()
+    assert "no text" in fal.NO_TEXT.lower() and "plain grey lines" in fal.NO_TEXT
 
 
-def test_character_is_the_guide_and_names_no_object():
-    c = fal.CHARACTER.lower()
-    # one character: the live guide (Anam avatar), described as in design/guide-cartoon/chosen.png
-    assert "the guide" in c and "reference picture" in c
-    for trait in ("woman", "bun", "orange earrings", "sage green"):
-        assert trait in c
-    # no object in CHARACTER, or it is drawn in every step; objects come from each step's picture_prompt
-    for obj in ("inhaler", "tablet", "cream", "letter", "phone", "drops", "spray", "box", "pill"):
-        assert obj not in c
-    assert fal.GUIDE_REF.exists() and fal.GUIDE_REF.stat().st_size < 60_000
+def test_picture_is_a_close_up_with_no_person():
+    """The live guide is the only person on screen: step pictures are hands + the object only."""
+    p = fal.step_picture_prompt("a hand holding a phone").lower()
+    for rule in ("only hands and the one object", "no person", "no face", "no head", "no body", "no decoration"):
+        assert rule in p
+    # continuity with the guide and the animated close-ups: skin tone + sage sleeve, close-up palette
+    assert "warm brown skin" in p and "sage green sleeve" in p
+    for colour in ("#fcebd6", "#f5973f", "#b5744a", "#93a27a"):
+        assert colour in p
+    # no full-character reference or description any more
+    assert not hasattr(fal, "CHARACTER") and not hasattr(fal, "guide_ref_uri")
+    assert "earrings" not in p and "bun" not in p
+
+
+@pytest.mark.parametrize("raw,want,gone", [
+    ("two hands holding an opened letter from a benefits office", "two hands holding an opened letter", ["benefits"]),
+    ("a hand writing a date in a small paper diary with a pen", "a hand writing in a small paper diary with a pen", ["date"]),
+    ('hands holding a letter from DWP saying "Universal Credit"', "hands holding a letter", ["dwp", "universal"]),
+    ("a calendar with 12 March circled", "a calendar", ["12", "march"]),
+    ("a person doing one simple task", "hands doing one simple task", ["person"]),
+    ("the pharmacist handing over a bag", "hands handing over a bag", ["pharmacist"]),
+    ("a hand holding a mobile phone to make a call", "a hand holding a mobile phone to make a call", []),
+])
+def test_wordless_drops_what_the_model_would_write(raw, want, gone):
+    out = fal.wordless(raw)
+    assert out.startswith(want)
+    for w in gone:
+        assert w not in out.lower()
+
+
+def test_wordless_never_empty():
+    assert fal.wordless('"Council tax" 2025') == "two hands holding a sheet of paper"
