@@ -81,6 +81,18 @@ For `letter`/`bill`/`form`/`other`, `facts` is present with the medicine fields 
 
 **Label vs leaflet (medicine).** When both are uploaded, dose and frequency come from the label. If the leaflet says something different, `facts.conflicts` is `[{ "field": "dose|frequency", "label": str, "leaflet": str }]`, `facts.warnings` starts with "Your label and leaflet say different things. Ask your pharmacist.", and one `warning` step with that exact text is included. Neither value is dropped silently.
 
+### v4 additions (all optional; old clients ignore them; mirrored in web/src/types.ts)
+- `step.visual`: `{ "kind": "closeup", "id": str }` — an animated close-up from the built-in library (`web/src/closeups/`, ids listed in `agent/visuals.py`). Missing/null = no close-up; then use highlights on the user's photo, else the picture.
+- `step.highlights`: `[{ "page": int, "text": str, "quad": [[x,y]×4] }]` — exact printed words for this step, located on the user's photo by OCR (normalised 0-1, clockwise from top-left). Never guessed by the model: if OCR can't find the quote, no highlight.
+- `step.callout`: `{ "value": str, "sub": str? }` — big number/date card, e.g. `{"value":"£212.50","sub":"by 17 Nov"}`.
+- `guide.sender`: `{ "name": str, "kind": "pharmacy|gp|hospital|council|school|company|government|other", "contact": str? }` — who sent it; used for "ask X" when a question is not answered by the paper.
+- `guide.dates`: `[{ "what", "what_en", "date": "YYYY-MM-DD", "time": "HH:MM"?, "quote", "amount"? }]` — dated actions for Remind me / Add to calendar (calendar file built in the browser).
+- `guide.unreadable_regions`: `[{ "page", "quad", "note" }]` — parts of a photo that could not be read.
+- `guide.title_override`: user's own name for the guide (`PATCH /api/guides/{id}` `{ "title": str }`).
+- Ask result `ask_who`: when `grounded` is false, who to ask instead (from `sender`).
+- `POST /api/scan` (multipart `image`) → `{ "quad", "found", "quality": { "ok", "issues": [...], "block" } }`; no AI, no cost.
+- The app adds **no** advice/safety lines of its own (no 999, no 111). Lines printed on the paper itself are kept as steps.
+
 **Sample:** `demo/fixtures/guide_council_letter.json` (fictional, labelled sample; no images, `image_url: null`, `status: "skipped"`).
 
 ## 2. Server HTTP API (`agent/`)

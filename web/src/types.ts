@@ -13,6 +13,30 @@ export interface Step {
   image_url: string | null;
   technique_clip_id: string | null;
   status: StepStatus;
+  /** v4: animated close-up from the built-in library (web/src/closeups). Missing = none. */
+  visual?: { kind: "closeup"; id: string } | null;
+  /** v4: where this step's words are on the user's own photo (OCR-located, never guessed). */
+  highlights?: Highlight[];
+  /** v4: the big number/date card for this step, e.g. {value:"£212.50", sub:"by 17 Nov"}. */
+  callout?: { value: string; sub?: string } | null;
+}
+
+/** v4: a span of printed text located on page `page` (0-based index into source.image_urls).
+ *  `quad` = 4 corner points [x,y] normalised 0-1 to the image, clockwise from top-left. */
+export interface Highlight {
+  page: number;
+  text: string;
+  quad: [number, number][];
+}
+
+/** v4: a dated action found on the paper (quote checked against the photo). */
+export interface DatedAction {
+  what: string;        // plain words in guide language, e.g. "Pay £212.50"
+  what_en: string;
+  date: string;        // YYYY-MM-DD
+  time?: string | null; // HH:MM 24h, missing = all day
+  quote: string;       // exact printed words
+  amount?: string | null;
 }
 
 export interface Facts {
@@ -62,6 +86,14 @@ export interface Guide {
   summary_line_en?: string;
   steps: Step[];
   created_at: string;
+  /** v4: who sent the paper / who to ask when the answer is not on it. */
+  sender?: { name: string; kind: "pharmacy" | "gp" | "hospital" | "council" | "school" | "company" | "government" | "other"; contact?: string | null } | null;
+  /** v4: dated actions for Remind me / Add to calendar. */
+  dates?: DatedAction[];
+  /** v4: parts of a photo that could not be read. */
+  unreadable_regions?: { page: number; quad: [number, number][]; note: string }[];
+  /** v4: user's own name for the guide (Rename in My guides). */
+  title_override?: string | null;
 }
 
 export interface Clip {
@@ -83,6 +115,15 @@ export interface AskResult {
   answer: string;
   grounded: boolean;
   escalate: Escalate;
+  /** v4: when not grounded, who to ask instead (from guide.sender), e.g. "the council". */
+  ask_who?: string | null;
+}
+
+/** v4: result of POST /api/scan (edge detect + quality, no AI). */
+export interface ScanResult {
+  quad: [number, number][];      // normalised corners; full photo when found=false
+  found: boolean;
+  quality: { ok: boolean; issues: ("small" | "blurry" | "dark" | "low_contrast" | "glare" | "cut_off")[]; block: boolean };
 }
 
 export type ServerEvent =
