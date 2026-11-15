@@ -40,14 +40,25 @@ def ask_who(guide: dict, lang: str) -> str:
         return table["pharmacy"]  # a medicine label or leaflet names its maker; the person to ask is the pharmacist
     if kind in table:
         return table[kind]
-    if len(name) > 48:
-        # "Community Nutrition and Dietetics Department, Adobe Health Centre (Susan Blight, ...)" -> its first part
-        name = re.split(r"\s*[,(]\s*", name)[0].strip()
-    if name and len(name) <= 48:
-        return name
+    if name:
+        # "HM Revenue & Customs, Accounts Office Cumbernauld" -> its first part
+        return short_name(name)
     if not s and guide.get("domain") in table:
         return table[guide["domain"]]  # an unsigned school form: ask the school
     return table["unknown"]
+
+
+def short_name(name: str, limit: int = 48) -> str:
+    """A sender name short enough to say and to fit the 'Who to ask' chip: 'HM Revenue & Customs, Accounts Office
+    Cumbernauld' -> 'HM Revenue & Customs'. Never empty for a non-empty name."""
+    name = re.sub(r"\s+", " ", name).strip()
+    if len(name) <= limit:
+        return name
+    head = re.split(r"\s*(?:,|\(|;| - | – | — )\s*", name, maxsplit=1)[0].strip()
+    if 2 < len(head) <= limit:
+        return head
+    cut = name[:limit].rsplit(" ", 1)[0].strip(" ,;-–—")
+    return cut or name[:limit]
 
 
 def not_on_paper(guide: dict, lang: str) -> str:

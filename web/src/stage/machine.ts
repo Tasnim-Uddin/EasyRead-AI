@@ -121,11 +121,29 @@ export function tailCaption(text: string, max = 160): string {
 }
 
 /** Who to ask when the paper does not answer: the sender's name, else a plain phrase. */
+/** The server's "nobody named" fallbacks (agent/qa.py WHO.unknown, the persona's line): not a name to show. */
+const GENERIC_WHO = new Set(
+  ["whoever sent it", "whoever sent them this paper", "quien se lo envió", "من أرسلها", "جس نے یہ بھیجا", "nadawcę", "যে পাঠিয়েছে তাকে"].map((s) => s.toLowerCase()),
+);
+
+/** A sender name short enough for the chip (same rule as agent/qa.py short_name). */
+export function shortName(name: string, limit = 48): string {
+  const n = name.replace(/\s+/g, " ").trim();
+  if (n.length <= limit) return n;
+  const head = n.split(/\s*(?:,|\(|;| - | – | — )\s*/)[0].trim();
+  if (head.length > 2 && head.length <= limit) return head;
+  const cut = n.slice(0, limit);
+  const sp = cut.lastIndexOf(" ");
+  return (sp > 0 ? cut.slice(0, sp) : cut).replace(/[\s,;\-–—]+$/, "") || cut;
+}
+
+/** Who to ask when the paper has no answer: the /ask result's ask_who, else the paper's sender, else null
+ *  (the UI then says "whoever sent it"). A generic "whoever sent it" from the server never hides a real sender. */
 export function whoToAsk(sender: { name?: string | null } | null | undefined, askWho?: string | null): string | null {
   const a = (askWho ?? "").trim();
-  if (a) return a;
+  if (a && !GENERIC_WHO.has(a.toLowerCase())) return a;
   const n = (sender?.name ?? "").trim();
-  return n || null;
+  return n ? shortName(n) : null;
 }
 
 /** A fallback time for the check-in when the guide's "done talking" event never comes. */

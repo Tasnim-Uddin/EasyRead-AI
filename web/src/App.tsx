@@ -3,11 +3,12 @@ import * as api from "./api";
 import type { Clip, Guide, ToolLogEntry } from "./types";
 import { LANGUAGES, t, tf } from "./i18n";
 import { cleanLanguage, isRtl, languageLabel, languageValue } from "./languages";
-import { useAnam, type ToolHandler } from "./useAnam";
+import { CONNECT_BUDGET_MS, useAnam, type ToolHandler } from "./useAnam";
 import { audioOwner, claimAudio, onAudioChange, setGuideQuiet, speak, stopSpeaking, voiceSettings } from "./speech";
 import { applyTheme, dockOn, initialTheme, type Theme } from "./look";
 import { forgetGuide, initialDemo, myGuideIds, rememberGuide, saveDemo } from "./mode";
 import { GuideStage, type AskInfo } from "./stage/GuideStage";
+import { whoToAsk } from "./stage/machine";
 import {
   AskScreen,
   AVATAR_VIDEO_ID,
@@ -46,7 +47,7 @@ import type { Quad } from "./camera/detect";
 let fallbackLang = "en";
 const safeFallback = () => t(fallbackLang, "gs_qaFailed");
 /** The guide has this long to join before the steps open in Read mode instead (Figma 19a). */
-const CONNECT_TIMEOUT_MS = 8000;
+
 type Screen = "home" | "camera" | "check" | "quality" | "tray" | "reading" | "summary" | "step" | "clip" | "ask" | "talk" | "tellback" | "error" | "settings" | "papers" | Extra;
 const isSample = (g: Guide | null) => !!g && g.id.startsWith("g_sample");
 /** Screens where the live guide may keep running. Anywhere else ends the session. */
@@ -350,9 +351,9 @@ export default function App() {
         }
         // The app adds no advice of its own: the answer, and who to ask when the paper does not say.
         askSeq.current += 1;
-        setAskInfo({ seq: askSeq.current, grounded: r.grounded, askWho: r.ask_who ?? null });
+        const who = whoToAsk(g()?.sender, r.ask_who);
+        setAskInfo({ seq: askSeq.current, grounded: r.grounded, askWho: who });
         if (!r.grounded) {
-          const who = r.ask_who || g()?.sender?.name;
           return `${r.answer} (Not on the paper.${who ? ` Who to ask: ${who}.` : " Tell them to ask whoever sent it."})`;
         }
         return r.answer;
@@ -414,7 +415,7 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wantLive, guide?.id, anam.state]);
-  // Could not connect (no key, refused, or not live within ~8 s), or the session dropped: calm Read mode (19a).
+  // Could not connect (no key, refused, or not live after a quiet retry), or the session dropped: calm Read mode (19a).
   const fallBack = useCallback(() => {
     if (!wantLiveRef.current) return;
     setCantConnect(true);
@@ -428,7 +429,7 @@ export default function App() {
       return;
     }
     if (anam.state !== "connecting") return;
-    const timer = setTimeout(fallBack, CONNECT_TIMEOUT_MS);
+    const timer = setTimeout(fallBack, CONNECT_BUDGET_MS);
     return () => clearTimeout(timer);
   }, [wantLive, anam.state, fallBack, fakeLiveStage]);
   const wasLive = useRef(false);
@@ -527,6 +528,12 @@ export default function App() {
     if (checkSource.current === "upload") uploadRef.current?.click();
     else go("camera", true);
   }
+  // A new paper from Home (or My guides): the pages of the last guide are not carried into the next one.
+  function freshPaper() {
+    if (checkQueue.length) return;
+    setItems([]);
+    setTooMany(false);
+  }
   function openCamera() {
     setSheetOpen(false);
     checkSource.current = "camera";
@@ -565,8 +572,18 @@ export default function App() {
     else if (more) {
       go("tray", true);
       setSheetOpen(true);
+    } else if (items.length === 0) {
+      // One page: no tray, straight on to making the guide (the paper kind is worked out on the server).
+      autoMakeRef.current = true;
     } else go("tray", true);
   }
+  const autoMakeRef = useRef(false);
+  useEffect(() => {
+    if (!autoMakeRef.current || items.length === 0) return;
+    autoMakeRef.current = false;
+    void makeGuide(true); // replaces the crop screen: Back from the loading screen goes home
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
   const checkSource = useRef<"camera" | "upload">("camera");
   function dropChecking() {
     retakingRef.current = false;
@@ -606,12 +623,12 @@ export default function App() {
   }
 
   // Several pages or papers go as repeated "document" fields, with `roles` in the same order (CONTRACTS.md section 2).
-  async function makeGuide() {
+  async function makeGuide(replace = false) {
     if (items.length === 0) return;
     setBusy(true);
     setUploading(true);
     setError(null);
-    go("reading");
+    go("reading", replace);
     try {
       const f = api.buildGuideForm(items, lang);
       const { guide_id } = await api.createGuide(f);
@@ -852,8 +869,8 @@ export default function App() {
             lang={lang}
             onLanguage={changeLanguage}
             onSettings={openSettings}
-            onCamera={openCamera}
-            onUpload={() => setSheetOpen(true)}
+            onCamera={() => { freshPaper(); openCamera(); }}
+            onUpload={() => { freshPaper(); setSheetOpen(true); }}
             onSample={demo ? (n) => openSample(n) : undefined}
             onPapers={openPapers}
             hasPapers={mine.length > 0}
@@ -1081,7 +1098,7 @@ export default function App() {
             onDelete={(id) => void deletePaper(id)}
             onRename={(id, title) => setPapers((rows) => renameRow(rows, id, title))}
             onRetry={loadPapers}
-            onNew={() => cameraRef.current?.click()}
+            onNew={() => { freshPaper(); setSheetOpen(true); }}
           />
         )}
 

@@ -151,6 +151,9 @@ def test_no_app_added_lines_in_steps():
     ({"name": "Boots Pharmacy", "kind": "pharmacy"}, "en", "the pharmacy"),
     ({"name": "St Mary's Primary", "kind": "school"}, "es", "la escuela"),
     (None, "en", "whoever sent it"),
+    ({"name": "HM Revenue & Customs, Accounts Office Cumbernauld", "kind": "government"}, "en", "HM Revenue & Customs"),
+    ({"name": "The Very Long Named Department For Something Important And Other Things", "kind": "government"}, "en",
+     "The Very Long Named Department For Something"),
     (None, "pl", "nadawcę"),
 ])
 def test_ask_who(sender, lang, who):
