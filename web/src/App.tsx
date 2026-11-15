@@ -577,7 +577,7 @@ export default function App() {
     addLog(to === index + 1 ? "next_step" : to === index - 1 ? "previous_step" : "show_step", { index: to }, 0, "user tap");
     if (liveRef.current) {
       anam.interrupt();
-      anam.send(`User moved to step ${to + 1}`);
+      anam.send(`User moved to step ${to + 1} (index ${to}). The screen shows: "${guide.steps[to]?.text ?? ""}". Read exactly this step aloud.`);
     } else if (voiceRef.current && guideOn) void speak(guide.steps[to]?.text ?? "", lang);
   }
 
