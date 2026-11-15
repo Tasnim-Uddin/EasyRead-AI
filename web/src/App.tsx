@@ -578,41 +578,23 @@ export default function App() {
     } else if (voiceRef.current && guideOn) void speak(guide.steps[to]?.text ?? "", lang);
   }
 
-  // Live: the guide answers out loud and its reply text fills the sheet. No reply in 8 s: ask the document
-  // directly, show it, and have the guide say it.
-  const [waitReply, setWaitReply] = useState<{ seq: number; q: string } | null>(null);
+  // Live: the guide answers out loud (one voice); the sheet shows the grounded answer from the document,
+  // fetched in parallel, so the text never depends on the avatar's speech stream.
   async function askOnStep(q: string) {
     const text = q.trim();
     if (!text || !guide) return;
     setQuestion(text);
     setAnswer(null);
     if (liveRef.current && anam.send(text)) {
-      setWaitReply({ seq: anam.replySeq, q: text });
+      try {
+        setAnswer(await runTool("answer_from_document", { question: text }));
+      } catch {
+        setAnswer(anam.liveCaption || null);
+      }
       return;
     }
     await onAsk(text);
   }
-  useEffect(() => {
-    if (!waitReply) return;
-    if (anam.replySeq > waitReply.seq) {
-      setAnswer(anam.liveCaption);
-      return;
-    }
-    const timer = setTimeout(() => {
-      setWaitReply(null);
-      void (async () => {
-        const say = await runTool("answer_from_document", { question: waitReply.q });
-        setAnswer(say);
-        if (liveRef.current) anam.talk(say);
-      })();
-    }, 8000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [waitReply, anam.replySeq, anam.liveCaption]);
-  useEffect(() => {
-    if (waitReply && anam.replySeq > waitReply.seq) setWaitReply(null); // reply finished
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [anam.replyDone]);
 
   function hideGuide() {
     void anam.stop();
@@ -756,7 +738,7 @@ export default function App() {
             onAskOpen={setAskOpen}
             onAsk={(q) => void askOnStep(q)}
             answer={answer}
-            busy={busy || !!waitReply}
+            busy={busy}
             onCheck={() => { go("tellback"); }}
           />
         )}
