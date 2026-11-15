@@ -6,25 +6,25 @@
 
 **Track:** 03 Voice, Vision & Generative Media (Imperial AI Hack, 14–15 Nov 2026).
 
-**Product: EasyRead AI.** Point your phone at a confusing document (a prescription, medicine leaflet or doctor's letter) and get an **Easy Read guide**: short steps, a picture for every step, in your own language. A friendly avatar talks you through it, answers your questions from the document, and shows you *how* to use your medicine with checked technique clips.
+**Product: EasyRead AI.** Point your phone at any confusing paper (a letter, bill, form, prescription, leaflet or instructions) and get an **Easy Read guide**: short steps, each with a visual, in your own language. A live Anam guide talks you through it one step at a time and answers your questions from the paper only. (Final v4 product: see README.md.)
 
 **Who it's for:** people with learning disabilities, low literacy or limited English, older patients, and the carers who help them. Easy Read (short sentence + picture) is an established accessible-information format, but it's made by hand today, so most people never get one.
 
-**Hero vertical: medicines.** The engine is general (any document → Easy Read), but we build and demo **medicines** properly, with a 30-second "it works on any letter" moment at the end (e.g. a council or school letter).
+**Scope:** the engine is general (any paper → Easy Read). Medicines get extra care: technique steps from fixed outlines and doses said exactly as printed.
 
 ### How it works (user flow)
 1. **Input:** photo or PDF of a prescription label, leaflet or letter. Optionally a **photo of the user's actual device** (inhaler, cream tube, eye drops).
 2. **Understand:** a vision model extracts medicine, dose, frequency, route, **device type**, warnings and "when to get help" into structured JSON. The device photo is used to **identify the exact device type** (e.g. a metered-dose inhaler is shaken and inhaled slowly; dry-powder inhalers are not shaken and are inhaled fast). This decides which technique steps are shown, so it's a correctness feature.
-3. **Easy Read rewrite:** the **Adaption fine-tuned model** turns the extracted facts into 6–8 steps: one idea per sentence, no jargon, each with a picture description.
+3. **Easy Read rewrite:** Claude writes the steps live (one idea per sentence, no jargon, each with a picture description). The **Adaption fine-tuned model** (win rate 0.7712 vs base) is evidence; it is used only when `ADAPTION_MODEL_ID` is set, because tuned models are not hosted.
 4. **Visuals (fal):**
-   - **A. Step pictures:** one consistent, friendly illustration per step, generated live. **No words inside images** (models garble text, and wordless pictures work in every language). Captions come from the UI in the chosen language.
+   - **A. Step visuals:** an animated close-up from the built-in library, a highlight on the user's own photo (OCR), or a fal close-up picture (at most 4 per guide), in one style. **No words inside images** (models garble text, and wordless pictures work in every language). Captions come from the UI in the chosen language.
    - **B. Technique clips:** 3–5 s looping clips for a small **checked library** of devices (inhaler with/without spacer, dry-powder inhaler, cream/ointment, tablets; stretch: eye drops, nasal spray). Made in advance with fal image→video, **checked by a human against NHS guidance**, then cached. Never generated live for a user.
    - **C. Your item:** fal image-edit annotations on the user's own device photo ("cap", "counter", "press here"). Nice to have.
-5. **Explain (Anam):** the avatar sits on the left, the step viewer on the right. The avatar reads each step aloud in the user's language, moves through the steps with tool calls, answers questions **only from the document and the checked library**, and finishes with a short "tell me back" check.
-6. **Take home:** a printable Easy Read sheet.
+5. **Explain (Anam):** the guide sits on the guide stage. She speaks each step in the user's language with captions, moves through the steps with tool calls, and answers questions **only from the paper**. ("Tell me back" is built but hidden for now.)
+6. **Take home:** You did it: save or share a PDF, reminders for future dates (.ics / Google Calendar), My guides with resume.
 
 ### Ground rules (do not break these)
-- **It explains the user's own document. It never gives medical advice, diagnoses, or changes doses.** Anything outside the document → "please ask your pharmacist or GP". Serious symptoms (chest pain, can't breathe, overdose, allergic reaction) → "call 999" (or 111 for urgent, non-emergency), every time, in every language.
+- **It explains the user's own document. It never gives medical advice, diagnoses, or changes doses.** The app adds no advice or help lines of its own (no 999/111/pharmacist lines); lines printed on the paper are kept. Anything not on the paper → "That's not on your paper. Ask <the sender>."
 - **Technique clips come only from the checked library.** Each library entry records who checked it and against which NHS page. No live-generated "how to" video is ever shown as instructions.
 - **No text inside generated images.**
 - **Demo data is labelled.** Sample prescriptions are fictional, with no real patient data. Real photos of devices are fine.

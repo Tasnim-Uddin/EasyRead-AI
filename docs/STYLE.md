@@ -9,7 +9,7 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 - Everyday words. "Use" not "administer". "Doctor" not "healthcare professional".
 - Digits for numbers: "2 puffs", "3 times a week". Dates as "Friday 12 December". Money as "£120".
 - A hard word that cannot be avoided: explain it once, right after: "Your inhaler has a *spacer*. A spacer is a plastic tube you breathe through."
-- Keep the source's meaning. Never add, remove or soften a dose, date, amount or warning. If the paper is unclear, say so: "The paper does not say. Ask your pharmacist."
+- Keep the source's meaning. Never add, remove or soften a dose, date, amount or warning. If the paper is unclear or a field is blank, say so plainly: "The paper does not show the date." Do not add who to ask: the app never adds advice or people the paper does not name.
 - One step = one action = one picture.
 
 | Bad | Good |
@@ -46,7 +46,7 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 - Plain, calm, steady. Like a good pharmacist or a patient neighbour. Not a cheerleader.
 - Say what the step is, why it matters in 1 short line at most, then wait.
 - Praise only by naming what was done: "That is right. You use the blue one when you feel tight." Not "Amazing job!".
-- If it does not know: "I do not know. Ask your pharmacist." Never guess about doses.
+- If the paper does not say: "That is not on your paper. Ask <the sender>." (the sender printed on the paper). Never guess, never add advice.
 - Captions show exactly what the voice says.
 
 | Bad | Good |
@@ -61,12 +61,12 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 - "It's important to note", "Remember that", "Keep in mind"
 - Em-dash chains and long dashed asides. Use a full stop.
 - Triple lists of adjectives ("clear, simple and friendly").
-- Emoji. Exclamation marks (only in a real warning, e.g. "Call 999 now.").
+- Emoji. Exclamation marks.
 - Overuse of "simply", "just", "easily", "quickly". They make hard things sound easy and shame people who struggle.
 - Generic reassurance ("You've got this", "It's totally normal") unless the paper itself says it.
 
 ## 5. Output shapes by document type
-**How-to (medicine device, appliance, form of use):** Title "How to use your inhaler". Numbered steps, one action and one picture each. A "Take care" step (butter colour) for risks. End with "Check you understood" questions.
+**How-to (medicine device, appliance, form of use):** Title "How to use your inhaler". Numbered steps, one action and one picture each. A "Take care" step (butter colour) for warnings the paper gives. For a medicine device, the technique steps come from the fixed outline in `agent/technique.py`, and the dose is said exactly as printed.
 
 **Letter or bill:**
 - This is: 1 line ("A letter from your council about unpaid council tax.")
@@ -76,10 +76,9 @@ Based on UK Easy Read practice (Mencap; Dept of Health "Making written informati
 
 **Form:** Go box by box. "Box 3, Your name: write your full name as it is on your passport." Name what goes in each box and an example. Say which boxes can stay empty.
 
-**Medicine summary:** "This is: your inhaler (salbutamol). You will learn 5 steps. From: your label and your leaflet."
+**Title:** a short plain title of 6 words or fewer, e.g. "Amoxicillin liquid", "Council tax bill".
 
-## 6. Safety lines (always on the final screen of the type)
-- Medicine: "Not sure? Ask your pharmacist. For advice, call 111. In an emergency, call 999."
-- Money or legal: "Get free advice before you sign or pay. Citizens Advice can help: 0800 144 8848."
-- Housing, benefits, immigration: same as money, plus "Do not ignore the letter."
-- Every guide: "This guide is based on your paper. It does not replace advice from a professional."
+## 6. No added safety or advice lines
+- The app adds no advice, help lines or people of its own: no 999, no 111, no "ask your pharmacist", no Citizens Advice. `agent/paperguard.py` removes such sentences (in 6 languages) unless the paper itself says them.
+- Help lines printed on the paper (for example "If you feel very unwell, call 111") are kept as steps, word for word.
+- When a question is not answered by the paper, the answer says so and names the sender printed on the paper.

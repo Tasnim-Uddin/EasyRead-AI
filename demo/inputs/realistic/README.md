@@ -6,7 +6,7 @@ Made with `make_docs.py` to test the real upload path on messy input. No real pe
 |---|---|---|
 | a_council_photo.jpg | council letter photographed at an angle, blur, shadow | amounts and date exact |
 | b_inhaler_dim.jpg | dim, low-contrast medicine label | reads dose; no spacer unless the label says always |
-| c_gp_letter.pdf | 2-page GP appointment letter (PDF) | date, time, room, fasting incl. "you may drink water", 999/111 line |
+| c_gp_letter.pdf | 2-page GP appointment letter (PDF) | date, time, room, fasting incl. "you may drink water"; the letter's own 999/111 line kept as printed |
 | d_eyedrops_label.jpg | eye drops label | 1 drop, both eyes, 4 times a day, 5 days, discard after 28 days |
 | e_discharge.png | dense hospital discharge letter | one step per medicine change, follow-ups kept |
 | f_spanish_school.png | Spanish school letter | guide in the chosen language, trip date and times kept |
