@@ -41,7 +41,7 @@ export function QualityScreen({ lang, url, quad, quality, onRetake, onUseAnyway,
   // Where to draw the dashed "problem here" box: the glare region when known, else the paper itself.
   const xs = quad.map((p) => p[0]), ys = quad.map((p) => p[1]);
   const box = quality.region ?? [Math.min(...xs), Math.min(...ys), Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)];
-  const showBox = main !== "dark" && main !== "low_contrast";
+  const showBox = main !== "dark" && main !== "low_contrast" && main !== "small";
   const has = (i: Issue) => quality.issues.includes(i) || (i === "dark" && quality.issues.includes("low_contrast"));
   return (
     <div className="screen cap-screen q-screen">

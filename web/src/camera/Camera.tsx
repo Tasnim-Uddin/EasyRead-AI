@@ -144,6 +144,7 @@ export function CameraScreen({ lang, pages, thumb, onShot, onClose, onPages, onP
       setQuad(q);
       const s = st.push(q, now);
       setSteady(s);
+      if (import.meta.env.DEV) (window as unknown as { __cam?: unknown }).__cam = { q, s };
       if (s && autoRef.current && !busyRef.current) void shoot(false);
     };
     raf = requestAnimationFrame(tick);
@@ -232,11 +233,11 @@ export function CameraScreen({ lang, pages, thumb, onShot, onClose, onPages, onP
       </div>
       <div className="cam-bottom">
         <button className="cam-side" onClick={onPages} disabled={!onPages || pages === 0} aria-label={pages === 1 ? t(lang, "camOnePage") : tf(lang, "camPages", { n: pages })}>
-          <span className="cam-thumb">
+          <span className="cam-thumb" style={pages === 0 ? { visibility: "hidden" } : undefined}>
             {thumb ? <img src={thumb} alt="" /> : <i />}
             {pages > 0 && <b>{pages}</b>}
           </span>
-          <span>{pages === 1 ? t(lang, "camOnePage") : tf(lang, "camPages", { n: pages })}</span>
+          {pages > 0 && <span>{pages === 1 ? t(lang, "camOnePage") : tf(lang, "camPages", { n: pages })}</span>}
         </button>
         <button className={"cam-shutter" + (steady ? " ready" : "")} onClick={() => void shoot(false)} disabled={state !== "live"} aria-label={t(lang, "camShutter")}>
           <i />

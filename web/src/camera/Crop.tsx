@@ -49,6 +49,7 @@ export function CropScreen({ lang, file: file0, url: url0, guess, pages, onUse, 
   const editedRef = useRef(false);
   editedRef.current = edited;
   const stageRef = useRef<HTMLDivElement>(null);
+  const photoRef = useRef<HTMLDivElement>(null);
   const [stage, setStage] = useState<[number, number]>([340, 380]);
   const scanReq = useRef<Promise<ScanResult | null> | null>(null);
 
@@ -95,9 +96,11 @@ export function CropScreen({ lang, file: file0, url: url0, guess, pages, onUse, 
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setStage([el.clientWidth, el.clientHeight]));
+    // Room for the photo inside the stage's padding (the dots may sit on the photo's edge).
+    const measure = () => setStage([Math.max(80, el.clientWidth - 40), Math.max(80, el.clientHeight - 40)]);
+    const ro = new ResizeObserver(measure);
     ro.observe(el);
-    setStage([el.clientWidth, el.clientHeight]);
+    measure();
     return () => ro.disconnect();
   }, []);
 
@@ -187,7 +190,9 @@ export function CropScreen({ lang, file: file0, url: url0, guess, pages, onUse, 
   const pts = quad.map(px);
   const n = pages.length + 1;
   const dp = drag !== null ? pts[drag] : null;
-  const loupeAbove = dp ? dp[1] > LOUPE + 24 : true;
+  // The loupe sits above the finger, unless that would leave the screen.
+  const photoTop = photoRef.current?.getBoundingClientRect().top ?? 0;
+  const loupeAbove = dp ? photoTop + dp[1] > LOUPE + 48 : true;
 
   return (
     <div className="screen cap-screen crop-screen" onPointerUp={onUp} onPointerCancel={onUp}>
@@ -196,7 +201,7 @@ export function CropScreen({ lang, file: file0, url: url0, guess, pages, onUse, 
         <p className="cap-sub" aria-live="polite">{t(lang, sub)}</p>
       </div>
       <div className="crop-stage" ref={stageRef}>
-        <div className="crop-photo" style={{ width: bw, height: bh }}>
+        <div className="crop-photo" ref={photoRef} style={{ width: bw, height: bh }}>
           {nat && <img src={url} alt="" draggable={false} />}
           <svg className="crop-lines" width={bw} height={bh} aria-hidden="true">
             <polygon points={pts.map((p) => p.join(",")).join(" ")} className={ok ? "" : "bad"} />
@@ -233,7 +238,7 @@ export function CropScreen({ lang, file: file0, url: url0, guess, pages, onUse, 
             </div>
           )}
           {drag === null && (
-            <span className={"crop-chip" + (edited ? " set" : "")}>
+            <span className={"crop-chip" + (edited ? " done" : "")}>
               <CIcon name={edited ? "check" : "move"} size={18} />
               {t(lang, edited ? "cornersSet" : "dragDots")}
             </span>
