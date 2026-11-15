@@ -60,7 +60,7 @@ def _flow(guide: dict, step_index: int) -> str:
             f"MOVING: call show_step, next_step or previous_step only when the user asks to move (for example \"next\", \"go back\", "
             f"\"show me step 3\"). Do not move on by yourself.\n"
             f"CONTEXT MESSAGES: if you receive a message like \"User moved to step N\" (N counts from 1), the screen already shows "
-            f"that step. Read it aloud (steps list index N-1) and do not call a step tool.\n"
+            f"that step. Read aloud the step text quoted in that message (it is steps list index N-1), never the step after it, and do not call a step tool.\n"
             f"INDEXES: step indexes run from 0 to {last}. Never call show_step or play_technique without an integer index in that range. "
             f"If you are not sure which step the user means, ask them.")
 
