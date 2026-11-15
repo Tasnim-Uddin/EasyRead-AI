@@ -124,7 +124,7 @@ export function ShareScreen({ guide, lang, onBack }: { guide: Guide; lang: strin
   const plain = () => {
     const s = sheetData(sheetGuide(guide, o.english), o.english);
     const L = o.english ? "en" : lang;
-    return [s.title, s.amount ? `${s.amount.label}: ${s.amount.value}` : "", s.date ? `${s.date.label}: ${s.date.value}` : "", ...s.steps.map((x, i) => `${i + 1}. ${x}`), s.sender ? `${t(L, "xContact")}: ${s.sender}` : ""]
+    return [s.title, s.amount ? `${s.amount.label || t(L, "xAmount")}: ${s.amount.value}` : "", s.date ? `${s.date.label || t(L, "xBy")}: ${s.date.value}` : "", ...s.steps.map((x, i) => `${i + 1}. ${x}`), s.sender ? `${t(L, "xContact")}: ${s.sender}` : ""]
       .filter(Boolean)
       .join("\n");
   };

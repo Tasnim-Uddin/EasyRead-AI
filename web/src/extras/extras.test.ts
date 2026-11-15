@@ -204,5 +204,11 @@ describe("share sheet", () => {
   });
   it("uses the user's own name first", () => {
     expect(sheetData({ ...letter, title_override: "Council tax" } as Guide).title).toBe("Council tax");
+    // a guide in Spanish: the English-only content title and labels give way to the translated title / sheet labels
+    const es = { ...letter, language: "es", title: "Factura del impuesto municipal" } as Guide;
+    const se = sheetData(es, false, "es");
+    expect(se.title).toBe("Factura del impuesto municipal");
+    if (se.amount && letter.content?.amounts?.length) expect(se.amount.label).toBe("");
+    expect(sheetData(es, true).title).toBe(sheetData(letter, true).title);
   });
 });

@@ -19,7 +19,9 @@ export function guideTitle(g: Guide, english = false): string {
   const c = g.content;
   const k = kindOf(g);
   if (english && g.summary_line_en && k !== "medicine") return g.summary_line_en;
-  if (k === "letter" && c?.what_this_is) return c.what_this_is;
+  // content.what_this_is is English only: in another language the translated short title wins.
+  const otherLang = !english && (g.language ?? "en") !== "en" && !!g.title;
+  if (k === "letter" && c?.what_this_is && !otherLang) return c.what_this_is;
   return (english ? g.title_en : g.title) || (f?.medicine ?? f?.title ?? c?.what_this_is ?? g.steps[0]?.text ?? "");
 }
 
@@ -76,11 +78,13 @@ export function sheetData(g: Guide, english = false, lang = "en"): SheetData {
     steps.push(`${day}: ${english ? d.what_en || d.what : d.what}`);
   }
   const amt = g.content?.amounts?.[0];
+  // content.amounts / by_when labels are English only: in another language the sheet shows its own translated label.
+  const enLabels = english || (g.language ?? "en") === "en";
   const call = g.steps.find((s) => s.callout?.value)?.callout ?? null;
   const amount = dated?.amount
     ? { label: english ? dated.what_en : dated.what, value: dated.amount }
     : amt
-    ? { label: amt.what, value: amt.amount }
+    ? { label: enLabels ? amt.what : "", value: amt.amount }
     : call && /[£$€¥₹]|\d/.test(call.value) && !dated
     ? { label: call.sub ?? "", value: call.value }
     : null;
@@ -88,7 +92,7 @@ export function sheetData(g: Guide, english = false, lang = "en"): SheetData {
   const date = dated
     ? { label: english ? dated.what_en || dated.what : dated.what, value: dated.quote || dated.date, iso: dated.date }
     : by
-    ? { label: by.what, value: by.date, iso: null } // a printed date we could not read as a calendar date: shown as printed
+    ? { label: enLabels ? by.what : "", value: by.date, iso: null } // a printed date we could not read as a calendar date: shown as printed
     : null;
   const sender = g.sender ? [g.sender.name, g.sender.contact].filter(Boolean).join(" · ") : null;
   return { title: guideTitle(g, english), steps, amount, date, sender, made: g.created_at ?? null };
