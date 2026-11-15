@@ -379,11 +379,22 @@ _SAYS_NO_DATE = re.compile(r"\bdate\b.*(?:does not|doesn't|not) (?:show|say|give
 def ensure_blank_date_step(steps: list[dict], notes: list[str], sender: dict | None) -> list[dict]:
     """The reader read the paper and saw the date is blank (a template, DD/MM/YYYY): if no step says so, one plain
     step does, so the guide never reads as if there were no deadline. Nothing is added when the date is not blank."""
-    if not any(_BLANK_DATE_NOTE.search(n or "") for n in notes):
+    if not any(_BLANK_DATE_NOTE.search(n or "") or _SAYS_NO_DATE.search(n or "") for n in notes):
         return steps
     if any(_SAYS_NO_DATE.search(s.get("text_en") or "") for s in steps):
         return steps
+    # "Pay HMRC by the date on your letter." -> the same step says the date is not there (keeps the step count).
+    for i, s in enumerate(steps):
+        if _POINTS_AT_DATE.search(s.get("text_en") or ""):
+            out = list(steps)
+            out[i] = {**s, "text_en": (s["text_en"].rstrip() + " This paper does not show the date.").strip()}
+            return out
     name = ((sender or {}).get("name") or "").strip()
+    if len(name) > 48:
+        name = re.split(r"\s*[,(]\s*", name)[0].strip()
     who = name if name and len(name) <= 48 else "whoever sent it"
     return steps + [_step("when", f"Your paper does not show the date. Check with {who}.",
                           "a calendar page with an empty space where the date should be")]
+
+
+_POINTS_AT_DATE = re.compile(r"\b(?:by|before|on) the date (?:on|in|shown on|given on) (?:your|the|this) (?:letter|paper|notice|form)\b", re.I)

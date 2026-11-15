@@ -26,11 +26,16 @@ DATE = re.compile(r"\b(?:\d{1,2}(?:st|nd|rd|th)?\s+(?:jan|feb|mar|apr|may|jun|ju
                   r"|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday))", re.I)
 
 
+# "A tariff is the price plan you pay for your gas." explains a word; it is not an action to picture.
+DEFINITION = re.compile(r"^(?:an?|the|this|that|it)?\s*[\w-]+(?:\s[\w-]+)?\s+(?:is|are|means)\s+(?:an?|the|when|how|what|money|checked)\b", re.I)
+
+
 def _clauses(text: str) -> list[str]:
     """Action clauses of a step: split on sentence ends, ';', ',' and before if/unless; drop conditions and
     negated clauses."""
     parts = re.split(r"[.!?;:]\s+|[.!?]$|,\s*|\s+(?=(?:if|unless)\b)|\s+-\s+", text.strip())
-    return [p.strip() for p in parts if p and p.strip() and not COND.match(p.strip()) and not NEG.search(p)]
+    return [p.strip() for p in parts if p and p.strip() and not COND.match(p.strip()) and not NEG.search(p)
+            and not DEFINITION.match(p.strip())]
 
 
 def _any(rx: str, clauses: list[str]) -> bool:
@@ -119,7 +124,8 @@ def _paper(step: dict, guide: dict, cl: list[str]) -> str | None:
         return "pay_card"
     if doc_type == "form" and _any(r"\bwrite\b|\bfill (?:in|out)\b|\bthe box\b", cl):
         return "write_in_box"  # "Find the box called Telephone No. Write your number." is writing, not a call
-    if _any(r"\b(?:call|phone|ring|telephone)\b(?! (?:number|numbers|no\b|bill))", cl):
+    # "Have your reference ready when you phone" is getting papers ready, not the call itself.
+    if _any(r"(?<!when you )(?<!before you )(?<!if you )\b(?:call|phone|ring|telephone)\b(?! (?:number|numbers|no\b|bill))", cl):
         return "phone_call"
     if _any(r"\bonline\b|\bwebsite\b|\bwww\.|\.gov\.uk\b|\.nhs\.uk\b|\blog ?in\b|\bsign in\b|\binternet\b|\bon the app\b", step_clauses_raw(step)):
         return "go_online"

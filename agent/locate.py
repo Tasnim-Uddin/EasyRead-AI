@@ -289,7 +289,7 @@ def quotes_for_step(step_text: str, quotes: list[dict], form: bool = False) -> l
             qw = _words(qt)
             if not qw or len(qw & sw) / len(qw) < (0.6 if form else 0.75):
                 continue
-            if label_words is not None and not qw <= label_words:
+            if label_words and not (qw <= label_words or label_words <= qw):  # same box, printed long or named short
                 continue
             # a label written out in the step ("the box called Signature(s)") beats one whose words are just nearby
             # and a label named early in the step ("Find the box called Signature. ...") beats one in a later sentence
