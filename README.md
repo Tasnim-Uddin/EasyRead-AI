@@ -126,7 +126,7 @@ The avatar talks you through the guide and drives the app with client tools. Cod
 
 **The guide as context.** When a session starts, the server puts the guide into the persona's system prompt: document type, facts, content, safety lines and every Easy Read step, plus the ground rules (`agent/persona.py`, `system_prompt`). The avatar starts on the step the user is on.
 
-**One avatar across screens.** There is one `<video>` element for the avatar. It moves to a slot on each screen (step, ask, talk), so the session and the video keep running as you move around the app (`web/src/screens.tsx`).
+**One avatar across screens.** There is one `<video>` element for the avatar. It moves to a slot on each screen (step, ask, talk), so the session and the video keep running as you move around the app (`web/src/screens/guide.tsx`).
 
 **Safety boundary.**
 
@@ -134,7 +134,7 @@ The avatar talks you through the guide and drives the app with client tools. Cod
 - If the answer says 999 or 111, the tool adds "If this is an emergency, call 999" or "Call 111 for urgent advice" to what the avatar says.
 - The prompt also tells it: never give medical advice or change doses, say "call 999" for serious symptoms in every language, and use only library clips.
 
-**Evidence: the Tool calls panel.** Every tool call, from the avatar or from an on-screen button, is logged with its arguments, time taken and the line returned. Open **Tool calls (n)** at the bottom of the screen to see it (`DevPanel` in `web/src/screens.tsx`).
+**Evidence: the Tool calls panel.** Every tool call, from the avatar or from an on-screen button, is logged with its arguments, time taken and the line returned. Open **Tool calls (n)** at the bottom of the screen to see it (`DevPanel` in `web/src/screens/settings.tsx`).
 
 ## Designed in Figma
 
