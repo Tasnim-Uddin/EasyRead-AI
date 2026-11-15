@@ -83,7 +83,8 @@ function GuideDock({ text, lang }: { text: string; lang: string }) {
       </button>
     );
   }
-  const caption = info.caption || text;
+  const full = info.caption || text;
+  const caption = full.length > 90 ? "…" + full.slice(-90).replace(/^\S*\s/, "") : full; // the latest words
   // Compact, one row: video tile, status chip + two-line caption, icon buttons. Typing lives in the question sheet.
   return (
     <section className="dock dock-live dock-compact" aria-label={t(lang, "guideSays")}>
@@ -1099,7 +1100,16 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
           </button>
         </div>
         <p className="sub">{tf(lang, "stillOnStep", { n })}</p>
-        <textarea dir="auto" value={q} onChange={(e) => setQ(e.target.value)} rows={2} placeholder={t(lang, "askExample")} />
+        <textarea
+          dir="auto"
+          value={q}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault();
+              submit(q);
+            }
+          }}
+          onChange={(e) => setQ(e.target.value)} rows={2} placeholder={t(lang, "askExample")} />
         <div className="sheet-actions">
           {Rec && (
             <button className="btn quiet" onClick={mic} aria-pressed={listening}>
@@ -1112,8 +1122,14 @@ function AskSheet({ lang, n, live, answer, busy, onAsk, onClose }: { lang: strin
             {t(lang, "askQ")}
           </button>
         </div>
-        {sent && !live && (busy ? <p role="status">…</p> : answer ? <div className="answer" dir="auto" aria-live="polite">{answer}</div> : null)}
-        {sent && live && <p className="sub" role="status">{t(lang, "guideSays")}…</p>}
+        {sent && answer ? (
+          <div className="answer" dir="auto" aria-live="polite">
+            {live && <b>{t(lang, "guideSays")}: </b>}
+            {answer}
+          </div>
+        ) : sent && busy ? (
+          <p className="sub" role="status">{live ? t(lang, "guideSays") : ""}…</p>
+        ) : null}
         <button className="btn quiet" onClick={onClose}>
           {tf(lang, "backToStep", { n })}
         </button>

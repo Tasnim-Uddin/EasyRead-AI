@@ -23,7 +23,9 @@ export function useAnam(
   /** What the guide is doing, for the dock's status chip. */
   const [activity, setActivity] = useState<"idle" | "talking" | "listening" | "paused">("idle");
   const [liveCaption, setLiveCaption] = useState("");
-  const captionId = useRef("");
+  const msgDone = useRef(true); // the last persona message ended: the next chunk starts a new caption
+  const [replySeq, setReplySeq] = useState(0); // +1 for each new persona message
+  const [replyDone, setReplyDone] = useState(0); // +1 each time a persona message ends
   const clientRef = useRef<ReturnType<typeof createClient> | null>(null);
   const handlersRef = useRef(handlers);
   handlersRef.current = handlers;
@@ -85,10 +87,16 @@ export function useAnam(
         }
         client.addListener(AnamEvent.MESSAGE_STREAM_EVENT_RECEIVED, (e: { id: string; content: string; role: string; endOfSpeech: boolean; interrupted: boolean }) => {
           if (e.role !== "persona") return;
-          if (e.id !== captionId.current) {
-            captionId.current = e.id;
-            setLiveCaption(e.content);
-          } else setLiveCaption((c) => c + e.content);
+          // Chunks of one message share nothing reliable, so a message runs until endOfSpeech/interrupted.
+          if (msgDone.current) {
+            msgDone.current = false;
+            setReplySeq((n) => n + 1);
+            setLiveCaption(e.content ?? "");
+          } else setLiveCaption((c) => c + (e.content ?? ""));
+          if (e.endOfSpeech || e.interrupted) {
+            msgDone.current = true;
+            setReplyDone((n) => n + 1);
+          }
           setActivity(e.endOfSpeech || e.interrupted ? "idle" : "talking");
         });
         client.addListener(AnamEvent.USER_SPEECH_STARTED, () => setActivity("listening"));
@@ -201,5 +209,5 @@ export function useAnam(
 
   useEffect(() => () => void stop(), [stop]);
 
-  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption };
+  return { state, error, sttMissing, micMuted, soundOff, start, stop, toggleMic, toggleSound, setLanguage, send, talk, interrupt, quiet, activity, liveCaption, replySeq, replyDone };
 }

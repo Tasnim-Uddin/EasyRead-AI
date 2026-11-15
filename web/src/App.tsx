@@ -578,13 +578,41 @@ export default function App() {
     } else if (voiceRef.current && guideOn) void speak(guide.steps[to]?.text ?? "", lang);
   }
 
+  // Live: the guide answers out loud and its reply text fills the sheet. No reply in 8 s: ask the document
+  // directly, show it, and have the guide say it.
+  const [waitReply, setWaitReply] = useState<{ seq: number; q: string } | null>(null);
   async function askOnStep(q: string) {
     const text = q.trim();
     if (!text || !guide) return;
     setQuestion(text);
-    if (liveRef.current && anam.send(text)) return; // the guide answers out loud, the user stays on the step
+    setAnswer(null);
+    if (liveRef.current && anam.send(text)) {
+      setWaitReply({ seq: anam.replySeq, q: text });
+      return;
+    }
     await onAsk(text);
   }
+  useEffect(() => {
+    if (!waitReply) return;
+    if (anam.replySeq > waitReply.seq) {
+      setAnswer(anam.liveCaption);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setWaitReply(null);
+      void (async () => {
+        const say = await runTool("answer_from_document", { question: waitReply.q });
+        setAnswer(say);
+        if (liveRef.current) anam.talk(say);
+      })();
+    }, 8000);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitReply, anam.replySeq, anam.liveCaption]);
+  useEffect(() => {
+    if (waitReply && anam.replySeq > waitReply.seq) setWaitReply(null); // reply finished
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [anam.replyDone]);
 
   function hideGuide() {
     void anam.stop();
@@ -728,7 +756,7 @@ export default function App() {
             onAskOpen={setAskOpen}
             onAsk={(q) => void askOnStep(q)}
             answer={answer}
-            busy={busy}
+            busy={busy || !!waitReply}
             onCheck={() => { go("tellback"); }}
           />
         )}
